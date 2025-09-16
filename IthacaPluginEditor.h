@@ -49,6 +49,10 @@ private:
     
     // Sample directory info
     std::unique_ptr<juce::Label> sampleDirLabel;
+    
+    // MISSING COMPONENTS - Přidány chybějící labels
+    std::unique_ptr<juce::Label> instrumentLabel;
+    std::unique_ptr<juce::Label> versionLabel;
 
     //==============================================================================
     // Voice Activity Grid Component - FORWARD DECLARATION
@@ -103,6 +107,11 @@ private:
     // Helper methods
     std::unique_ptr<juce::Label> createLabel(const juce::String& text, 
                                            juce::Justification justification = juce::Justification::centredLeft);
+    
+    // MISSING METHODS - Přidány chybějící metody
+    std::unique_ptr<juce::Label> createSmallLabel(const juce::String& text, 
+                                                 juce::Justification justification = juce::Justification::centredLeft);
+    
     void updateLabelText(juce::Label* label, const juce::String& newText);
     
     // Color scheme (white theme)
