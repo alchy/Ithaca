@@ -1,0 +1,5 @@
+build/
+libsndfile/
+JUCE/
+exports/
+core_logger/
