@@ -92,9 +92,10 @@ target_sources(IthacaPlayer
 
 # Include directories
 target_include_directories(IthacaPlayer PRIVATE 
-    ${CMAKE_CURRENT_SOURCE_DIR}                     # Root directory
-    ${CMAKE_CURRENT_SOURCE_DIR}/sampler             # IthacaCore sampler modules
-    ${CMAKE_CURRENT_SOURCE_DIR}/sampler/tests       # Test framework (optional)
+    ${CMAKE_CURRENT_SOURCE_DIR}                             # Root directory - IthacaConfig.h zde
+    ${CMAKE_CURRENT_SOURCE_DIR}/ithaca-core                 # IthacaCore modules
+    ${CMAKE_CURRENT_SOURCE_DIR}/ithaca-core/sampler         # IthacaCore sampler modules
+    ${CMAKE_CURRENT_SOURCE_DIR}/ithaca-core/sampler/tests   # Test framework
 )
 
 # JUCE compile definitions

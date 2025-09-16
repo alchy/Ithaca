@@ -1,6 +1,6 @@
 #pragma once
 
-#include "IthacaConfig.h"  // PŘIDÁNO - musí být první
+#include "IthacaConfig.h"  // musí být první
 #include <juce_audio_processors/juce_audio_processors.h>
 #include <memory>
 
