@@ -4,3 +4,6 @@
 [submodule "JUCE"]
 	path = JUCE
 	url = https://github.com/juce-framework/JUCE.git
+[submodule "ithaca-core"]
+	path = ithaca-core
+	url = https://github.com/alchy/IthacaCore.git
