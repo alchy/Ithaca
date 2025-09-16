@@ -1,71 +1,96 @@
+/**
+ * @file IthacaPluginEditor.cpp
+ * @brief Implementace GUI editoru pro IthacaPlugin s opraveným vykreslováním komponent přes obrázek v pozadí.
+ */
+
 #include "IthacaPluginEditor.h"
+#include "decorators/BinaryData.h"
 
 //==============================================================================
+/**
+ * @brief Konstruktor editoru.
+ * Inicializuje komponenty GUI: načte obrázek jako pozadí, přidá labely bez fixních bounds.
+ * @param p Reference na procesor.
+ */
 IthacaPluginEditor::IthacaPluginEditor (IthacaPluginProcessor& p)
     : AudioProcessorEditor (&p), processorRef (p), timerCallCounter(0)
 {
-    // Rozšíření okna pro více komponent
-    setSize(500, 320);
+    // Nastavení velikosti okna
+    setSize(400, 600);
     
-    // POUZE jeden jednoduchý label pro test
-    engineStatusLabel = std::make_unique<juce::Label>();
-    engineStatusLabel->setText("IthacaCore - Engine Ready!", juce::dontSendNotification);
-    engineStatusLabel->setBounds(10, 10, 450, 30);
-    engineStatusLabel->setColour(juce::Label::textColourId, juce::Colour(0xff0066cc));
-    engineStatusLabel->setFont(juce::FontOptions(14.0f));
-    addAndMakeVisible(engineStatusLabel.get());
+    // Embedovaný obrázek z BinaryData (načtení a nastavení)
+    juce::Image image = juce::ImageCache::getFromMemory(BinaryData::ithacaplayer1_jpg, BinaryData::ithacaplayer1_jpgSize);
+    imageComponent.setImage(image);
+    imageComponent.setImagePlacement(juce::RectanglePlacement::stretchToFit); // Roztáhni na celou plochu
+    imageComponent.setInterceptsMouseClicks(false, false); // Neblokuje interakce s overlay komponentami
+    addAndMakeVisible(imageComponent);
     
-    // Přidat základní komponenty
+    // Přidat základní komponenty (bez bounds, ty se nastaví v resized())
     setupMainComponents();
-    
-    // ŽÁDNÝ TIMER - pořád vypnutý
     
     // Debug výpis
     DBG("IthacaPluginEditor constructor with all labels completed successfully");
 }
 
+/**
+ * @brief Destruktor editoru.
+ * Automaticky uvolní komponenty.
+ */
 IthacaPluginEditor::~IthacaPluginEditor()
 {
     DBG("IthacaPluginEditor destructor called");
 }
 
 //==============================================================================
+/**
+ * @brief Maluje pozadí GUI.
+ * @param g Grafický kontext.
+ */
 void IthacaPluginEditor::paint (juce::Graphics& g)
 {
-    // Minimální paint
-    g.fillAll(juce::Colour(0xffffffff)); // Bílé pozadí
+    // Žádné plné pozadí - obrázek je podklad
+    // Přidat tlumený overlay pro čitelnost controlů
+    g.setColour(juce::Colours::black.withAlpha(0.1f));
+    g.fillRect(getLocalBounds().removeFromTop(300)); // Overlay na horní část pro labely
     
-    // Pouze základní text
-    g.setColour(juce::Colour(0xff333333));
-    g.setFont(juce::FontOptions(16.0f));
-    g.drawText("IthacaCore Sampler - Debug Mode", 10, 50, getWidth() - 20, 30, 
-               juce::Justification::centred);
+    // Žádné přímé kreslení textu - necháme na labelech
     
-    g.drawText("Engine: 703 samples loaded", 10, 80, getWidth() - 20, 20, 
-               juce::Justification::centred);
-               
-    // Oddělení pro nové komponenty
-    g.setColour(juce::Colour(0xffcccccc));
-    g.drawLine(10.0f, 110.0f, static_cast<float>(getWidth() - 10), 110.0f, 1.0f);
-               
     DBG("Paint method called successfully");
 }
 
+/**
+ * @brief Resized - nastavuje dynamické pozice komponent v GUI.
+ */
 void IthacaPluginEditor::resized()
 {
-    // Minimální resize
-    if (engineStatusLabel) {
-        engineStatusLabel->setBounds(10, 10, getWidth() - 20, 30);
-    }
+    auto bounds = getLocalBounds();
+    
+    // Obrázek zabírá celou plochu
+    imageComponent.setBounds(bounds);
+    
+    // Controls jsou overlay přes obrázek
+    auto controlArea = bounds.removeFromTop(300).reduced(10);
+    
+    if (engineStatusLabel) engineStatusLabel->setBounds(controlArea.removeFromTop(30));
+    if (totalSamplesLabel) totalSamplesLabel->setBounds(controlArea.removeFromTop(18));
+    if (sampleRateLabel) sampleRateLabel->setBounds(controlArea.removeFromTop(18));
+    if (activeVoicesLabel) activeVoicesLabel->setBounds(controlArea.removeFromTop(18));
+    if (sustainingVoicesLabel) sustainingVoicesLabel->setBounds(controlArea.removeFromTop(18));
+    if (releasingVoicesLabel) releasingVoicesLabel->setBounds(controlArea.removeFromTop(18));
+    if (masterGainLabel) masterGainLabel->setBounds(controlArea.removeFromTop(18));
+    if (masterPanLabel) masterPanLabel->setBounds(controlArea.removeFromTop(18));
     
     DBG("Resized method called successfully");
 }
 
+/**
+ * @brief Callback pro změnu hierarchie rodiče.
+ * Spustí timer bezpečně, pokud je komponenta viditelná.
+ */
 void IthacaPluginEditor::parentHierarchyChanged()
 {
     DBG("parentHierarchyChanged called - component showing: " + juce::String(isShowing() ? "true" : "false"));
     
-    // NYNÍ přidáme BEZPEČNÝ timer - pouze pro update labelů
     if (isShowing() && !isTimerRunning()) {
         DBG("Starting safe timer for label updates");
         startTimer(1000); // Začneme s 1 sekunda pro bezpečnost, později zrychlíme
@@ -73,24 +98,20 @@ void IthacaPluginEditor::parentHierarchyChanged()
 }
 
 //==============================================================================
-// VŠECHNY OSTATNÍ METODY PRÁZDNÉ PRO DEBUG
-
+/**
+ * @brief Timer callback pro aktualizaci labelů.
+ */
 void IthacaPluginEditor::timerCallback()
 {
     DBG("Timer callback - updating labels safely");
     
     try {
-        // BEZPEČNÁ aktualizace pouze základních labels
-        // BEZ přístupu k složitým VoiceManager strukturám
-        
-        // Engine status
         if (processorRef.getVoiceManager()) {
             if (engineStatusLabel) {
                 engineStatusLabel->setText("Engine: Ready (Live)", juce::dontSendNotification);
-                engineStatusLabel->setColour(juce::Label::textColourId, juce::Colour(0xff009900));
+                engineStatusLabel->setColour(juce::Label::textColourId, juce::Colours::white);
             }
             
-            // Získání základních stats BEZ přístupu k voice details
             auto stats = processorRef.getSamplerStats();
             
             if (sampleRateLabel) {
@@ -114,7 +135,6 @@ void IthacaPluginEditor::timerCallback()
                 releasingVoicesLabel->setText("Releasing: " + juce::String(stats.releasingVoices), juce::dontSendNotification);
             }
             
-            // Master controls - BEZPEČNĚ
             auto& parameters = processorRef.getParameters();
             if (auto* gainParam = parameters.getRawParameterValue("masterGain")) {
                 if (masterGainLabel) {
@@ -139,67 +159,49 @@ void IthacaPluginEditor::timerCallback()
             }
             
         } else {
-            // Engine není ready
             if (engineStatusLabel) {
                 engineStatusLabel->setText("Engine: Loading...", juce::dontSendNotification);
-                engineStatusLabel->setColour(juce::Label::textColourId, juce::Colour(0xffff8800));
+                engineStatusLabel->setColour(juce::Label::textColourId, juce::Colours::white);
             }
         }
         
     } catch (...) {
         DBG("Timer callback caught exception - GUI remains stable");
-        // Tiché selhání - GUI zůstane stabilní
     }
 }
 
+/**
+ * @brief Nastaví hlavní komponenty (labely) bez bounds.
+ */
 void IthacaPluginEditor::setupMainComponents()
 {
-    // Přidáme všechny základní labels postupně
+    // Status display
+    engineStatusLabel = createLabel("IthacaCore - Engine Ready!");
+    addAndMakeVisible(engineStatusLabel.get());
     
     // Total samples label
-    totalSamplesLabel = std::make_unique<juce::Label>();
-    totalSamplesLabel->setText("Total Samples: 703", juce::dontSendNotification);
-    totalSamplesLabel->setBounds(10, 120, 200, 18);
-    totalSamplesLabel->setColour(juce::Label::textColourId, juce::Colour(0xff333333));
+    totalSamplesLabel = createLabel("Total Samples: 703");
     addAndMakeVisible(totalSamplesLabel.get());
     
     // Sample rate label
-    sampleRateLabel = std::make_unique<juce::Label>();
-    sampleRateLabel->setText("Sample Rate: 48000 Hz", juce::dontSendNotification);
-    sampleRateLabel->setBounds(10, 140, 200, 18);
-    sampleRateLabel->setColour(juce::Label::textColourId, juce::Colour(0xff333333));
+    sampleRateLabel = createLabel("Sample Rate: 48000 Hz");
     addAndMakeVisible(sampleRateLabel.get());
     
     // Voice counters
-    activeVoicesLabel = std::make_unique<juce::Label>();
-    activeVoicesLabel->setText("Active: 0", juce::dontSendNotification);  
-    activeVoicesLabel->setBounds(10, 170, 200, 18);
-    activeVoicesLabel->setColour(juce::Label::textColourId, juce::Colour(0xff333333));
+    activeVoicesLabel = createLabel("Active: 0");
     addAndMakeVisible(activeVoicesLabel.get());
     
-    sustainingVoicesLabel = std::make_unique<juce::Label>();
-    sustainingVoicesLabel->setText("Sustaining: 0", juce::dontSendNotification);
-    sustainingVoicesLabel->setBounds(10, 190, 200, 18);
-    sustainingVoicesLabel->setColour(juce::Label::textColourId, juce::Colour(0xff333333));
+    sustainingVoicesLabel = createLabel("Sustaining: 0");
     addAndMakeVisible(sustainingVoicesLabel.get());
     
-    releasingVoicesLabel = std::make_unique<juce::Label>();
-    releasingVoicesLabel->setText("Releasing: 0", juce::dontSendNotification);
-    releasingVoicesLabel->setBounds(10, 210, 200, 18);
-    releasingVoicesLabel->setColour(juce::Label::textColourId, juce::Colour(0xff333333));
+    releasingVoicesLabel = createLabel("Releasing: 0");
     addAndMakeVisible(releasingVoicesLabel.get());
     
     // Master controls
-    masterGainLabel = std::make_unique<juce::Label>();
-    masterGainLabel->setText("Master Gain: 100", juce::dontSendNotification);
-    masterGainLabel->setBounds(10, 240, 200, 18);
-    masterGainLabel->setColour(juce::Label::textColourId, juce::Colour(0xff333333));
+    masterGainLabel = createLabel("Master Gain: 100");
     addAndMakeVisible(masterGainLabel.get());
     
-    masterPanLabel = std::make_unique<juce::Label>();
-    masterPanLabel->setText("Master Pan: Center", juce::dontSendNotification);
-    masterPanLabel->setBounds(10, 260, 200, 18);
-    masterPanLabel->setColour(juce::Label::textColourId, juce::Colour(0xff333333));
+    masterPanLabel = createLabel("Master Pan: Center");
     addAndMakeVisible(masterPanLabel.get());
     
     DBG("All basic components setup completed");
@@ -230,17 +232,29 @@ void IthacaPluginEditor::updateMasterControlsDisplay()
     // PRÁZDNÉ
 }
 
+/**
+ * @brief Vytvoří label s defaultními barvami pro overlay.
+ * @param text Text labelu.
+ * @param justification Zarovnání textu.
+ * @return Ukazatel na label.
+ */
 std::unique_ptr<juce::Label> IthacaPluginEditor::createLabel(const juce::String& text, 
                                                            juce::Justification justification)
 {
     auto label = std::make_unique<juce::Label>();
     label->setText(text, juce::dontSendNotification);
     label->setJustificationType(justification);
-    label->setColour(juce::Label::textColourId, juce::Colour(0xff333333));
+    label->setColour(juce::Label::textColourId, juce::Colours::white); // Bílý text pro čitelnost
+    label->setColour(juce::Label::backgroundColourId, juce::Colours::black.withAlpha(0.8f)); // Vyšší alpha pro viditelnost
     label->setFont(juce::FontOptions(12.0f));
     return label;
 }
 
+/**
+ * @brief Aktualizuje text labelu, pokud se liší.
+ * @param label Ukazatel na label.
+ * @param newText Nový text.
+ */
 void IthacaPluginEditor::updateLabelText(juce::Label* label, const juce::String& newText)
 {
     if (label && label->getText() != newText) {

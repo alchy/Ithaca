@@ -55,6 +55,9 @@ private:
     class VoiceActivityComponent; // Forward declaration
     std::unique_ptr<VoiceActivityComponent> voiceActivityGrid;
 
+    // Background image component
+    juce::ImageComponent imageComponent;
+
     //==============================================================================
     // Timer callback for updates
     void timerCallback() override;
