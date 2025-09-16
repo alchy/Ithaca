@@ -311,6 +311,11 @@ git submodule update --init --recursive
 git submodule add https://github.com/libsndfile/libsndfile libsndfile
 ```
 
+## Manualne pridat JUCE
+```
+git clone https://github.com/juce-framework/JUCE.git
+```
+
 ## Grep z logu
 
 ```
