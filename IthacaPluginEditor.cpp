@@ -8,7 +8,7 @@
 #include <iostream>
 
 // DEBUG: Přepínač pro vypnutí background obrázku
-#define BACKGROUND_PICTURE_OFF 1  // Nastav na 1 pro vypnutí obrázku, 0 pro zapnutí
+#define BACKGROUND_PICTURE_OFF 0  // Nastav na 1 pro vypnutí obrázku, 0 pro zapnutí
 
 //==============================================================================
 /**
@@ -56,34 +56,10 @@ IthacaPluginEditor::~IthacaPluginEditor()
 void IthacaPluginEditor::paint (juce::Graphics& g)
 {
 #if BACKGROUND_PICTURE_OFF
-    // DEBUG MODE: Šedé pozadí místo bílého pro lepší viditelnost
-    g.fillAll(juce::Colour(0xff808080)); // Tmavě šedé pro jistotu
+    // DEBUG MODE: Čisté šedé pozadí
+    g.fillAll(juce::Colour(0xff808080));
     
-    // FORCE TEST: Kreslení textu přímo v paint() pro test
-    g.setColour(juce::Colour(0xffffffff)); // Bílý text
-    g.setFont(juce::FontOptions(20.0f));
-    g.drawText("DIRECT PAINT TEST", 50, 100, 300, 30, juce::Justification::centred);
-    
-    g.setColour(juce::Colour(0xff000000)); // Černý text
-    g.drawText("Labels count: " + juce::String(getNumChildComponents()), 50, 140, 300, 30, juce::Justification::centred);
-    
-    // NOVÝ TEST: Force bounds setup v paint() 
-    if (engineStatusLabel && engineStatusLabel->getBounds().isEmpty()) {
-        engineStatusLabel->setBounds(15, 180, 370, 25);
-        std::cout << "IthacaGUI: EMERGENCY bounds fix in paint()" << std::endl;
-    }
-    
-    if (totalSamplesLabel && totalSamplesLabel->getBounds().isEmpty()) {
-        totalSamplesLabel->setBounds(15, 210, 370, 20);
-    }
-    
-    // Test kreslení bounds info
-    if (engineStatusLabel) {
-        g.drawText("Engine label bounds: " + engineStatusLabel->getBounds().toString(), 
-                   50, 250, 350, 20, juce::Justification::centredLeft);
-    }
-    
-    // Původní title
+    // Pouze základní title 
     g.setColour(juce::Colour(0xff333333));
     g.setFont(juce::FontOptions(18.0f));
     g.drawText("IthacaCore Sampler - Debug Mode", 10, 10, getWidth() - 20, 30, 
@@ -93,7 +69,7 @@ void IthacaPluginEditor::paint (juce::Graphics& g)
     g.setColour(juce::Colour(0xffcccccc));
     g.drawLine(10.0f, 45.0f, static_cast<float>(getWidth() - 10), 45.0f, 1.0f);
     
-    std::cout << "IthacaGUI: Paint method - DEBUG MODE with emergency bounds fix" << std::endl;
+    std::cout << "IthacaGUI: Paint method - DEBUG MODE (clean version)" << std::endl;
 #else
     // BACKGROUND MODE: Pouze overlay pro čitelnost
     
@@ -120,23 +96,23 @@ void IthacaPluginEditor::resized()
 #if !BACKGROUND_PICTURE_OFF
     // BACKGROUND MODE: Obrázek zabírá celou plochu
     imageComponent.setBounds(bounds);
-    
-    // Controls jsou overlay přes obrázek v horní části
     auto controlArea = bounds.removeFromTop(280).reduced(15);
 #else
     // DEBUG MODE: Controls zabírají normální layout
-    auto controlArea = bounds.removeFromTop(400).reduced(15, 50); // Začínáme níže kvůli title
+    auto controlArea = bounds.removeFromTop(400).reduced(15, 50);
 #endif
     
-    // Rozložení labelů s dostatečným prostorem
+    // OPRAVENÉ rozložení labelů - kontrola existence před nastavením bounds
     if (engineStatusLabel) {
         engineStatusLabel->setBounds(controlArea.removeFromTop(25));
-        controlArea.removeFromTop(5); // mezera
+        controlArea.removeFromTop(5);
+        std::cout << "IthacaGUI: engineStatusLabel bounds set to " << engineStatusLabel->getBounds().toString() << std::endl;
     }
     
     if (totalSamplesLabel) {
         totalSamplesLabel->setBounds(controlArea.removeFromTop(20));
         controlArea.removeFromTop(3);
+        std::cout << "IthacaGUI: totalSamplesLabel bounds set to " << totalSamplesLabel->getBounds().toString() << std::endl;
     }
     
     if (sampleRateLabel) {
@@ -144,7 +120,7 @@ void IthacaPluginEditor::resized()
         controlArea.removeFromTop(3);
     }
     
-    controlArea.removeFromTop(10); // větší mezera před voice counters
+    controlArea.removeFromTop(10);
     
     if (activeVoicesLabel) {
         activeVoicesLabel->setBounds(controlArea.removeFromTop(20));
@@ -161,7 +137,7 @@ void IthacaPluginEditor::resized()
         controlArea.removeFromTop(3);
     }
     
-    controlArea.removeFromTop(10); // větší mezera před master controls
+    controlArea.removeFromTop(10);
     
     if (masterGainLabel) {
         masterGainLabel->setBounds(controlArea.removeFromTop(20));
@@ -170,23 +146,10 @@ void IthacaPluginEditor::resized()
     
     if (masterPanLabel) {
         masterPanLabel->setBounds(controlArea.removeFromTop(20));
-        std::cout << "IthacaGUI: masterPanLabel bounds set to " << masterPanLabel->getBounds().toString() << std::endl;
     }
     
     std::cout << "IthacaGUI: Resized method completed - mode=" << (BACKGROUND_PICTURE_OFF ? "DEBUG" : "BACKGROUND") << std::endl;
     std::cout << "IthacaGUI: Total visible child components: " << getNumChildComponents() << std::endl;
-    
-    // Debug: Print bounds of all labels
-    if (engineStatusLabel) std::cout << "engineStatusLabel bounds: " << engineStatusLabel->getBounds().toString() << std::endl;
-    if (totalSamplesLabel) std::cout << "totalSamplesLabel bounds: " << totalSamplesLabel->getBounds().toString() << std::endl;
-    if (activeVoicesLabel) std::cout << "activeVoicesLabel bounds: " << activeVoicesLabel->getBounds().toString() << std::endl;
-    
-    // FALLBACK: Timer spuštění pokud ještě neběží
-    if (!isTimerRunning()) {
-        std::cout << "IthacaGUI: Starting timer fallback in resized()" << std::endl;
-        startTimer(300);
-        timerCallback(); // Force první update
-    }
 }
 
 /**
@@ -211,6 +174,41 @@ void IthacaPluginEditor::parentHierarchyChanged()
  */
 void IthacaPluginEditor::timerCallback()
 {
+    // FIRST: Ensure all labels have proper bounds (fix timing issue)
+    static bool boundsFixed = false;
+    if (!boundsFixed) {
+        std::cout << "IthacaGUI: Fixing bounds via timer callback" << std::endl;
+        
+        if (engineStatusLabel && engineStatusLabel->getBounds().isEmpty()) {
+            engineStatusLabel->setBounds(15, 50, 370, 25);
+        }
+        if (totalSamplesLabel && totalSamplesLabel->getBounds().isEmpty()) {
+            totalSamplesLabel->setBounds(15, 80, 370, 20);
+        }
+        if (sampleRateLabel && sampleRateLabel->getBounds().isEmpty()) {
+            sampleRateLabel->setBounds(15, 105, 370, 20);
+        }
+        if (activeVoicesLabel && activeVoicesLabel->getBounds().isEmpty()) {
+            activeVoicesLabel->setBounds(15, 135, 370, 20);
+        }
+        if (sustainingVoicesLabel && sustainingVoicesLabel->getBounds().isEmpty()) {
+            sustainingVoicesLabel->setBounds(15, 160, 370, 20);
+        }
+        if (releasingVoicesLabel && releasingVoicesLabel->getBounds().isEmpty()) {
+            releasingVoicesLabel->setBounds(15, 185, 370, 20);
+        }
+        if (masterGainLabel && masterGainLabel->getBounds().isEmpty()) {
+            masterGainLabel->setBounds(15, 215, 370, 20);
+        }
+        if (masterPanLabel && masterPanLabel->getBounds().isEmpty()) {
+            masterPanLabel->setBounds(15, 240, 370, 20);
+        }
+        
+        boundsFixed = true;
+        std::cout << "IthacaGUI: All bounds fixed via timer - should be visible now" << std::endl;
+    }
+    
+    // THEN: Update data
     try {
         if (processorRef.getVoiceManager()) {
             if (engineStatusLabel) {
