@@ -5,8 +5,8 @@
 
 //==============================================================================
 /**
- * @class IthacaPluginEditor - ROZŠÍŘENÁ VERZE s minimalistickým GUI
- * @brief Základní GUI editor pro IthacaCore sampler plugin s real-time monitoring
+ * @class IthacaPluginEditor - Stabilní verze s real-time voice monitoring
+ * @brief GUI editor pro IthacaCore sampler plugin s konfigurovatelnou stabilitou
  */
 class IthacaPluginEditor final : public juce::AudioProcessorEditor,
                                  private juce::Timer
@@ -26,8 +26,6 @@ private:
 
     //==============================================================================
     // GUI UPDATE TIMING
-    static constexpr int GUI_TIMER_FPS = 30;  // 30fps for voice activity
-    static constexpr int STATS_UPDATE_DIVIDER = 10; // Every 10 timer calls = ~3fps for stats
     int timerCallCounter = 0;
 
     //==============================================================================
@@ -79,7 +77,7 @@ private:
         void resized() override;
         
         void updateVoiceStates(int active, int sustaining, int releasing);
-        void setVoiceState(uint8_t midiNote, bool isActive, int voiceState); // 0=idle, 1=sustaining, 2=releasing
+        void setVoiceState(uint8_t midiNote, bool isActive, int voiceState); // 0=idle, 1=attack, 2=sustaining, 3=releasing
         
     private:
         static constexpr int GRID_COLS = 16; // 16 columns
@@ -87,8 +85,11 @@ private:
         static constexpr int CELL_SIZE = 12;
         static constexpr int CELL_PADDING = 1;
         
-        // Voice states: 0=idle, 1=sustaining, 2=releasing
+        // Voice states: 0=idle, 1=attack, 2=sustaining, 3=releasing
         std::array<int, 128> voiceStates{};
+        
+        // Rate limiting for stability
+        juce::uint32 lastRepaintTime;
         
         // Helper methods
         juce::Rectangle<int> getCellBounds(int row, int col) const;
@@ -107,8 +108,6 @@ private:
     static constexpr juce::uint32 TEXT_COLOR = 0xff333333;        // Dark gray text
     static constexpr juce::uint32 ACCENT_COLOR = 0xff0066cc;      // Blue accent
     static constexpr juce::uint32 BORDER_COLOR = 0xffcccccc;      // Light gray borders
-    static constexpr juce::uint32 ACTIVE_VOICE_COLOR = 0xff00cc66; // Green for active
-    static constexpr juce::uint32 RELEASING_VOICE_COLOR = 0xffff6600; // Orange for releasing
 
     //==============================================================================
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (IthacaPluginEditor)
