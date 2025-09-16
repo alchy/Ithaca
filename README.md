@@ -1,3 +1,8 @@
+# BUGS
+
+pri note-off to lupne pokud je nota jeste v attack phase
+
+
 # IthacaCore: C++ Audio Sampler Engine
 
 ## Popis projektu
