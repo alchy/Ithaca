@@ -3,48 +3,193 @@
 
 //==============================================================================
 IthacaPluginProcessor::IthacaPluginProcessor()
-     : AudioProcessor (BusesProperties()
-                       .withOutput ("Output", juce::AudioChannelSet::stereo(), true)),
-       parameters_(*this, nullptr, juce::Identifier("IthacaParameters"), createParameterLayout()),
-       samplerInitialized_(false),
-       currentSampleRate_(0.0),
-       currentBlockSize_(0),
-       processBlockCallCount_(0),
-       totalMidiEventsProcessed_(0)
+    : AudioProcessor(BusesProperties()
+                    .withOutput("Output", juce::AudioChannelSet::stereo(), true)),
+      pluginInitialized_(false)
 {
-    // Initialize parameter pointers
-    masterGainParam_ = parameters_.getRawParameterValue("masterGain");
-    masterPanParam_ = parameters_.getRawParameterValue("masterPan");
+    // Create delegated components in dependency order
+    // NOTE: Using temporary logger for initialization logging
+    auto tempLogger = std::make_unique<Logger>(".");
     
-    // Initialize logger
-    logger_ = std::make_unique<Logger>(".");
-    logSafe("IthacaPluginProcessor/constructor", "info", "=== ITHACA PLUGIN STARTING ===");
+    tempLogger->log("IthacaPluginProcessor/constructor", "info", 
+                   "=== ITHACA PLUGIN PROCESSOR STARTING ===");
+    tempLogger->log("IthacaPluginProcessor/constructor", "info", 
+                   "Creating component managers...");
     
-    // Set default sample directory - use the same as IthacaCore
-    currentSampleDirectory_ = DEFAULT_SAMPLE_DIR;
-    
-    logSafe("IthacaPluginProcessor/constructor", "info", "Plugin initialized");
-    logSafe("IthacaPluginProcessor/constructor", "info", "Default sample directory: " + currentSampleDirectory_.toStdString());
+    try {
+        // Create parameter manager first (no dependencies)
+        tempLogger->log("IthacaPluginProcessor/constructor", "info", 
+                       "Creating ParameterManager...");
+        parameterManager_ = std::make_unique<ParameterManager>();
+        tempLogger->log("IthacaPluginProcessor/constructor", "info", 
+                       "ParameterManager created successfully");
+        
+        // Create sampler manager (independent)
+        tempLogger->log("IthacaPluginProcessor/constructor", "info", 
+                       "Creating SamplerManager...");
+        samplerManager_ = std::make_unique<SamplerManager>();
+        tempLogger->log("IthacaPluginProcessor/constructor", "info", 
+                       "SamplerManager created successfully");
+        
+        // Create audio engine (depends on both managers)
+        tempLogger->log("IthacaPluginProcessor/constructor", "info", 
+                       "Creating AudioProcessingEngine...");
+        audioEngine_ = std::make_unique<AudioProcessingEngine>(*samplerManager_, *parameterManager_);
+        tempLogger->log("IthacaPluginProcessor/constructor", "info", 
+                       "AudioProcessingEngine created successfully");
+        
+        pluginInitialized_ = true;
+        
+        tempLogger->log("IthacaPluginProcessor/constructor", "info", 
+                       "=== PLUGIN PROCESSOR INITIALIZATION COMPLETED ===");
+        tempLogger->log("IthacaPluginProcessor/constructor", "info", 
+                       "Plugin ready for prepareToPlay() call from DAW");
+        
+    } catch (const std::exception& e) {
+        tempLogger->log("IthacaPluginProcessor/constructor", "error", 
+                       "Exception during initialization: " + std::string(e.what()));
+        pluginInitialized_ = false;
+        
+    } catch (...) {
+        tempLogger->log("IthacaPluginProcessor/constructor", "error", 
+                       "Unknown exception during initialization");
+        pluginInitialized_ = false;
+    }
 }
 
 IthacaPluginProcessor::~IthacaPluginProcessor()
 {
-    logSafe("IthacaPluginProcessor/destructor", "info", "=== ITHACA PLUGIN SHUTTING DOWN ===");
+    // Create temporary logger for shutdown logging
+    auto tempLogger = std::make_unique<Logger>(".");
+    tempLogger->log("IthacaPluginProcessor/destructor", "info", 
+                   "=== ITHACA PLUGIN PROCESSOR SHUTTING DOWN ===");
     
-    // Cleanup VoiceManager first (stops all voices)
-    if (voiceManager_) {
-        voiceManager_->stopAllVoices();
-        voiceManager_->resetAllVoices(*logger_);
-        voiceManager_.reset();
-    }
+    // Cleanup in reverse order of creation
+    tempLogger->log("IthacaPluginProcessor/destructor", "info", 
+                   "Destroying AudioProcessingEngine...");
+    audioEngine_.reset();
     
-    // Cleanup envelope static data
-    EnvelopeStaticData::cleanup();
+    tempLogger->log("IthacaPluginProcessor/destructor", "info", 
+                   "Destroying SamplerManager...");
+    samplerManager_.reset();
     
-    logSafe("IthacaPluginProcessor/destructor", "info", "Plugin cleanup completed");
+    tempLogger->log("IthacaPluginProcessor/destructor", "info", 
+                   "Destroying ParameterManager...");
+    parameterManager_.reset();
+    
+    tempLogger->log("IthacaPluginProcessor/destructor", "info", 
+                   "=== PLUGIN PROCESSOR SHUTDOWN COMPLETED ===");
 }
 
 //==============================================================================
+// JUCE AudioProcessor Interface - Core Methods
+
+void IthacaPluginProcessor::prepareToPlay(double sampleRate, int samplesPerBlock)
+{
+    auto tempLogger = std::make_unique<Logger>(".");
+    tempLogger->log("IthacaPluginProcessor/prepareToPlay", "info", 
+                   "=== PREPARING AUDIO PROCESSING ===");
+    tempLogger->log("IthacaPluginProcessor/prepareToPlay", "info", 
+                   "Sample rate: " + std::to_string(sampleRate) + " Hz");
+    tempLogger->log("IthacaPluginProcessor/prepareToPlay", "info", 
+                   "Buffer size: " + std::to_string(samplesPerBlock) + " samples");
+    
+    if (!pluginInitialized_) {
+        tempLogger->log("IthacaPluginProcessor/prepareToPlay", "error", 
+                       "Plugin not properly initialized - cannot prepare for playback");
+        return;
+    }
+    
+    try {
+        // Delegate to audio engine
+        tempLogger->log("IthacaPluginProcessor/prepareToPlay", "info", 
+                       "Delegating to AudioProcessingEngine...");
+        audioEngine_->prepareToPlay(sampleRate, samplesPerBlock);
+        
+        tempLogger->log("IthacaPluginProcessor/prepareToPlay", "info", 
+                       "=== AUDIO PROCESSING READY ===");
+        
+    } catch (const std::exception& e) {
+        tempLogger->log("IthacaPluginProcessor/prepareToPlay", "error", 
+                       "Exception during prepareToPlay: " + std::string(e.what()));
+    } catch (...) {
+        tempLogger->log("IthacaPluginProcessor/prepareToPlay", "error", 
+                       "Unknown exception during prepareToPlay");
+    }
+}
+
+void IthacaPluginProcessor::releaseResources()
+{
+    auto tempLogger = std::make_unique<Logger>(".");
+    tempLogger->log("IthacaPluginProcessor/releaseResources", "info", 
+                   "=== RELEASING AUDIO RESOURCES ===");
+    
+    if (audioEngine_) {
+        audioEngine_->releaseResources();
+        tempLogger->log("IthacaPluginProcessor/releaseResources", "info", 
+                       "Audio resources released successfully");
+    } else {
+        tempLogger->log("IthacaPluginProcessor/releaseResources", "warn", 
+                       "AudioEngine not available - no resources to release");
+    }
+}
+
+void IthacaPluginProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midiMessages)
+{
+    // RT-SAFE: No logging in processBlock!
+    juce::ScopedNoDenormals noDenormals;
+    
+    if (!pluginInitialized_ || !audioEngine_) {
+        buffer.clear();
+        return;
+    }
+    
+    // Delegate to audio engine (RT-safe)
+    audioEngine_->processBlock(buffer, midiMessages);
+}
+
+bool IthacaPluginProcessor::isBusesLayoutSupported(const BusesLayout& layouts) const
+{
+    // We only support stereo output
+    auto mainOutput = layouts.getMainOutputChannelSet();
+    return (mainOutput == juce::AudioChannelSet::stereo());
+}
+
+//==============================================================================
+// JUCE AudioProcessor Interface - Editor Management
+
+bool IthacaPluginProcessor::hasEditor() const
+{
+    return true;
+}
+
+juce::AudioProcessorEditor* IthacaPluginProcessor::createEditor()
+{
+    auto tempLogger = std::make_unique<Logger>(".");
+    tempLogger->log("IthacaPluginProcessor/createEditor", "info", 
+                   "Creating plugin editor GUI");
+    
+    try {
+        auto* editor = new IthacaPluginEditor(*this);
+        tempLogger->log("IthacaPluginProcessor/createEditor", "info", 
+                       "Plugin editor created successfully");
+        return editor;
+        
+    } catch (const std::exception& e) {
+        tempLogger->log("IthacaPluginProcessor/createEditor", "error", 
+                       "Exception creating editor: " + std::string(e.what()));
+        return nullptr;
+        
+    } catch (...) {
+        tempLogger->log("IthacaPluginProcessor/createEditor", "error", 
+                       "Unknown exception creating editor");
+        return nullptr;
+    }
+}
+
+//==============================================================================
+// JUCE AudioProcessor Interface - Plugin Metadata
+
 const juce::String IthacaPluginProcessor::getName() const
 {
     return JucePlugin_Name;
@@ -70,6 +215,9 @@ double IthacaPluginProcessor::getTailLengthSeconds() const
     return 0.0;
 }
 
+//==============================================================================
+// JUCE AudioProcessor Interface - Program Management
+
 int IthacaPluginProcessor::getNumPrograms()
 {
     return 1;
@@ -80,331 +228,91 @@ int IthacaPluginProcessor::getCurrentProgram()
     return 0;
 }
 
-void IthacaPluginProcessor::setCurrentProgram (int index)
+void IthacaPluginProcessor::setCurrentProgram(int index)
 {
-    juce::ignoreUnused (index);
+    juce::ignoreUnused(index);
 }
 
-const juce::String IthacaPluginProcessor::getProgramName (int index)
+const juce::String IthacaPluginProcessor::getProgramName(int index)
 {
-    juce::ignoreUnused (index);
+    juce::ignoreUnused(index);
     return {};
 }
 
-void IthacaPluginProcessor::changeProgramName (int index, const juce::String& newName)
+void IthacaPluginProcessor::changeProgramName(int index, const juce::String& newName)
 {
-    juce::ignoreUnused (index, newName);
+    juce::ignoreUnused(index, newName);
 }
 
 //==============================================================================
-void IthacaPluginProcessor::prepareToPlay (double sampleRate, int samplesPerBlock)
+// JUCE AudioProcessor Interface - State Management
+
+void IthacaPluginProcessor::getStateInformation(juce::MemoryBlock& destData)
 {
-    logSafe("IthacaPluginProcessor/prepareToPlay", "info", "=== PREPARING AUDIO PROCESSING ===");
-    logSafe("IthacaPluginProcessor/prepareToPlay", "info", 
-           "Sample rate: " + std::to_string(sampleRate) + " Hz");
-    logSafe("IthacaPluginProcessor/prepareToPlay", "info", 
-           "Buffer size: " + std::to_string(samplesPerBlock) + " samples");
+    auto tempLogger = std::make_unique<Logger>(".");
+    tempLogger->log("IthacaPluginProcessor/getStateInformation", "info", 
+                   "Saving plugin state...");
     
-    currentSampleRate_ = sampleRate;
-    currentBlockSize_ = samplesPerBlock;
-    
-    // Initialize sampler if not already done
-    if (!samplerInitialized_) {
-        if (!initializeSampler()) {
-            logSafe("IthacaPluginProcessor/prepareToPlay", "error", 
-                   "Failed to initialize sampler - audio processing will be disabled");
-            return;
-        }
+    if (parameterManager_) {
+        parameterManager_->saveState(destData);
+        tempLogger->log("IthacaPluginProcessor/getStateInformation", "info", 
+                       "Plugin state saved successfully");
+    } else {
+        tempLogger->log("IthacaPluginProcessor/getStateInformation", "error", 
+                       "ParameterManager not available - cannot save state");
     }
-    
-    // Prepare VoiceManager for new sample rate/block size
-    if (voiceManager_) {
-        if (voiceManager_->getCurrentSampleRate() != static_cast<int>(sampleRate)) {
-            voiceManager_->changeSampleRate(static_cast<int>(sampleRate), *logger_);
-        }
-        voiceManager_->prepareToPlay(samplesPerBlock);
-        voiceManager_->setRealTimeMode(true); // Enable RT mode for audio processing
-        
-        logSafe("IthacaPluginProcessor/prepareToPlay", "info", "VoiceManager prepared successfully");
-    }
-    
-    logSafe("IthacaPluginProcessor/prepareToPlay", "info", "=== AUDIO PROCESSING READY ===");
 }
 
-void IthacaPluginProcessor::releaseResources()
+void IthacaPluginProcessor::setStateInformation(const void* data, int sizeInBytes)
 {
-    logSafe("IthacaPluginProcessor/releaseResources", "info", "=== RELEASING AUDIO RESOURCES ===");
+    auto tempLogger = std::make_unique<Logger>(".");
+    tempLogger->log("IthacaPluginProcessor/setStateInformation", "info", 
+                   "Loading plugin state (" + std::to_string(sizeInBytes) + " bytes)...");
     
-    if (voiceManager_) {
-        voiceManager_->setRealTimeMode(false); // Disable RT mode
-        voiceManager_->stopAllVoices();
-    }
-    
-    logSafe("IthacaPluginProcessor/releaseResources", "info", "Audio resources released");
-}
-
-bool IthacaPluginProcessor::isBusesLayoutSupported (const BusesLayout& layouts) const
-{
-    // We only support stereo output
-    auto mainOutput = layouts.getMainOutputChannelSet();
-    return (mainOutput == juce::AudioChannelSet::stereo());
-}
-
-void IthacaPluginProcessor::processBlock (juce::AudioBuffer<float>& buffer,
-                                          juce::MidiBuffer& midiMessages)
-{
-    juce::ScopedNoDenormals noDenormals;
-    
-    // Increment process block counter
-    processBlockCallCount_.fetch_add(1);
-    
-    // Clear output buffer
-    buffer.clear();
-    
-    // Early exit if sampler not initialized
-    if (!samplerInitialized_ || !voiceManager_) {
-        return;
-    }
-    
-    // Update sampler parameters from JUCE parameters - RT-SAFE VERSION
-    updateSamplerParametersRTSafe();
-    
-    // Process MIDI events
-    processMidiEvents(midiMessages);
-    
-    // Process audio through VoiceManager
-    const int numSamples = buffer.getNumSamples();
-    const int numChannels = buffer.getNumChannels();
-    
-    if (numChannels >= 2 && numSamples > 0) {
-        float* leftChannel = buffer.getWritePointer(0);
-        float* rightChannel = buffer.getWritePointer(1);
-        
-        // Process audio block through IthacaCore VoiceManager
-        voiceManager_->processBlockUninterleaved(leftChannel, rightChannel, numSamples);
+    if (parameterManager_) {
+        parameterManager_->loadState(data, sizeInBytes);
+        tempLogger->log("IthacaPluginProcessor/setStateInformation", "info", 
+                       "Plugin state loaded successfully");
+    } else {
+        tempLogger->log("IthacaPluginProcessor/setStateInformation", "error", 
+                       "ParameterManager not available - cannot load state");
     }
 }
 
 //==============================================================================
-bool IthacaPluginProcessor::hasEditor() const
-{
-    return true;
-}
+// Public API Implementation
 
-juce::AudioProcessorEditor* IthacaPluginProcessor::createEditor()
+SamplerManager::SamplerStats IthacaPluginProcessor::getSamplerStats() const
 {
-    logSafe("IthacaPluginProcessor/createEditor", "info", "Creating plugin editor");
-    return new IthacaPluginEditor (*this);
-}
-
-//==============================================================================
-void IthacaPluginProcessor::getStateInformation (juce::MemoryBlock& destData)
-{
-    // Save plugin state
-    auto state = parameters_.copyState();
-    std::unique_ptr<juce::XmlElement> xml (state.createXml());
-    copyXmlToBinary (*xml, destData);
-    
-    logSafe("IthacaPluginProcessor/getStateInformation", "info", "Plugin state saved");
-}
-
-void IthacaPluginProcessor::setStateInformation (const void* data, int sizeInBytes)
-{
-    // Load plugin state
-    std::unique_ptr<juce::XmlElement> xmlState (getXmlFromBinary (data, sizeInBytes));
-    
-    if (xmlState.get() != nullptr) {
-        if (xmlState->hasTagName (parameters_.state.getType())) {
-            parameters_.replaceState (juce::ValueTree::fromXml (*xmlState));
-            logSafe("IthacaPluginProcessor/setStateInformation", "info", "Plugin state loaded");
-        }
+    if (samplerManager_) {
+        return samplerManager_->getStats();
     }
-}
-
-//==============================================================================
-// IthacaCore specific methods
-
-IthacaPluginProcessor::SamplerStats IthacaPluginProcessor::getSamplerStats() const
-{
-    SamplerStats stats;
-    
-    if (voiceManager_) {
-        stats.activeVoices = voiceManager_->getActiveVoicesCount();
-        stats.sustainingVoices = voiceManager_->getSustainingVoicesCount();
-        stats.releasingVoices = voiceManager_->getReleasingVoicesCount();
-        stats.currentSampleRate = voiceManager_->getCurrentSampleRate();
-        // Note: totalLoadedSamples would need to be exposed from InstrumentLoader
-    }
-    
-    return stats;
+    return SamplerManager::SamplerStats{};
 }
 
 void IthacaPluginProcessor::changeSampleDirectory(const juce::String& newPath)
 {
-    if (newPath == currentSampleDirectory_) {
-        return; // No change needed
-    }
+    auto tempLogger = std::make_unique<Logger>(".");
+    tempLogger->log("IthacaPluginProcessor/changeSampleDirectory", "info", 
+                   "Changing sample directory to: " + newPath.toStdString());
     
-    logSafe("IthacaPluginProcessor/changeSampleDirectory", "info", 
-           "Changing sample directory to: " + newPath.toStdString());
-    
-    currentSampleDirectory_ = newPath;
-    
-    // Reinitialize sampler with new directory
-    samplerInitialized_ = false;
-    
-    if (currentSampleRate_ > 0 && currentBlockSize_ > 0) {
-        initializeSampler();
-    }
-}
-
-//==============================================================================
-// Private methods
-
-bool IthacaPluginProcessor::initializeSampler()
-{
-    try {
-        logSafe("IthacaPluginProcessor/initializeSampler", "info", "Initializing IthacaCore sampler...");
-        
-        // Initialize envelope static data first
-        if (!EnvelopeStaticData::isInitialized()) {
-            if (!EnvelopeStaticData::initialize(*logger_)) {
-                logSafe("IthacaPluginProcessor/initializeSampler", "error", 
-                       "Failed to initialize envelope static data");
-                return false;
-            }
+    if (samplerManager_) {
+        bool success = samplerManager_->changeSampleDirectory(newPath);
+        if (success) {
+            tempLogger->log("IthacaPluginProcessor/changeSampleDirectory", "info", 
+                           "Sample directory changed successfully");
+        } else {
+            tempLogger->log("IthacaPluginProcessor/changeSampleDirectory", "error", 
+                           "Failed to change sample directory");
         }
-        
-        // Create VoiceManager with exception handling
-        try {
-            voiceManager_ = std::make_unique<VoiceManager>(currentSampleDirectory_.toStdString(), *logger_);
-        } catch (const std::exception& e) {
-            logSafe("IthacaPluginProcessor/initializeSampler", "error", 
-                   "Failed to create VoiceManager: " + std::string(e.what()));
-            return false;
-        }
-        
-        // Initialize system with exception handling
-        try {
-            voiceManager_->initializeSystem(*logger_);
-            voiceManager_->loadForSampleRate(static_cast<int>(currentSampleRate_), *logger_);
-        } catch (const std::exception& e) {
-            logSafe("IthacaPluginProcessor/initializeSampler", "error", 
-                   "Failed to initialize sampler system: " + std::string(e.what()));
-            voiceManager_.reset();  // Clean up on failure
-            return false;
-        }
-        
-        // Prepare for current block size
-        if (currentBlockSize_ > 0) {
-            voiceManager_->prepareToPlay(currentBlockSize_);
-        }
-        
-        samplerInitialized_ = true;
-        
-        logSafe("IthacaPluginProcessor/initializeSampler", "info", "Sampler initialized successfully");
-        voiceManager_->logSystemStatistics(*logger_);
-        
-        return true;
-        
-    } catch (const std::exception& e) {
-        logSafe("IthacaPluginProcessor/initializeSampler", "error", 
-               "Exception during sampler initialization: " + std::string(e.what()));
-        return false;
-    } catch (...) {
-        logSafe("IthacaPluginProcessor/initializeSampler", "error", 
-               "Unknown exception during sampler initialization");
-        return false;
-    }
-}
-
-void IthacaPluginProcessor::processMidiEvents(const juce::MidiBuffer& midiMessages)
-{
-    if (!voiceManager_) return;
-    
-    for (const auto& midiMetadata : midiMessages) {
-        auto message = midiMetadata.getMessage();
-        totalMidiEventsProcessed_.fetch_add(1);
-        
-        if (message.isNoteOn()) {
-            uint8_t midiNote = static_cast<uint8_t>(message.getNoteNumber());
-            uint8_t velocity = static_cast<uint8_t>(message.getVelocity());
-            voiceManager_->setNoteStateMIDI(midiNote, true, velocity);
-        }
-        else if (message.isNoteOff()) {
-            uint8_t midiNote = static_cast<uint8_t>(message.getNoteNumber());
-            voiceManager_->setNoteStateMIDI(midiNote, false);
-        }
-        // Add other MIDI message types as needed (CC, pitch bend, etc.)
-    }
-}
-
-juce::AudioProcessorValueTreeState::ParameterLayout IthacaPluginProcessor::createParameterLayout()
-{
-    std::vector<std::unique_ptr<juce::RangedAudioParameter>> parameters;
-    
-    // OPRAVA: Modernizovaný JUCE AudioParameterFloat s novým API
-    parameters.push_back(std::make_unique<juce::AudioParameterFloat>(
-        juce::ParameterID("masterGain", 1),    // ZMĚNA: použít ParameterID
-        "Master Gain",
-        juce::NormalisableRange<float>(0.0f, 127.0f, 1.0f),
-        100.0f,
-        juce::AudioParameterFloatAttributes()  // ZMĚNA: použít Attributes
-            .withStringFromValueFunction([](float value, int) { 
-                return juce::String(static_cast<int>(value)); 
-            })
-    ));
-    
-    parameters.push_back(std::make_unique<juce::AudioParameterFloat>(
-        juce::ParameterID("masterPan", 1),     // ZMĚNA: použít ParameterID
-        "Master Pan",
-        juce::NormalisableRange<float>(-64.0f, 63.0f, 1.0f),
-        0.0f,
-        juce::AudioParameterFloatAttributes()  // ZMĚNA: použít Attributes
-            .withStringFromValueFunction([](float value, int) { 
-                if (value < 0) return "L" + juce::String(static_cast<int>(-value));
-                else if (value > 0) return "R" + juce::String(static_cast<int>(value));
-                else return juce::String("Center");
-            })
-    ));
-    
-    return { parameters.begin(), parameters.end() };
-}
-
-void IthacaPluginProcessor::updateSamplerParametersRTSafe()
-{
-    if (!voiceManager_) return;
-    
-    // RT-SAFE version - bez loggingu
-    if (masterGainParam_) {
-        uint8_t midiGain = static_cast<uint8_t>(masterGainParam_->load());
-        float gain = midiGain / 127.0f;
-        
-        // Použít RT-safe metodu pro nastavení gain všem voices
-        for (int i = 0; i < 128; ++i) {
-            auto& voice = voiceManager_->getVoiceMIDI(static_cast<uint8_t>(i));
-            voice.setMasterGainRTSafe(gain);
-        }
-    }
-    
-    // Update master pan - již RT-safe
-    if (masterPanParam_) {
-        float panValue = masterPanParam_->load();
-        uint8_t midiPan = static_cast<uint8_t>(panValue + 64.0f);
-        voiceManager_->setAllVoicesPanMIDI(midiPan);
-    }
-}
-
-void IthacaPluginProcessor::logSafe(const std::string& component, const std::string& severity, 
-                                   const std::string& message) const
-{
-    if (logger_) {
-        logger_->log(component, severity, message);
+    } else {
+        tempLogger->log("IthacaPluginProcessor/changeSampleDirectory", "error", 
+                       "SamplerManager not available");
     }
 }
 
 //==============================================================================
-// This creates new instances of the plugin
+// Plugin Factory
 juce::AudioProcessor* JUCE_CALLTYPE createPluginFilter()
 {
     return new IthacaPluginProcessor();

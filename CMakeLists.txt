@@ -36,48 +36,56 @@ juce_generate_juce_header(IthacaPlayer)
 # SPRÁVNĚ: target_sources místo add_executable
 target_sources(IthacaPlayer
     PRIVATE
-        # JUCE Plugin Framework - NOVÉ SOUBORY
+        # JUCE Plugin Framework - REFACTORED ARCHITECTURE
         IthacaPluginProcessor.cpp
         IthacaPluginProcessor.h
         IthacaPluginEditor.cpp  
         IthacaPluginEditor.h
         
+        # REFACTORED COMPONENT MANAGERS
+        ParameterManager.cpp
+        ParameterManager.h
+        SamplerManager.cpp
+        SamplerManager.h
+        AudioProcessingEngine.cpp
+        AudioProcessingEngine.h
+       
         # Configuration
         IthacaConfig.h
-        
+       
         # IthacaCore - Core Logger module
         sampler/core_logger.cpp
         sampler/core_logger.h
-        
+       
         # IthacaCore - SamplerIO module  
         sampler/sampler_io.cpp
-        
+       
         # IthacaCore - Sampler coordinator module
         sampler/sampler.cpp
         sampler/sampler.h
-        
+       
         # IthacaCore - InstrumentLoader module
         sampler/instrument_loader.cpp
         sampler/instrument_loader.h
-
+        
         # IthacaCore - Wav exporter
         sampler/wav_file_exporter.cpp
         sampler/wav_file_exporter.h
-
+        
         # IthacaCore - Voice module
         sampler/voice.cpp
         sampler/voice.h
-        
+       
         # IthacaCore - VoiceManager module
         sampler/voice_manager.cpp
         sampler/voice_manager.h
-
+        
         # IthacaCore - Envelopes (ADSR/ASR)
         sampler/envelopes/envelope.cpp
         sampler/envelopes/envelope.h
         sampler/envelopes/envelope_static_data.cpp
         sampler/envelopes/envelope_static_data.h
-
+        
         # IthacaCore - Tests (optional - can be excluded for release)
         sampler/tests/test_helpers.cpp
         sampler/tests/test_helpers.h
