@@ -5,9 +5,9 @@
 #include <memory>
 
 // IthacaCore includes
-#include "voice_manager.h"
-#include "envelopes/envelope_static_data.h"
-#include "core_logger.h"
+#include "ithaca-core/sampler/voice_manager.h"
+#include "ithaca-core/sampler/envelopes/envelope_static_data.h"
+#include "ithaca-core/sampler/core_logger.h"
 
 //==============================================================================
 /**

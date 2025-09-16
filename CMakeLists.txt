@@ -46,43 +46,43 @@ target_sources(IthacaPlayer
         IthacaConfig.h
         
         # IthacaCore - Core Logger module
-        sampler/core_logger.cpp
-        sampler/core_logger.h
+        ithaca-core/sampler/core_logger.cpp
+        ithaca-core/sampler/core_logger.h
         
         # IthacaCore - SamplerIO module  
-        sampler/sampler_io.cpp
+        ithaca-core/sampler/sampler_io.cpp
         
         # IthacaCore - Sampler coordinator module
-        sampler/sampler.cpp
-        sampler/sampler.h
+        ithaca-core/sampler/sampler.cpp
+        ithaca-core/sampler/sampler.h
         
         # IthacaCore - InstrumentLoader module
-        sampler/instrument_loader.cpp
-        sampler/instrument_loader.h
+        ithaca-core/sampler/instrument_loader.cpp
+        ithaca-core/sampler/instrument_loader.h
 
         # IthacaCore - Wav exporter
-        sampler/wav_file_exporter.cpp
-        sampler/wav_file_exporter.h
+        ithaca-core/sampler/wav_file_exporter.cpp
+        ithaca-core/sampler/wav_file_exporter.h
 
         # IthacaCore - Voice module
-        sampler/voice.cpp
-        sampler/voice.h
+        ithaca-core/sampler/voice.cpp
+        ithaca-core/sampler/voice.h
         
         # IthacaCore - VoiceManager module
-        sampler/voice_manager.cpp
-        sampler/voice_manager.h
+        ithaca-core/sampler/voice_manager.cpp
+        ithaca-core/sampler/voice_manager.h
 
         # IthacaCore - Envelopes (ADSR/ASR)
-        sampler/envelopes/envelope.cpp
-        sampler/envelopes/envelope.h
-        sampler/envelopes/envelope_static_data.cpp
-        sampler/envelopes/envelope_static_data.h
+        ithaca-core/sampler/envelopes/envelope.cpp
+        ithaca-core/sampler/envelopes/envelope.h
+        ithaca-core/sampler/envelopes/envelope_static_data.cpp
+        ithaca-core/sampler/envelopes/envelope_static_data.h
 
         # IthacaCore - Tests (optional - can be excluded for release)
-        sampler/tests/test_helpers.cpp
-        sampler/tests/test_helpers.h
-        sampler/tests/tests.cpp
-        sampler/tests/tests.h
+        ithaca-core/sampler/tests/test_helpers.cpp
+        ithaca-core/sampler/tests/test_helpers.h
+        ithaca-core/sampler/tests/tests.cpp
+        ithaca-core/sampler/tests/tests.h
 )
 
 # Include directories
