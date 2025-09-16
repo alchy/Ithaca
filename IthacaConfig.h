@@ -54,15 +54,13 @@
 
 // Platform-specific default paths
 #ifdef _WIN32
-    #define ITHACA_DEFAULT_SAMPLE_DIR_VARIANT           R"(C:\Users\jindr\AppData\Roaming\IthacaPlayer\instrument)"
-    #define ITHACA_DEFAULT_SAMPLE_DIR   R"(C:\Users\nemej992\AppData\Roaming\IthacaPlayer\instrument)"
-    #define ITHACA_FALLBACK_SAMPLE_DIR          R"(C:\ProgramData\IthacaPlayer\samples)"
+    #define ITHACA_DEFAULT_SAMPLE_DIR   R"(C:\SoundBanks\IthacaPlayer\instrument)"
 #elif __APPLE__
-    #define ITHACA_DEFAULT_SAMPLE_DIR "~/Library/Application Support/IthacaPlayer/instrument"
-    #define ITHACA_FALLBACK_SAMPLE_DIR "/Library/Application Support/IthacaPlayer/samples"
+    #define ITHACA_DEFAULT_SAMPLE_DIR   "~/Library/Application Support/IthacaPlayer/instrument"
+    #define ITHACA_FALLBACK_SAMPLE_DIR  "/Library/Application Support/IthacaPlayer/samples"
 #else
-    #define ITHACA_DEFAULT_SAMPLE_DIR "~/.local/share/IthacaPlayer/instrument"
-    #define ITHACA_FALLBACK_SAMPLE_DIR "/usr/share/IthacaPlayer/samples"
+    #define ITHACA_DEFAULT_SAMPLE_DIR   "~/.local/share/IthacaPlayer/instrument"
+    #define ITHACA_FALLBACK_SAMPLE_DIR  "/usr/share/IthacaPlayer/samples"
 #endif
 
 // ===== JUCE PLUGIN INTEGRATION =====

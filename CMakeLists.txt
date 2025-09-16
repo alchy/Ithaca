@@ -36,14 +36,19 @@ juce_generate_juce_header(IthacaPlayer)
 # SPRÁVNĚ: target_sources místo add_executable
 target_sources(IthacaPlayer
     PRIVATE
+
+        # Configuration
+        IthacaConfig.h
+        
+        # Binary data
+        decorators/BinaryData.cpp
+        decorators/BinaryData.h
+
         # JUCE Plugin Framework - NOVÉ SOUBORY
         IthacaPluginProcessor.cpp
         IthacaPluginProcessor.h
         IthacaPluginEditor.cpp  
         IthacaPluginEditor.h
-        
-        # Configuration
-        IthacaConfig.h
         
         # IthacaCore - Core Logger module
         ithaca-core/sampler/core_logger.cpp
