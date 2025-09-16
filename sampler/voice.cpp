@@ -200,14 +200,13 @@ bool Voice::calculateBlockGains(float* gainBuffer, int numSamples) noexcept {
     
     switch (state_) {
         case VoiceState::Attacking: {
-            std::cout << "-> getAttackGains";
-            // ZMĚNA: Přidán sample_rate_ parametr pro delegaci
+            // Přidán sample_rate_ parametr pro delegaci
             bool attackContinues = envelope_->getAttackGains(gainBuffer, numSamples, 
                                                            envelope_attack_position_, sampleRate_);
             
             envelope_attack_position_ += numSamples;
             
-            // Zkontroluj dokončení attack
+            // Dokončení attack
             if (!attackContinues || gainBuffer[numSamples - 1] >= 0.95f) {
                 state_ = VoiceState::Sustaining;
                 // Dokončit blok sustain hodnotami
@@ -232,8 +231,7 @@ bool Voice::calculateBlockGains(float* gainBuffer, int numSamples) noexcept {
         }
         
         case VoiceState::Releasing: {
-            std::cout << "-> getReleaseGains";
-            // ZMĚNA: Přidán sample_rate_ parametr pro delegaci
+            // Přidán sample_rate_ parametr pro delegaci
             bool releaseContinues = envelope_->getReleaseGains(gainBuffer, numSamples, 
                                                              envelope_release_position_, sampleRate_);
             
