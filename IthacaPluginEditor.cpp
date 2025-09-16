@@ -1,6 +1,6 @@
 /**
  * @file IthacaPluginEditor.cpp
- * @brief Implementace GUI editoru pro IthacaPlugin s opraveným vykreslováním komponent přes obrázek v pozadí.
+ * @brief Implementace GUI editoru pro IthacaPlugin s obrázekem v pozadí.
  */
 
 #include "IthacaPluginEditor.h"
@@ -21,8 +21,8 @@ IthacaPluginEditor::IthacaPluginEditor (IthacaPluginProcessor& p)
     // Embedovaný obrázek z BinaryData (načtení a nastavení)
     juce::Image image = juce::ImageCache::getFromMemory(BinaryData::ithacaplayer1_jpg, BinaryData::ithacaplayer1_jpgSize);
     imageComponent.setImage(image);
-    imageComponent.setImagePlacement(juce::RectanglePlacement::stretchToFit); // Roztáhni na celou plochu
-    imageComponent.setInterceptsMouseClicks(false, false); // Neblokuje interakce s overlay komponentami
+    imageComponent.setImagePlacement(juce::RectanglePlacement::stretchToFit);       // Roztáhni na celou plochu
+    imageComponent.setInterceptsMouseClicks(false, false);                          // Neblokuje interakce s overlay komponentami
     addAndMakeVisible(imageComponent);
     
     // Přidat základní komponenty (bez bounds, ty se nastaví v resized())
@@ -244,8 +244,8 @@ std::unique_ptr<juce::Label> IthacaPluginEditor::createLabel(const juce::String&
     auto label = std::make_unique<juce::Label>();
     label->setText(text, juce::dontSendNotification);
     label->setJustificationType(justification);
-    label->setColour(juce::Label::textColourId, juce::Colours::white); // Bílý text pro čitelnost
-    label->setColour(juce::Label::backgroundColourId, juce::Colours::black.withAlpha(0.8f)); // Vyšší alpha pro viditelnost
+    label->setColour(juce::Label::textColourId, juce::Colours::white);                          // Bílý text pro čitelnost
+    label->setColour(juce::Label::backgroundColourId, juce::Colours::black.withAlpha(0.8f));    // Vyšší alpha pro viditelnost
     label->setFont(juce::FontOptions(12.0f));
     return label;
 }
@@ -267,7 +267,7 @@ void IthacaPluginEditor::updateLabelText(juce::Label* label, const juce::String&
 
 IthacaPluginEditor::VoiceActivityComponent::VoiceActivityComponent()
 {
-    // PRÁZDNÉ - nebudeme vytvářet
+    // PRÁZDNÉ
 }
 
 void IthacaPluginEditor::VoiceActivityComponent::paint(juce::Graphics& g)

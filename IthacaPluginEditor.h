@@ -5,8 +5,8 @@
 
 //==============================================================================
 /**
- * @class IthacaPluginEditor - ROZŠÍŘENÁ VERZE s minimalistickým GUI
- * @brief Základní GUI editor pro IthacaCore sampler plugin s real-time monitoring
+ * @class IthacaPluginEditor - VERZE s minimalistickým GUI
+ * @brief Základní GUI editor pro IthacaCore sampler plugin s real-time monitoringem
  */
 class IthacaPluginEditor final : public juce::AudioProcessorEditor,
                                  private juce::Timer
