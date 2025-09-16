@@ -1,12 +1,14 @@
 #pragma once
 
 #include "IthacaPluginProcessor.h"
-#include <juce_gui_basics/juce_gui_basics.h>
+#include "decorators/BinaryData.h"
 
-//==============================================================================
+#include <juce_gui_basics/juce_gui_basics.h>
+#include <juce_graphics/juce_graphics.h>
+
 /**
- * @class IthacaPluginEditor - Stabilní verze s real-time voice monitoring
- * @brief GUI editor pro IthacaCore sampler plugin s konfigurovatelnou stabilitou
+ * @class IthacaPluginEditor
+ * @brief GUI editor pro IthacaCore sampler plugin s real-time voice monitoring a obrázkovým pozadím.
  */
 class IthacaPluginEditor final : public juce::AudioProcessorEditor,
                                  private juce::Timer
@@ -15,100 +17,75 @@ public:
     explicit IthacaPluginEditor (IthacaPluginProcessor&);
     ~IthacaPluginEditor() override;
 
-    //==============================================================================
     void paint (juce::Graphics&) override;
     void resized() override;
-    void parentHierarchyChanged() override; // Pro bezpečné spuštění timeru
+    void parentHierarchyChanged() override;
 
 private:
-    // Reference to processor
     IthacaPluginProcessor& processorRef;
-
-    //==============================================================================
-    // GUI UPDATE TIMING
     int timerCallCounter = 0;
 
-    //==============================================================================
-    // MAIN GUI COMPONENTS
-    
-    // Status display
+    // ===== GUI Components =====
     std::unique_ptr<juce::Label> engineStatusLabel;
     std::unique_ptr<juce::Label> sampleRateLabel;
     std::unique_ptr<juce::Label> totalSamplesLabel;
-    
-    // Voice counters
+
     std::unique_ptr<juce::Label> activeVoicesLabel;
     std::unique_ptr<juce::Label> sustainingVoicesLabel;
     std::unique_ptr<juce::Label> releasingVoicesLabel;
-    
-    // Master controls display
+
     std::unique_ptr<juce::Label> masterGainLabel;
     std::unique_ptr<juce::Label> masterPanLabel;
-    
-    // Sample directory info
+
     std::unique_ptr<juce::Label> sampleDirLabel;
 
-    //==============================================================================
-    // Voice Activity Grid Component - FORWARD DECLARATION
-    class VoiceActivityComponent; // Forward declaration
-    std::unique_ptr<VoiceActivityComponent> voiceActivityGrid;
+    // Obrázkový komponent pro pozadí
+    std::unique_ptr<juce::ImageComponent> imageComponent;
 
-    //==============================================================================
-    // Timer callback for updates
-    void timerCallback() override;
-    
-    // Setup methods
-    void setupMainComponents();
-    void setupLabels();
-    void setupVoiceActivityGrid();
-    
-    // Update methods
-    void updateStatsDisplay();      // ~3fps updates
-    void updateVoiceActivityDisplay(); // 30fps updates
-    void updateMasterControlsDisplay();
-    
-    //==============================================================================
-    // Voice Activity Grid Component - FULL DEFINITION
+    // ===== Voice Activity Grid Component - FULL DEFINITION =====
     class VoiceActivityComponent : public juce::Component
     {
     public:
         VoiceActivityComponent();
         void paint (juce::Graphics& g) override;
         void resized() override;
-        
-        void updateVoiceStates(int active, int sustaining, int releasing);
-        void setVoiceState(uint8_t midiNote, bool isActive, int voiceState); // 0=idle, 1=attack, 2=sustaining, 3=releasing
-        
+
+        void updateVoiceStates (int active, int sustaining, int releasing);
+        void setVoiceState (uint8_t midiNote, bool isActive, int voiceState);
+
     private:
-        static constexpr int GRID_COLS = 16; // 16 columns
-        static constexpr int GRID_ROWS = 8;  // 8 rows = 128 notes
+        static constexpr int GRID_COLS = 16;
+        static constexpr int GRID_ROWS = 8;
         static constexpr int CELL_SIZE = 12;
         static constexpr int CELL_PADDING = 1;
-        
-        // Voice states: 0=idle, 1=attack, 2=sustaining, 3=releasing
-        std::array<int, 128> voiceStates{};
-        
-        // Rate limiting for stability
-        juce::uint32 lastRepaintTime;
-        
-        // Helper methods
-        juce::Rectangle<int> getCellBounds(int row, int col) const;
-        juce::Colour getStateColour(int state) const;
-        int getMidiNoteFromGrid(int row, int col) const;
+
+        std::array<int, 128> voiceStates {};
+        juce::uint32 lastRepaintTime = 0;
+
+        juce::Rectangle<int> getCellBounds (int row, int col) const;
+        juce::Colour getStateColour (int state) const;
+        int getMidiNoteFromGrid (int row, int col) const;
     };
 
-    //==============================================================================
-    // Helper methods
-    std::unique_ptr<juce::Label> createLabel(const juce::String& text, 
-                                           juce::Justification justification = juce::Justification::centredLeft);
-    void updateLabelText(juce::Label* label, const juce::String& newText);
-    
-    // Color scheme (white theme)
-    static constexpr juce::uint32 BG_COLOR = 0xffffffff;          // White background  
-    static constexpr juce::uint32 TEXT_COLOR = 0xff333333;        // Dark gray text
-    static constexpr juce::uint32 ACCENT_COLOR = 0xff0066cc;      // Blue accent
-    static constexpr juce::uint32 BORDER_COLOR = 0xffcccccc;      // Light gray borders
+    std::unique_ptr<VoiceActivityComponent> voiceActivityGrid;
 
-    //==============================================================================
+    // ===== Internal Methods =====
+    void timerCallback() override;
+    void setupMainComponents();
+    void setupLabels();
+    void setupVoiceActivityGrid();
+    void updateStatsDisplay();
+    void updateVoiceActivityDisplay();
+    void updateMasterControlsDisplay();
+
+    std::unique_ptr<juce::Label> createLabel (const juce::String& text,
+                                              juce::Justification justification = juce::Justification::centredLeft);
+    void updateLabelText (juce::Label* label, const juce::String& newText);
+
+    static constexpr juce::uint32 BG_COLOR = 0xffffffff;
+    static constexpr juce::uint32 TEXT_COLOR = 0xff333333;
+    static constexpr juce::uint32 ACCENT_COLOR = 0xff0066cc;
+    static constexpr juce::uint32 BORDER_COLOR = 0xffcccccc;
+
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (IthacaPluginEditor)
 };
