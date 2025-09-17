@@ -35,8 +35,8 @@ juce_generate_juce_header(IthacaPlayer)
 
 # SPRÁVNĚ: target_sources místo add_executable
 target_sources(IthacaPlayer
-    PRIVATE
 
+    PRIVATE
         # Configuration
         IthacaConfig.h
         
