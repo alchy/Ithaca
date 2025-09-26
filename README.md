@@ -337,3 +337,8 @@ Get-Content -Path "C:\Users\nemej992\Documents\Repos\IthacaCore\build\Debug\Debu
 Get-Content -Path "C:\Users\nemej992\Documents\Repos\IthacaCore\build\Debug\Debug\core_logger\core_logger.log" -Tail 10 -Wait | Where-Object { $_ -like "*Envelope/*" }
 ```
 
+# Build
+
+```
+C:\Users\Jindra\Documents\Repos\Ithaca\build\IthacaPlayer_artefacts\Debug\Standalone\IthacaPlayer.exe
+```
