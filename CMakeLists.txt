@@ -86,6 +86,8 @@ target_sources(IthacaPlayer
         # IthacaCore - Pan
         ithaca-core/sampler/pan.cpp
         ithaca-core/sampler/pan.h
+        ithaca-core/sampler/lfopan.cpp
+        ithaca-core/sampler/lfopan.h
 
         # IthacaCore - Tests (optional - can be excluded for release)
         ithaca-core/sampler/tests/test_helpers.cpp
