@@ -129,6 +129,17 @@ private:
     std::atomic<float>* lfoPanSpeedParam_ = nullptr;
     std::atomic<float>* lfoPanDepthParam_ = nullptr;
     
+    // ===== CHANGE DETECTION =====
+    // Cached hodnoty pro detekci změn - eliminuje zbytečné VoiceManager volání
+    
+    uint8_t lastMasterGain_ = 100;
+    uint8_t lastMasterPan_ = 64;
+    uint8_t lastAttack_ = 0;
+    uint8_t lastRelease_ = 4;
+    uint8_t lastSustainLevel_ = 127;
+    uint8_t lastLfoPanSpeed_ = 0;
+    uint8_t lastLfoPanDepth_ = 0;
+    
     // ===== HELPER METHODS =====
     
     /**

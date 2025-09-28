@@ -77,51 +77,79 @@ void ParameterManager::updateSamplerParametersRTSafe(VoiceManager* voiceManager,
         return;
     }
     
-    // RT-SAFE version - bez loggingu, používá VoiceManager API
+    // RT-SAFE version s CHANGE DETECTION - eliminuje zbytečné volání
     
-    // Master Gain (0-127 MIDI value)
+    // Master Gain - pouze při změně
     if (masterGainParam_) {
-        uint8_t midiGain = getCurrentMasterGain();
-        // POZOR: setAllVoicesMasterGainMIDI není RT-safe (má logging)
-        // Pro RT použití by bylo lepší mít RT-safe verzi
-        // Pro nyní ponecháme, ale je třeba upravit VoiceManager API
-        voiceManager->setAllVoicesMasterGainMIDI(midiGain, logger);
+        uint8_t currentGain = getCurrentMasterGain();
+        if (currentGain != lastMasterGain_) {
+            lastMasterGain_ = currentGain;
+            // PROBLÉM: setAllVoicesMasterGainMIDI má logging - není RT-safe!
+            // Potřebujeme RT-safe verzi nebo vlastní implementaci
+            // Pro nyní komentujeme problematické volání
+            // voiceManager->setAllVoicesMasterGainMIDI(currentGain, logger);
+            
+            // DOČASNÉ RT-SAFE ŘEŠENÍ: Přímé nastavení všem voices
+            for (int i = 0; i < 128; ++i) {
+                auto& voice = voiceManager->getVoiceMIDI(static_cast<uint8_t>(i));
+                float gain = currentGain / 127.0f;
+                voice.setMasterGainRTSafe(gain);
+            }
+        }
     }
     
-    // Master Pan (MIDI value: 0-127, kde 64 = center)
+    // Master Pan - pouze při změně (RT-safe)
     if (masterPanParam_) {
-        uint8_t midiPan = getCurrentMasterPan();
-        voiceManager->setAllVoicesPanMIDI(midiPan); // RT-safe
+        uint8_t currentPan = getCurrentMasterPan();
+        if (currentPan != lastMasterPan_) {
+            lastMasterPan_ = currentPan;
+            voiceManager->setAllVoicesPanMIDI(currentPan); // RT-safe
+        }
     }
     
-    // Attack Time (0-127 MIDI value)
+    // Attack Time - pouze při změně (RT-safe)
     if (attackParam_) {
-        uint8_t midiAttack = getCurrentAttack();
-        voiceManager->setAllVoicesAttackMIDI(midiAttack); // RT-safe
+        uint8_t currentAttack = getCurrentAttack();
+        if (currentAttack != lastAttack_) {
+            lastAttack_ = currentAttack;
+            voiceManager->setAllVoicesAttackMIDI(currentAttack); // RT-safe
+        }
     }
     
-    // Release Time (0-127 MIDI value)
+    // Release Time - pouze při změně (RT-safe)
     if (releaseParam_) {
-        uint8_t midiRelease = getCurrentRelease();
-        voiceManager->setAllVoicesReleaseMIDI(midiRelease); // RT-safe
+        uint8_t currentRelease = getCurrentRelease();
+        if (currentRelease != lastRelease_) {
+            lastRelease_ = currentRelease;
+            voiceManager->setAllVoicesReleaseMIDI(currentRelease); // RT-safe
+        }
     }
     
-    // Sustain Level (0-127 MIDI value)
+    // Sustain Level - pouze při změně (RT-safe)
     if (sustainLevelParam_) {
-        uint8_t midiSustain = getCurrentSustainLevel();
-        voiceManager->setAllVoicesSustainLevelMIDI(midiSustain); // RT-safe
+        uint8_t currentSustain = getCurrentSustainLevel();
+        if (currentSustain != lastSustainLevel_) {
+            lastSustainLevel_ = currentSustain;
+            voiceManager->setAllVoicesSustainLevelMIDI(currentSustain); // RT-safe
+        }
     }
     
-    // LFO Pan Speed (0-127 MIDI value)
+    // LFO Pan Speed - pouze při změně (RT-safe)
     if (lfoPanSpeedParam_) {
-        uint8_t midiSpeed = getCurrentLfoPanSpeed();
-        voiceManager->setAllVoicesPanSpeedMIDI(midiSpeed); // RT-safe
+        uint8_t currentSpeed = getCurrentLfoPanSpeed();
+        if (currentSpeed != lastLfoPanSpeed_) {
+            lastLfoPanSpeed_ = currentSpeed;
+            voiceManager->setAllVoicesPanSpeedMIDI(currentSpeed); // RT-safe
+        }
     }
     
-    // LFO Pan Depth (0-127 MIDI value)
+    // LFO Pan Depth - pouze při změně (RT-safe)
     if (lfoPanDepthParam_) {
-        uint8_t midiDepth = getCurrentLfoPanDepth();
-        voiceManager->setAllVoicesPanDepthMIDI(midiDepth); // RT-safe
+        uint8_t currentDepth = getCurrentLfoPanDepth();
+        if (currentDepth != lastLfoPanDepth_) {
+            lastLfoPanDepth_ = currentDepth;
+            voiceManager->setAllVoicesPanDepthMIDI(currentDepth); // RT-safe
+        }
     }
 }
 
