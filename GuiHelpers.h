@@ -1,93 +1,48 @@
-#ifndef GUI_HELPERS_H
-#define GUI_HELPERS_H
+/**
+ * @file GuiHelpers.h
+ * @brief GUI helper funkce pro vytváření komponent a styling
+ */
+
+#pragma once
 
 #include <juce_gui_basics/juce_gui_basics.h>
-#include <memory>
-#include "ParameterDefaults.h"
+#include "GuiConstants.h"
 
-//==============================================================================
-/**
- * @class GuiHelpers
- * @brief Factory functions for creating consistent GUI components
- */
-class GuiHelpers
-{
+class GuiHelpers {
 public:
-    //==============================================================================
-    // SLIDER CREATION
-    
-    /**
-     * @brief Create horizontal slider without text box
-     */
+    // ZMĚNA: Horizontální slidery místo vertikálních
     static std::unique_ptr<juce::Slider> createCompactSlider(
-        double min = MIDI_MIN_VALUE, 
-        double max = MIDI_MAX_VALUE, 
-        double defaultVal = 64.0, 
-        double interval = MIDI_STEP_VALUE);
+        double min, double max, double defaultVal, double interval = 1.0);
     
-    /**
-     * @brief Apply consistent styling to slider based on mode
-     */
-    static void styleSlider(juce::Slider& slider, bool debugMode = false);
+    // ZACHOVAT: Původní styling logiku
+    static void styleSlider(juce::Slider& slider, bool debugMode);
     
-    //==============================================================================
-    // LABEL CREATION
+    // ZACHOVAT: Původní label styling
+    static std::unique_ptr<juce::Label> createSliderLabel(const juce::String& text, bool debugMode = false);
+    static std::unique_ptr<juce::Label> createSmallLabel(const juce::String& text, bool debugMode = false);
+    static std::unique_ptr<juce::Label> createInfoLabel(const juce::String& text, bool debugMode = false);
     
-    /**
-     * @brief Create label for slider controls
-     */
-    static std::unique_ptr<juce::Label> createSliderLabel(const juce::String& text);
+    // Layout helpers pro horizontální uspořádání
+    static void positionHorizontalSliderWithLabel(juce::Rectangle<int>& area, 
+                                                  juce::Label* label, 
+                                                  juce::Slider* slider);
     
-    /**
-     * @brief Create small info label
-     */
-    static std::unique_ptr<juce::Label> createInfoLabel(const juce::String& text);
+    static juce::Rectangle<int> layoutTwoColumnSliders(
+        juce::Rectangle<int> totalArea, 
+        juce::Rectangle<int>& leftColumn, 
+        juce::Rectangle<int>& rightColumn);
     
-    /**
-     * @brief Apply consistent styling to label based on mode
-     */
-    static void styleLabel(juce::Label& label, bool isSliderLabel = false, bool debugMode = false);
+    // ZACHOVAT: Původní overlay vykreslování
+    static void applyControlAreaOverlay(juce::Graphics& g, juce::Rectangle<int> area);
+    static void applyDebugBackground(juce::Graphics& g, juce::Rectangle<int> area);
     
-    //==============================================================================
-    // LAYOUT HELPERS
+    // Debug mode detection
+    static bool isDebugModeEnabled();
     
-    /**
-     * @brief Position slider with label in area
-     * @param area Area to remove space from
-     * @param label Label to position (can be nullptr)
-     * @param slider Slider to position (can be nullptr)
-     */
-    static void positionSliderWithLabel(juce::Rectangle<int>& area, 
-                                       juce::Label* label, 
-                                       juce::Slider* slider);
-    
-    /**
-     * @brief Position info label in area
-     * @param area Area to remove space from
-     * @param label Label to position
-     * @param spacing Extra spacing after label
-     */
-    static void positionInfoLabel(juce::Rectangle<int>& area, 
-                                 juce::Label* label, 
-                                 int spacing = 4);
+    // Text update helper
+    static void updateLabelText(juce::Label* label, const juce::String& newText);
 
 private:
-    GuiHelpers() = delete; // Static class
+    // Disable instantiation
+    GuiHelpers() = delete;
 };
-
-//==============================================================================
-/**
- * @class DebugHelper
- * @brief Debug output helper with conditional compilation
- */
-class DebugHelper
-{
-public:
-    static void print(const juce::String& message);
-    static void setDebugMode(bool enabled) { debugEnabled = enabled; }
-    
-private:
-    static bool debugEnabled;
-};
-
-#endif // GUI_HELPERS_H
