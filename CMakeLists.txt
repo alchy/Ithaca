@@ -43,6 +43,9 @@ target_sources(IthacaPlayer
         # Binary data
         decorators/BinaryData.cpp
         decorators/BinaryData.h
+        
+        # JUCE - MIDI Control (Centralized)
+        MidiCCDefinitions.h
 
         # JUCE - Plugin Framework (IthacaPluginProcessor)  
         IthacaPluginProcessor.cpp

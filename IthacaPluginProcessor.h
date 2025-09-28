@@ -18,6 +18,9 @@
 // Parameter management
 #include "ParameterManager.h"
 
+// MIDI CC definitions
+#include "MidiCCDefinitions.h"
+
 //==============================================================================
 /**
  * @class IthacaPluginProcessor (Refactored)
@@ -171,9 +174,17 @@ private:
     /**
      * @brief Process MIDI events from JUCE MidiBuffer
      * @param midiMessages MIDI buffer from processBlock
-     * @note RT-safe: no allocations
+     * @note RT-safe: no allocations, includes MIDI CC support
      */
     void processMidiEvents(const juce::MidiBuffer& midiMessages);
+    
+    /**
+     * @brief Process MIDI Control Change messages for parameter automation
+     * @param ccNumber MIDI CC number (0-127)
+     * @param ccValue MIDI CC value (0-127)
+     * @note RT-safe: directly updates parameters via JUCE system
+     */
+    void processMidiControlChange(uint8_t ccNumber, uint8_t ccValue);
     
     /**
      * @brief Safe logging wrapper for non-RT operations

@@ -323,8 +323,57 @@ void IthacaPluginProcessor::processMidiEvents(const juce::MidiBuffer& midiMessag
             uint8_t midiNote = static_cast<uint8_t>(message.getNoteNumber());
             voiceManager_->setNoteStateMIDI(midiNote, false);
         }
-        // Add other MIDI message types as needed (CC, pitch bend, etc.)
+        else if (message.isController()) {
+            // MIDI Control Change processing for parameter automation
+            uint8_t ccNumber = static_cast<uint8_t>(message.getControllerNumber());
+            uint8_t ccValue = static_cast<uint8_t>(message.getControllerValue());
+            processMidiControlChange(ccNumber, ccValue);
+        }
+        // Future: můžeme přidat pitch bend, aftertouch, etc.
     }
+}
+
+void IthacaPluginProcessor::processMidiControlChange(uint8_t ccNumber, uint8_t ccValue)
+{
+#if ENABLE_MIDI_CC_PROCESSING
+    // RT-SAFE: Používá centralizované MIDI CC definice z MidiCCDefinitions.h
+    // Přímo nastavuje parameter hodnoty pro GUI sync a host automation
+    
+    // Najdi parameter ID pro daný CC number
+    const char* parameterID = MidiCC::getParameterIDForCC(ccNumber);
+    if (!parameterID) {
+        // Neznámý CC - ignorujeme pro performance
+#if ENABLE_MIDI_CC_LOGGING
+        // Logging pouze v debug módu a ne v RT kontextu
+        static_cast<void>(ccNumber); // Suppress unused warning in release
+#endif
+        return;
+    }
+    
+    // Získej JUCE parameter
+    auto* param = parameters_.getParameter(parameterID);
+    if (!param) {
+        return;
+    }
+    
+    // Konverze hodnoty podle typu parametru
+    float normalizedValue;
+    
+    if (ccNumber == MidiCC::MASTER_PAN) {
+        // Speciální konverze pro pan parameter
+        normalizedValue = MidiCC::ccPanToNormalized(ccValue);
+    } else {
+        // Standardní konverze pro ostatní parametry
+        normalizedValue = MidiCC::ccValueToNormalized(ccValue);
+    }
+    
+    // Nastav parameter hodnotu s host notification
+    param->setValueNotifyingHost(normalizedValue);
+    
+#else
+    // MIDI CC processing je vypnuté
+    juce::ignoreUnused(ccNumber, ccValue);
+#endif
 }
 
 void IthacaPluginProcessor::logSafe(const std::string& component, const std::string& severity, 
