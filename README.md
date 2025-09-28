@@ -6,7 +6,7 @@ pri note-off to lupne pokud je nota jeste v attack phase
 # IthacaCore: C++ Audio Sampler Engine
 
 ## Popis projektu
-IthacaCore je profesionální audio sampler engine napsaný v C++17, navržený pro efektivní zpracování WAV souborů a polyfonní přehrávání s ADSR obálkou. Projekt je modulární, podporuje thread-safe logování, načítání WAV souborů do paměti jako stereo float buffery a koordinaci polyfonního přehrávání. Klíčové moduly zahrnují `Logger`, `SamplerIO`, `InstrumentLoader`, `Voice`, `VoiceManager`, `Envelope` a `WavExporter`. Systém je optimalizován pro integraci do audio pluginů nebo standalone aplikací, s důrazem na RT-safe operace a JUCE-ready formát.
+IthacaCore je audio sampler engine napsaný v C++17, navržený pro efektivní zpracování WAV souborů a polyfonní přehrávání s ADSR obálkou. Projekt je modulární, podporuje thread-safe logování, načítání WAV souborů do paměti jako stereo float buffery a koordinaci polyfonního přehrávání. Klíčové moduly zahrnují `Logger`, `SamplerIO`, `InstrumentLoader`, `Voice`, `VoiceManager`, `Envelope` a `WavExporter`. Systém je optimalizován pro integraci do audio pluginů nebo standalone aplikací, s důrazem na RT-safe operace a JUCE-ready formát.
 
 **Klíčové vlastnosti:**
 - Thread-safe logování do souboru (`core_logger/core_logger.log`).

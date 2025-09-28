@@ -30,7 +30,7 @@ juce_add_plugin(IthacaPlayer
     FORMATS AU VST3 Standalone                  
     PRODUCT_NAME "IthacaPlayer")                
 
-# Generate JUCE header
+# Generate JUCE header 
 juce_generate_juce_header(IthacaPlayer)
 
 # SPRÁVNĚ: target_sources místo add_executable
