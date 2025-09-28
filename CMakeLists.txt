@@ -83,6 +83,12 @@ target_sources(IthacaPlayer
         ithaca-core/sampler/envelopes/envelope_static_data.cpp
         ithaca-core/sampler/envelopes/envelope_static_data.h
 
+        # IthacaCore - Pan
+        ithaca-core/sampler/pan.cpp
+        ithaca-core/sampler/pan.h
+        ithaca-core/sampler/lfopan.cpp
+        ithaca-core/sampler/lfopan.h
+
         # IthacaCore - Tests (optional - can be excluded for release)
         ithaca-core/sampler/tests/test_helpers.cpp
         ithaca-core/sampler/tests/test_helpers.h
