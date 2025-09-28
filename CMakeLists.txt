@@ -44,20 +44,26 @@ target_sources(IthacaPlayer
         decorators/BinaryData.cpp
         decorators/BinaryData.h
 
-        # JUCE - Plugin Framework
+        # JUCE - Plugin Framework (IthacaPluginProcessor)  
         IthacaPluginProcessor.cpp
         IthacaPluginProcessor.h
+
+        # JUCE - Parameter Management (IthacaPluginProcessor)
+        ParameterManager.h
+        ParameterManager.cpp
+
+        # JUCE - Plugin Framework (IthacaPluginEditor)
         IthacaPluginEditor.cpp  
         IthacaPluginEditor.h
 
-        # JUCE - GUI Helper
+        # JUCE - GUI Helper (IthacaPluginEditor)
         GuiConstants.h
         GuiHelpers.h
         GuiHelpers.cpp
         ParameterAttachmentManager.h
         ParameterAttachmentManager.cpp
 
-        # JUCE - Specialized GUI Components
+        # JUCE - Specialized GUI Components (IthacaPluginEditor)
         SliderPanelComponent.h
         SliderPanelComponent.cpp
         InfoPanelComponent.h

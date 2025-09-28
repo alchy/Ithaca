@@ -1,30 +1,41 @@
+/**
+ * @file IthacaPluginProcessor.cpp (Refactored)
+ * @brief Zjednodušená implementace procesoru s delegací na ParameterManager
+ */
+
 #include "IthacaPluginProcessor.h"
 #include "IthacaPluginEditor.h"
 
 //==============================================================================
+// Constructor - Zjednodušený s delegací parameter managementu
+
 IthacaPluginProcessor::IthacaPluginProcessor()
-     : AudioProcessor (BusesProperties()
-                       .withOutput ("Output", juce::AudioChannelSet::stereo(), true)),
-       parameters_(*this, nullptr, juce::Identifier("IthacaParameters"), createParameterLayout()),
-       samplerInitialized_(false),
-       currentSampleRate_(0.0),
-       currentBlockSize_(0),
-       processBlockCallCount_(0),
-       totalMidiEventsProcessed_(0)
+    : AudioProcessor(BusesProperties()
+                    .withOutput("Output", juce::AudioChannelSet::stereo(), true)),
+      parameters_(*this, nullptr, juce::Identifier("IthacaParameters"), 
+                 ParameterManager::createParameterLayout()), // DELEGACE: parameter layout
+      samplerInitialized_(false),
+      currentSampleRate_(0.0),
+      currentBlockSize_(0),
+      processBlockCallCount_(0),
+      totalMidiEventsProcessed_(0)
 {
-    // Initialize parameter pointers
-    masterGainParam_ = parameters_.getRawParameterValue("masterGain");
-    masterPanParam_ = parameters_.getRawParameterValue("masterPan");
-    
     // Initialize logger
     logger_ = std::make_unique<Logger>(".");
     logSafe("IthacaPluginProcessor/constructor", "info", "=== ITHACA PLUGIN STARTING ===");
     
-    // Set default sample directory - use the same as IthacaCore
+    // DELEGACE: Initialize parameter pointers through ParameterManager
+    if (!parameterManager_.initializeParameterPointers(parameters_)) {
+        logSafe("IthacaPluginProcessor/constructor", "error", 
+               "Failed to initialize parameter pointers");
+    }
+    
+    // Set default sample directory
     currentSampleDirectory_ = DEFAULT_SAMPLE_DIR;
     
     logSafe("IthacaPluginProcessor/constructor", "info", "Plugin initialized");
-    logSafe("IthacaPluginProcessor/constructor", "info", "Default sample directory: " + currentSampleDirectory_.toStdString());
+    logSafe("IthacaPluginProcessor/constructor", "info", 
+           "Default sample directory: " + currentSampleDirectory_.toStdString());
 }
 
 IthacaPluginProcessor::~IthacaPluginProcessor()
@@ -45,59 +56,32 @@ IthacaPluginProcessor::~IthacaPluginProcessor()
 }
 
 //==============================================================================
+// JUCE AudioProcessor Interface - Unchanged
+
 const juce::String IthacaPluginProcessor::getName() const
 {
     return JucePlugin_Name;
 }
 
-bool IthacaPluginProcessor::acceptsMidi() const
-{
-    return true;
-}
+bool IthacaPluginProcessor::acceptsMidi() const { return true; }
+bool IthacaPluginProcessor::producesMidi() const { return false; }
+bool IthacaPluginProcessor::isMidiEffect() const { return false; }
+double IthacaPluginProcessor::getTailLengthSeconds() const { return 0.0; }
 
-bool IthacaPluginProcessor::producesMidi() const
-{
-    return false;
+int IthacaPluginProcessor::getNumPrograms() { return 1; }
+int IthacaPluginProcessor::getCurrentProgram() { return 0; }
+void IthacaPluginProcessor::setCurrentProgram(int index) { juce::ignoreUnused(index); }
+const juce::String IthacaPluginProcessor::getProgramName(int index) { 
+    juce::ignoreUnused(index); return {}; 
 }
-
-bool IthacaPluginProcessor::isMidiEffect() const
-{
-    return false;
-}
-
-double IthacaPluginProcessor::getTailLengthSeconds() const
-{
-    return 0.0;
-}
-
-int IthacaPluginProcessor::getNumPrograms()
-{
-    return 1;
-}
-
-int IthacaPluginProcessor::getCurrentProgram()
-{
-    return 0;
-}
-
-void IthacaPluginProcessor::setCurrentProgram (int index)
-{
-    juce::ignoreUnused (index);
-}
-
-const juce::String IthacaPluginProcessor::getProgramName (int index)
-{
-    juce::ignoreUnused (index);
-    return {};
-}
-
-void IthacaPluginProcessor::changeProgramName (int index, const juce::String& newName)
-{
-    juce::ignoreUnused (index, newName);
+void IthacaPluginProcessor::changeProgramName(int index, const juce::String& newName) { 
+    juce::ignoreUnused(index, newName); 
 }
 
 //==============================================================================
-void IthacaPluginProcessor::prepareToPlay (double sampleRate, int samplesPerBlock)
+// Audio Processing Pipeline - Simplified with delegation
+
+void IthacaPluginProcessor::prepareToPlay(double sampleRate, int samplesPerBlock)
 {
     logSafe("IthacaPluginProcessor/prepareToPlay", "info", "=== PREPARING AUDIO PROCESSING ===");
     logSafe("IthacaPluginProcessor/prepareToPlay", "info", 
@@ -143,15 +127,15 @@ void IthacaPluginProcessor::releaseResources()
     logSafe("IthacaPluginProcessor/releaseResources", "info", "Audio resources released");
 }
 
-bool IthacaPluginProcessor::isBusesLayoutSupported (const BusesLayout& layouts) const
+bool IthacaPluginProcessor::isBusesLayoutSupported(const BusesLayout& layouts) const
 {
     // We only support stereo output
     auto mainOutput = layouts.getMainOutputChannelSet();
     return (mainOutput == juce::AudioChannelSet::stereo());
 }
 
-void IthacaPluginProcessor::processBlock (juce::AudioBuffer<float>& buffer,
-                                          juce::MidiBuffer& midiMessages)
+void IthacaPluginProcessor::processBlock(juce::AudioBuffer<float>& buffer,
+                                         juce::MidiBuffer& midiMessages)
 {
     juce::ScopedNoDenormals noDenormals;
     
@@ -166,8 +150,8 @@ void IthacaPluginProcessor::processBlock (juce::AudioBuffer<float>& buffer,
         return;
     }
     
-    // Update sampler parameters from JUCE parameters - RT-SAFE VERSION
-    updateSamplerParametersRTSafe();
+    // DELEGACE: RT-safe parameter update through ParameterManager
+    parameterManager_.updateSamplerParametersRTSafe(voiceManager_.get(), *logger_);
     
     // Process MIDI events
     processMidiEvents(midiMessages);
@@ -186,6 +170,8 @@ void IthacaPluginProcessor::processBlock (juce::AudioBuffer<float>& buffer,
 }
 
 //==============================================================================
+// Editor Management - Unchanged
+
 bool IthacaPluginProcessor::hasEditor() const
 {
     return true;
@@ -194,35 +180,37 @@ bool IthacaPluginProcessor::hasEditor() const
 juce::AudioProcessorEditor* IthacaPluginProcessor::createEditor()
 {
     logSafe("IthacaPluginProcessor/createEditor", "info", "Creating plugin editor");
-    return new IthacaPluginEditor (*this);
+    return new IthacaPluginEditor(*this);
 }
 
 //==============================================================================
-void IthacaPluginProcessor::getStateInformation (juce::MemoryBlock& destData)
+// State Management - Unchanged
+
+void IthacaPluginProcessor::getStateInformation(juce::MemoryBlock& destData)
 {
     // Save plugin state
     auto state = parameters_.copyState();
-    std::unique_ptr<juce::XmlElement> xml (state.createXml());
-    copyXmlToBinary (*xml, destData);
+    std::unique_ptr<juce::XmlElement> xml(state.createXml());
+    copyXmlToBinary(*xml, destData);
     
     logSafe("IthacaPluginProcessor/getStateInformation", "info", "Plugin state saved");
 }
 
-void IthacaPluginProcessor::setStateInformation (const void* data, int sizeInBytes)
+void IthacaPluginProcessor::setStateInformation(const void* data, int sizeInBytes)
 {
     // Load plugin state
-    std::unique_ptr<juce::XmlElement> xmlState (getXmlFromBinary (data, sizeInBytes));
+    std::unique_ptr<juce::XmlElement> xmlState(getXmlFromBinary(data, sizeInBytes));
     
     if (xmlState.get() != nullptr) {
-        if (xmlState->hasTagName (parameters_.state.getType())) {
-            parameters_.replaceState (juce::ValueTree::fromXml (*xmlState));
+        if (xmlState->hasTagName(parameters_.state.getType())) {
+            parameters_.replaceState(juce::ValueTree::fromXml(*xmlState));
             logSafe("IthacaPluginProcessor/setStateInformation", "info", "Plugin state loaded");
         }
     }
 }
 
 //==============================================================================
-// IthacaCore specific methods
+// IthacaCore Integration - Simplified
 
 IthacaPluginProcessor::SamplerStats IthacaPluginProcessor::getSamplerStats() const
 {
@@ -259,7 +247,7 @@ void IthacaPluginProcessor::changeSampleDirectory(const juce::String& newPath)
 }
 
 //==============================================================================
-// Private methods
+// Private Methods - Unchanged implementation
 
 bool IthacaPluginProcessor::initializeSampler()
 {
@@ -336,62 +324,6 @@ void IthacaPluginProcessor::processMidiEvents(const juce::MidiBuffer& midiMessag
             voiceManager_->setNoteStateMIDI(midiNote, false);
         }
         // Add other MIDI message types as needed (CC, pitch bend, etc.)
-    }
-}
-
-juce::AudioProcessorValueTreeState::ParameterLayout IthacaPluginProcessor::createParameterLayout()
-{
-    std::vector<std::unique_ptr<juce::RangedAudioParameter>> parameters;
-    
-    // OPRAVA: Modernizovaný JUCE AudioParameterFloat s novým API
-    parameters.push_back(std::make_unique<juce::AudioParameterFloat>(
-        juce::ParameterID("masterGain", 1),    // ZMĚNA: použít ParameterID
-        "Master Gain",
-        juce::NormalisableRange<float>(0.0f, 127.0f, 1.0f),
-        100.0f,
-        juce::AudioParameterFloatAttributes()  // ZMĚNA: použít Attributes
-            .withStringFromValueFunction([](float value, int) { 
-                return juce::String(static_cast<int>(value)); 
-            })
-    ));
-    
-    parameters.push_back(std::make_unique<juce::AudioParameterFloat>(
-        juce::ParameterID("masterPan", 1),     // ZMĚNA: použít ParameterID
-        "Master Pan",
-        juce::NormalisableRange<float>(-64.0f, 63.0f, 1.0f),
-        0.0f,
-        juce::AudioParameterFloatAttributes()  // ZMĚNA: použít Attributes
-            .withStringFromValueFunction([](float value, int) { 
-                if (value < 0) return "L" + juce::String(static_cast<int>(-value));
-                else if (value > 0) return "R" + juce::String(static_cast<int>(value));
-                else return juce::String("Center");
-            })
-    ));
-    
-    return { parameters.begin(), parameters.end() };
-}
-
-void IthacaPluginProcessor::updateSamplerParametersRTSafe()
-{
-    if (!voiceManager_) return;
-    
-    // RT-SAFE version - bez loggingu
-    if (masterGainParam_) {
-        uint8_t midiGain = static_cast<uint8_t>(masterGainParam_->load());
-        float gain = midiGain / 127.0f;
-        
-        // Použít RT-safe metodu pro nastavení gain všem voices
-        for (int i = 0; i < 128; ++i) {
-            auto& voice = voiceManager_->getVoiceMIDI(static_cast<uint8_t>(i));
-            voice.setMasterGainRTSafe(gain);
-        }
-    }
-    
-    // Update master pan - již RT-safe
-    if (masterPanParam_) {
-        float panValue = masterPanParam_->load();
-        uint8_t midiPan = static_cast<uint8_t>(panValue + 64.0f);
-        voiceManager_->setAllVoicesPanMIDI(midiPan);
     }
 }
 
