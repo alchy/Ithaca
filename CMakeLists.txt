@@ -44,11 +44,24 @@ target_sources(IthacaPlayer
         decorators/BinaryData.cpp
         decorators/BinaryData.h
 
-        # JUCE Plugin Framework - NOVÉ SOUBORY
+        # JUCE - Plugin Framework
         IthacaPluginProcessor.cpp
         IthacaPluginProcessor.h
         IthacaPluginEditor.cpp  
         IthacaPluginEditor.h
+
+        # JUCE - GUI Helper
+        GuiConstants.h
+        GuiHelpers.h
+        GuiHelpers.cpp
+        ParameterAttachmentManager.h
+        ParameterAttachmentManager.cpp
+
+        # JUCE - Specialized GUI Components
+        SliderPanelComponent.h
+        SliderPanelComponent.cpp
+        InfoPanelComponent.h
+        InfoPanelComponent.cpp
         
         # IthacaCore - Core Logger module
         ithaca-core/sampler/core_logger.cpp
