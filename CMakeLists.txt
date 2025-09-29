@@ -93,6 +93,7 @@ target_sources(IthacaPlayer
 
         # IthacaCore - Voice module
         ithaca-core/sampler/voice.cpp
+        ithaca-core/sampler/voice_processing.cpp
         ithaca-core/sampler/voice.h
         
         # IthacaCore - VoiceManager module
