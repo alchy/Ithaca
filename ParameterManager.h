@@ -108,6 +108,12 @@ public:
      * @return MIDI hodnota 0-127
      */
     uint8_t getCurrentLfoPanDepth() const;
+
+    /**
+     * @brief Získej aktuální hodnotu stereo field
+     * @return MIDI hodnota 0-127
+     */
+    uint8_t getCurrentStereoField() const;
     
     // ===== VALIDATION =====
     
@@ -128,6 +134,7 @@ private:
     std::atomic<float>* sustainLevelParam_ = nullptr;
     std::atomic<float>* lfoPanSpeedParam_ = nullptr;
     std::atomic<float>* lfoPanDepthParam_ = nullptr;
+    std::atomic<float>* stereoFieldParam_ = nullptr;
     
     // ===== CHANGE DETECTION =====
     // Cached hodnoty pro detekci změn - eliminuje zbytečné VoiceManager volání
@@ -139,6 +146,7 @@ private:
     uint8_t lastSustainLevel_ = 127;
     uint8_t lastLfoPanSpeed_ = 0;
     uint8_t lastLfoPanDepth_ = 0;
+    uint8_t lastStereoField_ = 0;
     
     // ===== HELPER METHODS =====
     

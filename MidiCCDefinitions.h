@@ -33,6 +33,9 @@ namespace MidiCC {
     // LFO Controls (Extended Sound Controller range)
     constexpr uint8_t LFO_PAN_SPEED = 74;   // Sound Controller 5 (LFO Speed)
     constexpr uint8_t LFO_PAN_DEPTH = 75;   // Sound Controller 6 (LFO Depth)
+
+    // Stereo field
+    constexpr uint8_t STEREO_FIELD = 76;   // Sound Controller 7 (Stereo Field)
     
     // ===== ALTERNATIVE CC ASSIGNMENTS =====
     
@@ -82,7 +85,8 @@ namespace MidiCC {
         {RELEASE, "release", "Release", "Envelope release time (CC 72)"},
         {SUSTAIN_LEVEL, "sustainLevel", "Sustain Level", "Envelope sustain level (CC 71)"},
         {LFO_PAN_SPEED, "lfoPanSpeed", "LFO Pan Speed", "Auto-pan LFO speed (CC 74)"},
-        {LFO_PAN_DEPTH, "lfoPanDepth", "LFO Pan Depth", "Auto-pan LFO depth (CC 75)"}
+        {LFO_PAN_DEPTH, "lfoPanDepth", "LFO Pan Depth", "Auto-pan LFO depth (CC 75)"},
+        {STEREO_FIELD, "stereoField", "Stereo Field", "Piano stereo width simulation (CC 76)"} 
     };
     
     /**

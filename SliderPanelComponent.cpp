@@ -91,6 +91,7 @@ void SliderPanelComponent::setupAllControls()
     createMasterControls();
     createADSRControls();
     createLFOControls();
+    createStereoFieldControls();
     
     GUI_DEBUG("SliderPanelComponent: All controls setup completed");
 }
@@ -198,6 +199,23 @@ void SliderPanelComponent::createLFOControls()
     }
 }
 
+void SliderPanelComponent::createStereoFieldControls()
+{
+    // === STEREO FIELD ===
+    stereoFieldLabel = GuiHelpers::createSliderLabel("Stereo Field", debugMode_);
+    if (stereoFieldLabel) {
+        addAndMakeVisible(stereoFieldLabel.get());
+        GUI_DEBUG("SliderPanelComponent: stereoFieldLabel created");
+    }
+    
+    stereoFieldSlider = GuiHelpers::createCompactSlider(0.0, 127.0, 0.0, 1.0);
+    if (stereoFieldSlider) {
+        stereoFieldSlider->addListener(this);
+        addAndMakeVisible(stereoFieldSlider.get());
+        GUI_DEBUG("SliderPanelComponent: stereoFieldSlider created (horizontal)");
+    }
+}
+
 void SliderPanelComponent::setupSliderAttachments()
 {
     GUI_DEBUG("SliderPanelComponent: Setting up slider attachments - START");
@@ -211,6 +229,7 @@ void SliderPanelComponent::setupSliderAttachments()
     sliderSet.sustainLevel = sustainLevelSlider.get();
     sliderSet.lfoPanSpeed = lfoPanSpeedSlider.get();
     sliderSet.lfoPanDepth = lfoPanDepthSlider.get();
+    sliderSet.stereoField = stereoFieldSlider.get(); 
     
     // Vytvoř všechny attachments
     bool success = attachmentManager_.createAllAttachments(parameters_, sliderSet);
@@ -259,6 +278,16 @@ void SliderPanelComponent::layoutBackgroundMode(juce::Rectangle<int> bounds)
     if (lfoPanDepthSlider) {
         lfoPanDepthSlider->setBounds(rightColumn.removeFromTop(20)); // Menší výška
     }
+
+    rightColumn.removeFromTop(4); // Extra spacing
+    if (stereoFieldLabel) {
+        stereoFieldLabel->setBounds(rightColumn.removeFromTop(14));
+        rightColumn.removeFromTop(1);
+    }
+    if (stereoFieldSlider) {
+        stereoFieldSlider->setBounds(rightColumn.removeFromTop(20));
+    }
+
     
     GUI_DEBUG("SliderPanelComponent: Background mode layout completed");
 }
@@ -284,6 +313,11 @@ void SliderPanelComponent::layoutDebugMode(juce::Rectangle<int> bounds)
     // LFO
     GuiHelpers::positionHorizontalSliderWithLabel(slidersArea, lfoPanSpeedLabel.get(), lfoPanSpeedSlider.get());
     GuiHelpers::positionHorizontalSliderWithLabel(slidersArea, lfoPanDepthLabel.get(), lfoPanDepthSlider.get());
+
+    slidersArea.removeFromTop(8); // Section spacing
+    
+    // Stereo Field
+    GuiHelpers::positionHorizontalSliderWithLabel(slidersArea, stereoFieldLabel.get(), stereoFieldSlider.get());
     
     GUI_DEBUG("SliderPanelComponent: Debug mode layout completed");
 }

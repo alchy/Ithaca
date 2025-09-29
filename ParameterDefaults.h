@@ -15,6 +15,7 @@
 #define DEFAULT_SUSTAIN_LEVEL       127  // Výchozí úroveň udržení (sustain)
 #define DEFAULT_LFO_PAN_SPEED       32   // Výchozí rychlost LFO pro panorama
 #define DEFAULT_LFO_PAN_DEPTH       127  // Výchozí hloubka LFO pro panorama
+#define DEFAULT_STEREO_FIELD        0    // Výchozí stereo field (vypnuto)
 
 // === ROZSAHY PARAMETRŮ ===
 // Definují rozsahy hodnot pro MIDI parametry
@@ -31,6 +32,7 @@
 #define PARAM_ID_SUSTAIN_LEVEL      "sustainLevel"
 #define PARAM_ID_LFO_PAN_SPEED      "lfoPanSpeed"
 #define PARAM_ID_LFO_PAN_DEPTH      "lfoPanDepth"
+#define PARAM_ID_STEREO_FIELD       "stereoField"
 
 // === NÁZVY PARAMETRŮ ===
 // Uživatelsky přívětivé názvy pro GUI
@@ -41,6 +43,7 @@
 #define PARAM_NAME_SUSTAIN_LEVEL    "Sustain Level"
 #define PARAM_NAME_LFO_PAN_SPEED    "LFO Pan Speed"
 #define PARAM_NAME_LFO_PAN_DEPTH    "LFO Pan Depth"
+#define PARAM_NAME_STEREO_FIELD     "Stereo Field"
 
 // === MAPOVÁNÍ MIDI CC ===
 // MIDI Control Change čísla pro ovládání parametrů
@@ -53,6 +56,7 @@
 #define CC_LFO_PAN_DEPTH            21  // Vlastní MIDI CC pro hloubku LFO
 #define CC_ALL_SOUND_OFF            120 // MIDI CC pro vypnutí všech zvuků
 #define CC_ALL_NOTES_OFF            123 // MIDI CC pro vypnutí všech not
+#define CC_STEREO_FIELD             76  // MIDI CC pro stereo field (Sound Controller 7)
 
 // === ROZMÍSTĚNÍ GUI ===
 // Rozměry a mezery pro GUI komponenty (slidery a labely)

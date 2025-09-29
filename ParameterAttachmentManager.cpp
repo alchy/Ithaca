@@ -82,6 +82,14 @@ bool ParameterAttachmentManager::createAllAttachments(
     } else if (sliders.lfoPanDepth) {
         GUI_DEBUG("ParameterAttachmentManager: WARNING - lfoPanDepth parameter not found!");
     }
+
+    // Stereo Field
+    if (sliders.stereoField && createAttachment(parameters, "stereoField", sliders.stereoField)) {
+        successCount++;
+        GUI_DEBUG("ParameterAttachmentManager: stereoField attachment created");
+    } else if (sliders.stereoField) {
+        GUI_DEBUG("ParameterAttachmentManager: WARNING - stereoField parameter not found!");
+    }
     
     GUI_DEBUG("ParameterAttachmentManager: Attachments completed - " << successCount 
               << "/" << attachments_.size() << " attachments created successfully");

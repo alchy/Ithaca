@@ -30,7 +30,7 @@ private:
     // Reference k parametrům
     juce::AudioProcessorValueTreeState& parameters_;
     
-    // ZMĚNA: Všechny slidery horizontální (LinearHorizontal)
+    // Všechny slidery horizontální (LinearHorizontal)
     // Master controls
     std::unique_ptr<juce::Slider> masterGainSlider;
     std::unique_ptr<juce::Label> masterGainLabel;
@@ -50,6 +50,10 @@ private:
     std::unique_ptr<juce::Label> lfoPanSpeedLabel;
     std::unique_ptr<juce::Slider> lfoPanDepthSlider;
     std::unique_ptr<juce::Label> lfoPanDepthLabel;
+
+    // Stereo Field
+    std::unique_ptr<juce::Slider> stereoFieldSlider;
+    std::unique_ptr<juce::Label> stereoFieldLabel;
     
     // Parameter attachments manager
     ParameterAttachmentManager attachmentManager_;
@@ -69,6 +73,7 @@ private:
     void createMasterControls();
     void createADSRControls();
     void createLFOControls();
+    void createStereoFieldControls();
     
     // Disable copy
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(SliderPanelComponent)

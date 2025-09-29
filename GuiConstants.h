@@ -53,6 +53,7 @@ namespace GuiConstants {
         constexpr const char* SUSTAIN_LABEL = "Sustain";
         constexpr const char* LFO_SPEED_LABEL = "LFO Speed";
         constexpr const char* LFO_DEPTH_LABEL = "LFO Depth";
+        constexpr const char* STEREO_FIELD_LABEL = "Stereo Field";
         
         constexpr const char* ACTIVE_VOICES_PREFIX = "Active: ";
         constexpr const char* SUSTAINING_VOICES_PREFIX = "Sustaining: ";

@@ -34,6 +34,9 @@ juce::AudioProcessorValueTreeState::ParameterLayout ParameterManager::createPara
     
     // LFO Pan Depth (0-127, default 0 = no effect)
     parameters.push_back(createMidiParameter("lfoPanDepth", "LFO Pan Depth", 0.0f));
+
+    // Stereo Field (0-127, default 0 = disabled)
+    parameters.push_back(createMidiParameter("stereoField", "Stereo Field", 0.0f));
     
     return { parameters.begin(), parameters.end() };
 }
@@ -50,6 +53,7 @@ bool ParameterManager::initializeParameterPointers(juce::AudioProcessorValueTree
     sustainLevelParam_ = parameters.getRawParameterValue("sustainLevel");
     lfoPanSpeedParam_ = parameters.getRawParameterValue("lfoPanSpeed");
     lfoPanDepthParam_ = parameters.getRawParameterValue("lfoPanDepth");
+    stereoFieldParam_ = parameters.getRawParameterValue("stereoField");
     
     // Zkontroluj zda byly všechny parametry nalezeny
     bool allValid = areParametersValid();
@@ -63,6 +67,7 @@ bool ParameterManager::initializeParameterPointers(juce::AudioProcessorValueTree
         if (!sustainLevelParam_) { /* log error */ }
         if (!lfoPanSpeedParam_) { /* log error */ }
         if (!lfoPanDepthParam_) { /* log error */ }
+        if (!stereoFieldParam_) { /* log error */ }
     }
     
     return allValid;
@@ -151,6 +156,15 @@ void ParameterManager::updateSamplerParametersRTSafe(VoiceManager* voiceManager,
             voiceManager->setAllVoicesPanDepthMIDI(currentDepth); // RT-safe
         }
     }
+
+    // Stereo Field - pouze při změně (RT-safe)
+    if (stereoFieldParam_) {
+        uint8_t currentStereoField = getCurrentStereoField();
+        if (currentStereoField != lastStereoField_) {
+            lastStereoField_ = currentStereoField;
+            voiceManager->setAllVoicesStereoFieldAmountMIDI(currentStereoField); // RT-safe
+        }
+    }
 }
 
 // ===== PARAMETER ACCESS =====
@@ -190,6 +204,11 @@ uint8_t ParameterManager::getCurrentLfoPanDepth() const
     return lfoPanDepthParam_ ? convertToMidiValue(lfoPanDepthParam_->load()) : 0;
 }
 
+uint8_t ParameterManager::getCurrentStereoField() const
+{
+    return stereoFieldParam_ ? convertToMidiValue(stereoFieldParam_->load()) : 0;
+}
+
 // ===== VALIDATION =====
 
 bool ParameterManager::areParametersValid() const
@@ -200,7 +219,8 @@ bool ParameterManager::areParametersValid() const
            releaseParam_ != nullptr &&
            sustainLevelParam_ != nullptr &&
            lfoPanSpeedParam_ != nullptr &&
-           lfoPanDepthParam_ != nullptr;
+           lfoPanDepthParam_ != nullptr &&
+           stereoFieldParam_ != nullptr;
 }
 
 // ===== HELPER METHODS =====
