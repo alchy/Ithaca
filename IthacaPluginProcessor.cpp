@@ -151,7 +151,7 @@ void IthacaPluginProcessor::processBlock(juce::AudioBuffer<float>& buffer,
     }
     
     // DELEGACE: RT-safe parameter update through ParameterManager
-    parameterManager_.updateSamplerParametersRTSafe(voiceManager_.get(), *logger_);
+    parameterManager_.updateSamplerParametersRTSafe(voiceManager_.get());
     
     // Process MIDI events
     processMidiEvents(midiMessages);

@@ -75,7 +75,7 @@ bool ParameterManager::initializeParameterPointers(juce::AudioProcessorValueTree
 
 // ===== RT-SAFE PARAMETER UPDATES =====
 
-void ParameterManager::updateSamplerParametersRTSafe(VoiceManager* voiceManager, Logger& logger)
+void ParameterManager::updateSamplerParametersRTSafe(VoiceManager* voiceManager)
 {
     // Early exit pokud VoiceManager není dostupný
     if (!voiceManager || !areParametersValid()) {
@@ -89,16 +89,10 @@ void ParameterManager::updateSamplerParametersRTSafe(VoiceManager* voiceManager,
         uint8_t currentGain = getCurrentMasterGain();
         if (currentGain != lastMasterGain_) {
             lastMasterGain_ = currentGain;
-            // PROBLÉM: setAllVoicesMasterGainMIDI má logging - není RT-safe!
-            // Potřebujeme RT-safe verzi nebo vlastní implementaci
-            // Pro nyní komentujeme problematické volání
-            // voiceManager->setAllVoicesMasterGainMIDI(currentGain, logger);
-            
-            // DOČASNÉ RT-SAFE ŘEŠENÍ: Přímé nastavení všem voices
             for (int i = 0; i < 128; ++i) {
                 auto& voice = voiceManager->getVoiceMIDI(static_cast<uint8_t>(i));
                 float gain = currentGain / 127.0f;
-                voice.setMasterGainRTSafe(gain);
+                voice.setMasterGain(gain);
             }
         }
     }

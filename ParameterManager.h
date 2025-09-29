@@ -63,7 +63,7 @@ public:
      * @note Volána z processBlock() - musí být RT-safe
      * @note Konvertuje GUI hodnoty na MIDI formát (0-127)
      */
-    void updateSamplerParametersRTSafe(VoiceManager* voiceManager, Logger& logger);
+    void updateSamplerParametersRTSafe(VoiceManager* voiceManager);
     
     // ===== PARAMETER ACCESS =====
     
