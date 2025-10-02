@@ -24,6 +24,9 @@
 // Async loading
 #include "AsyncSampleLoader.h"
 
+// MIDI processing
+#include "MidiProcessor.h"
+
 //==============================================================================
 /**
  * @class IthacaPluginProcessor (Refactored with Async Loading)
@@ -176,6 +179,7 @@ private:
     std::unique_ptr<Logger> logger_;                    // IthacaCore logger
     std::unique_ptr<VoiceManager> voiceManager_;        // IthacaCore voice manager
     std::unique_ptr<AsyncSampleLoader> asyncLoader_;    // Async sample loader
+    std::unique_ptr<MidiProcessor> midiProcessor_;      // MIDI event processor
     
     //==============================================================================
     // Parameter Management (delegated to ParameterManager)
@@ -199,7 +203,7 @@ private:
     // Performance Monitoring
     
     mutable std::atomic<int> processBlockCallCount_;    // Process block counter
-    mutable std::atomic<int> totalMidiEventsProcessed_; // MIDI event counter
+    // Note: MIDI event counter moved to MidiProcessor
 
     //==============================================================================
     // Private Methods - Audio Processing
@@ -209,21 +213,6 @@ private:
      * @note Called from processBlock() to detect loading completion
      */
     void checkAndTransferVoiceManager();
-    
-    /**
-     * @brief Process MIDI events from JUCE MidiBuffer
-     * @param midiMessages MIDI buffer from processBlock
-     * @note RT-safe: no allocations, includes MIDI CC support
-     */
-    void processMidiEvents(const juce::MidiBuffer& midiMessages);
-    
-    /**
-     * @brief Process MIDI Control Change messages for parameter automation
-     * @param ccNumber MIDI CC number (0-127)
-     * @param ccValue MIDI CC value (0-127)
-     * @note RT-safe: directly updates parameters via JUCE system
-     */
-    void processMidiControlChange(uint8_t ccNumber, uint8_t ccValue);
     
     /**
      * @brief Safe logging wrapper for non-RT operations

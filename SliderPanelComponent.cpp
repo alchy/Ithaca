@@ -1,226 +1,255 @@
 /**
- * @file SliderPanelComponent.cpp
- * @brief Implementace komponenty pro horizontální slidery
+ * @file SliderPanelComponent.cpp (COMPLETE VERSION)
+ * @brief Hierarchický layout sliderů s rounded overlay
+ * 
+ * ============================================================================
+ * GUI REFACTORING - SLIDER PANEL IMPLEMENTATION (COMPLETE)
+ * ============================================================================
+ * 
+ * Layout struktura (4 řádky, každý 50/50 split):
+ * Row 1: Master Gain | Stereo Field
+ * Row 2: LFO Depth | LFO Speed
+ * Row 3: Attack | Release
+ * Row 4: Sustain | Master Pan
+ * 
+ * Mezi řádky: Průhledné separátory (60% alpha, 1px)
+ * Overlay: 60% alpha, 6px rounded corners
+ * ============================================================================
  */
 
 #include "SliderPanelComponent.h"
 #include "GuiConstants.h"
 #include <iostream>
 
-// DEBUG: Přepínač pro vypnutí background obrázku (zachovat původní logiku)
 #define BACKGROUND_PICTURE_OFF 0
 
-// Makro pro debug výpisy (zachovat původní logiku)
 #if BACKGROUND_PICTURE_OFF
 #define GUI_DEBUG(msg) std::cout << msg << std::endl
 #else
 #define GUI_DEBUG(msg)
 #endif
 
+// ============================================================================
+// Constructor / Destructor
+// ============================================================================
+
 SliderPanelComponent::SliderPanelComponent(juce::AudioProcessorValueTreeState& parameters)
     : parameters_(parameters), debugMode_(GuiHelpers::isDebugModeEnabled())
 {
-    GUI_DEBUG("SliderPanelComponent: Constructor starting with HORIZONTAL SLIDERS");
+    GUI_DEBUG("SliderPanelComponent: Constructor - Hierarchical Layout");
     
-    setupAllControls();           // Vytvoří všechny slidery a labely
-    setupSliderAttachments();     // Propojí s parametry
+    setupAllControls();
+    setupSliderAttachments();
     
-    GUI_DEBUG("SliderPanelComponent: Constructor completed - " << getNumChildComponents() << " child components");
+    GUI_DEBUG("SliderPanelComponent: Constructor completed");
 }
 
 SliderPanelComponent::~SliderPanelComponent()
 {
-    // Slider attachments se automaticky vyčistí
-    GUI_DEBUG("SliderPanelComponent: Destructor called");
+    GUI_DEBUG("SliderPanelComponent: Destructor");
 }
+
+// ============================================================================
+// Component Overrides
+// ============================================================================
 
 void SliderPanelComponent::paint(juce::Graphics& g)
 {
-    // TRANSPARENTNÍ - bez pozadí, nechá hlavní editor vykreslit overlay
-    juce::ignoreUnused(g);
-    GUI_DEBUG("SliderPanelComponent: Paint method - transparent mode");
+    auto bounds = getLocalBounds();
+    
+    if (!debugMode_) {
+        // Zaoblené overlay pozadí (60% alpha, 6px radius)
+        GuiHelpers::drawRoundedOverlay(g, bounds, 
+                                      GuiConstants::SLIDER_OVERLAY_ALPHA,
+                                      GuiConstants::PANEL_CORNER_RADIUS);
+        
+        // Vykreslí separátory mezi řádky
+        paintSeparators(g);
+    }
 }
 
 void SliderPanelComponent::resized()
 {
-    auto bounds = getLocalBounds();
+    // Vyčistit předchozí separator pozice
+    separatorPositions_.clear();
+    
+    auto bounds = getLocalBounds().reduced(GuiConstants::SECTION_PADDING);
     
     if (debugMode_) {
         layoutDebugMode(bounds);
     } else {
         layoutBackgroundMode(bounds);
     }
-    
-    GUI_DEBUG("SliderPanelComponent: Resized with bounds " << bounds.toString().toStdString());
 }
+
+// ============================================================================
+// Slider Listener
+// ============================================================================
 
 void SliderPanelComponent::sliderValueChanged(juce::Slider* slider)
 {
-    // Parameter attachments automaticky synchronizují s parametry
-    // Můžeme přidat custom akce zde pokud potřebujeme
-    
-    if (slider == lfoPanSpeedSlider.get() || slider == lfoPanDepthSlider.get()) {
-        // LFO parametry - můžeme přidat visual feedback
-        GUI_DEBUG("SliderPanelComponent: LFO parameter changed");
-    }
-    
-    // Pro debug můžeme logovat změny
-    GUI_DEBUG("SliderPanelComponent: Slider value changed: " << slider->getValue());
+    // Parameter attachments automatically sync
+    juce::ignoreUnused(slider);
 }
+
+// ============================================================================
+// Public Control
+// ============================================================================
 
 void SliderPanelComponent::setDebugMode(bool enabled)
 {
     if (debugMode_ != enabled) {
         debugMode_ = enabled;
-        
-        // Přestylovat všechny komponenty
-        setupAllControls();  // Znovu vytvoří s novými barvami
-        resized();           // Přelayoutuje
-        
+        setupAllControls();
+        resized();
         GUI_DEBUG("SliderPanelComponent: Debug mode " << (enabled ? "ENABLED" : "DISABLED"));
     }
 }
 
+// ============================================================================
+// Private Methods - Setup
+// ============================================================================
+
 void SliderPanelComponent::setupAllControls()
 {
-    GUI_DEBUG("SliderPanelComponent: Setting up all controls - START");
+    GUI_DEBUG("SliderPanelComponent: Setting up all controls");
     
-    // Vymazat existující komponenty
     removeAllChildren();
     
-    createMasterControls();
-    createADSRControls();
-    createLFOControls();
-    createStereoFieldControls();
+    createMasterControls();    // Row 1: Master Gain, Stereo Field
+    createLFOControls();        // Row 2: LFO Depth, LFO Speed
+    createADSRControls();       // Row 3: Attack, Release, Sustain
+    createPanControl();         // Row 4: Master Pan
     
-    GUI_DEBUG("SliderPanelComponent: All controls setup completed");
+    GUI_DEBUG("SliderPanelComponent: All controls created");
 }
 
 void SliderPanelComponent::createMasterControls()
 {
-    // === MASTER CONTROLS ===
-    masterGainLabel = GuiHelpers::createSliderLabel(GuiConstants::TextConstants::MASTER_GAIN_LABEL, debugMode_);
+    // === ROW 1: Master Gain | Stereo Field ===
+    
+    // Master Gain (left)
+    masterGainLabel = GuiHelpers::createSliderLabel(
+        GuiConstants::TextConstants::MASTER_GAIN_LABEL, debugMode_);
     if (masterGainLabel) {
         addAndMakeVisible(masterGainLabel.get());
-        GUI_DEBUG("SliderPanelComponent: masterGainLabel created");
     }
     
     masterGainSlider = GuiHelpers::createCompactSlider(0.0, 127.0, 100.0, 1.0);
     if (masterGainSlider) {
         masterGainSlider->addListener(this);
         addAndMakeVisible(masterGainSlider.get());
-        GUI_DEBUG("SliderPanelComponent: masterGainSlider created (horizontal)");
     }
     
-    masterPanLabel = GuiHelpers::createSliderLabel(GuiConstants::TextConstants::MASTER_PAN_LABEL, debugMode_);
-    if (masterPanLabel) {
-        addAndMakeVisible(masterPanLabel.get());
-        GUI_DEBUG("SliderPanelComponent: masterPanLabel created");
-    }
-    
-    masterPanSlider = GuiHelpers::createCompactSlider(0.0, 127.0, 64.0, 1.0);
-    if (masterPanSlider) {
-        masterPanSlider->addListener(this);
-        addAndMakeVisible(masterPanSlider.get());
-        GUI_DEBUG("SliderPanelComponent: masterPanSlider created (horizontal)");
-    }
-}
-
-void SliderPanelComponent::createADSRControls()
-{
-    // === ADSR ENVELOPE ===
-    attackLabel = GuiHelpers::createSliderLabel(GuiConstants::TextConstants::ATTACK_LABEL, debugMode_);
-    if (attackLabel) {
-        addAndMakeVisible(attackLabel.get());
-        GUI_DEBUG("SliderPanelComponent: attackLabel created");
-    }
-    
-    attackSlider = GuiHelpers::createCompactSlider(0.0, 127.0, 0.0, 1.0);
-    if (attackSlider) {
-        attackSlider->addListener(this);
-        addAndMakeVisible(attackSlider.get());
-        GUI_DEBUG("SliderPanelComponent: attackSlider created (horizontal)");
-    }
-    
-    releaseLabel = GuiHelpers::createSliderLabel(GuiConstants::TextConstants::RELEASE_LABEL, debugMode_);
-    if (releaseLabel) {
-        addAndMakeVisible(releaseLabel.get());
-        GUI_DEBUG("SliderPanelComponent: releaseLabel created");
-    }
-    
-    releaseSlider = GuiHelpers::createCompactSlider(0.0, 127.0, 4.0, 1.0);
-    if (releaseSlider) {
-        releaseSlider->addListener(this);
-        addAndMakeVisible(releaseSlider.get());
-        GUI_DEBUG("SliderPanelComponent: releaseSlider created (horizontal)");
-    }
-    
-    sustainLevelLabel = GuiHelpers::createSliderLabel(GuiConstants::TextConstants::SUSTAIN_LABEL, debugMode_);
-    if (sustainLevelLabel) {
-        addAndMakeVisible(sustainLevelLabel.get());
-        GUI_DEBUG("SliderPanelComponent: sustainLevelLabel created");
-    }
-    
-    sustainLevelSlider = GuiHelpers::createCompactSlider(0.0, 127.0, 127.0, 1.0);
-    if (sustainLevelSlider) {
-        sustainLevelSlider->addListener(this);
-        addAndMakeVisible(sustainLevelSlider.get());
-        GUI_DEBUG("SliderPanelComponent: sustainLevelSlider created (horizontal)");
-    }
-}
-
-void SliderPanelComponent::createLFOControls()
-{
-    // === LFO PANNING ===
-    lfoPanSpeedLabel = GuiHelpers::createSliderLabel(GuiConstants::TextConstants::LFO_SPEED_LABEL, debugMode_);
-    if (lfoPanSpeedLabel) {
-        addAndMakeVisible(lfoPanSpeedLabel.get());
-        GUI_DEBUG("SliderPanelComponent: lfoPanSpeedLabel created");
-    }
-    
-    lfoPanSpeedSlider = GuiHelpers::createCompactSlider(0.0, 127.0, 0.0, 1.0);
-    if (lfoPanSpeedSlider) {
-        lfoPanSpeedSlider->addListener(this);
-        addAndMakeVisible(lfoPanSpeedSlider.get());
-        GUI_DEBUG("SliderPanelComponent: lfoPanSpeedSlider created (horizontal)");
-    }
-    
-    lfoPanDepthLabel = GuiHelpers::createSliderLabel(GuiConstants::TextConstants::LFO_DEPTH_LABEL, debugMode_);
-    if (lfoPanDepthLabel) {
-        addAndMakeVisible(lfoPanDepthLabel.get());
-        GUI_DEBUG("SliderPanelComponent: lfoPanDepthLabel created");
-    }
-    
-    lfoPanDepthSlider = GuiHelpers::createCompactSlider(0.0, 127.0, 0.0, 1.0);
-    if (lfoPanDepthSlider) {
-        lfoPanDepthSlider->addListener(this);
-        addAndMakeVisible(lfoPanDepthSlider.get());
-        GUI_DEBUG("SliderPanelComponent: lfoPanDepthSlider created (horizontal)");
-    }
-}
-
-void SliderPanelComponent::createStereoFieldControls()
-{
-    // === STEREO FIELD ===
-    stereoFieldLabel = GuiHelpers::createSliderLabel("Stereo Field", debugMode_);
+    // Stereo Field (right)
+    stereoFieldLabel = GuiHelpers::createSliderLabel(
+        GuiConstants::TextConstants::STEREO_FIELD_LABEL, debugMode_);
     if (stereoFieldLabel) {
         addAndMakeVisible(stereoFieldLabel.get());
-        GUI_DEBUG("SliderPanelComponent: stereoFieldLabel created");
     }
     
     stereoFieldSlider = GuiHelpers::createCompactSlider(0.0, 127.0, 0.0, 1.0);
     if (stereoFieldSlider) {
         stereoFieldSlider->addListener(this);
         addAndMakeVisible(stereoFieldSlider.get());
-        GUI_DEBUG("SliderPanelComponent: stereoFieldSlider created (horizontal)");
+    }
+}
+
+void SliderPanelComponent::createLFOControls()
+{
+    // === ROW 2: LFO Depth | LFO Speed ===
+    
+    // LFO Depth (left)
+    lfoPanDepthLabel = GuiHelpers::createSliderLabel(
+        GuiConstants::TextConstants::LFO_DEPTH_LABEL, debugMode_);
+    if (lfoPanDepthLabel) {
+        addAndMakeVisible(lfoPanDepthLabel.get());
+    }
+    
+    lfoPanDepthSlider = GuiHelpers::createCompactSlider(0.0, 127.0, 0.0, 1.0);
+    if (lfoPanDepthSlider) {
+        lfoPanDepthSlider->addListener(this);
+        addAndMakeVisible(lfoPanDepthSlider.get());
+    }
+    
+    // LFO Speed (right)
+    lfoPanSpeedLabel = GuiHelpers::createSliderLabel(
+        GuiConstants::TextConstants::LFO_SPEED_LABEL, debugMode_);
+    if (lfoPanSpeedLabel) {
+        addAndMakeVisible(lfoPanSpeedLabel.get());
+    }
+    
+    lfoPanSpeedSlider = GuiHelpers::createCompactSlider(0.0, 127.0, 0.0, 1.0);
+    if (lfoPanSpeedSlider) {
+        lfoPanSpeedSlider->addListener(this);
+        addAndMakeVisible(lfoPanSpeedSlider.get());
+    }
+}
+
+void SliderPanelComponent::createADSRControls()
+{
+    // === ROW 3: Attack | Release ===
+    
+    // Attack (left)
+    attackLabel = GuiHelpers::createSliderLabel(
+        GuiConstants::TextConstants::ATTACK_LABEL, debugMode_);
+    if (attackLabel) {
+        addAndMakeVisible(attackLabel.get());
+    }
+    
+    attackSlider = GuiHelpers::createCompactSlider(0.0, 127.0, 0.0, 1.0);
+    if (attackSlider) {
+        attackSlider->addListener(this);
+        addAndMakeVisible(attackSlider.get());
+    }
+    
+    // Release (right)
+    releaseLabel = GuiHelpers::createSliderLabel(
+        GuiConstants::TextConstants::RELEASE_LABEL, debugMode_);
+    if (releaseLabel) {
+        addAndMakeVisible(releaseLabel.get());
+    }
+    
+    releaseSlider = GuiHelpers::createCompactSlider(0.0, 127.0, 4.0, 1.0);
+    if (releaseSlider) {
+        releaseSlider->addListener(this);
+        addAndMakeVisible(releaseSlider.get());
+    }
+    
+    // === ROW 4: Sustain (left) ===
+    sustainLevelLabel = GuiHelpers::createSliderLabel(
+        GuiConstants::TextConstants::SUSTAIN_LABEL, debugMode_);
+    if (sustainLevelLabel) {
+        addAndMakeVisible(sustainLevelLabel.get());
+    }
+    
+    sustainLevelSlider = GuiHelpers::createCompactSlider(0.0, 127.0, 127.0, 1.0);
+    if (sustainLevelSlider) {
+        sustainLevelSlider->addListener(this);
+        addAndMakeVisible(sustainLevelSlider.get());
+    }
+}
+
+void SliderPanelComponent::createPanControl()
+{
+    // === ROW 4: Master Pan (right) ===
+    masterPanLabel = GuiHelpers::createSliderLabel(
+        GuiConstants::TextConstants::MASTER_PAN_LABEL, debugMode_);
+    if (masterPanLabel) {
+        addAndMakeVisible(masterPanLabel.get());
+    }
+    
+    masterPanSlider = GuiHelpers::createCompactSlider(0.0, 127.0, 64.0, 1.0);
+    if (masterPanSlider) {
+        masterPanSlider->addListener(this);
+        addAndMakeVisible(masterPanSlider.get());
     }
 }
 
 void SliderPanelComponent::setupSliderAttachments()
 {
-    GUI_DEBUG("SliderPanelComponent: Setting up slider attachments - START");
+    GUI_DEBUG("SliderPanelComponent: Setting up slider attachments");
     
-    // Připravi SliderSet strukturu
     ParameterAttachmentManager::SliderSet sliderSet;
     sliderSet.masterGain = masterGainSlider.get();
     sliderSet.masterPan = masterPanSlider.get();
@@ -229,95 +258,149 @@ void SliderPanelComponent::setupSliderAttachments()
     sliderSet.sustainLevel = sustainLevelSlider.get();
     sliderSet.lfoPanSpeed = lfoPanSpeedSlider.get();
     sliderSet.lfoPanDepth = lfoPanDepthSlider.get();
-    sliderSet.stereoField = stereoFieldSlider.get(); 
+    sliderSet.stereoField = stereoFieldSlider.get();
     
-    // Vytvoř všechny attachments
     bool success = attachmentManager_.createAllAttachments(parameters_, sliderSet);
     
     if (success) {
-        GUI_DEBUG("SliderPanelComponent: All slider attachments created successfully");
+        GUI_DEBUG("SliderPanelComponent: All attachments created successfully");
     } else {
-        GUI_DEBUG("SliderPanelComponent: Some slider attachments failed - check parameter IDs");
+        GUI_DEBUG("SliderPanelComponent: Some attachments failed");
     }
-    
-    attachmentManager_.logAttachmentStatus();
 }
+
+// ============================================================================
+// Private Methods - Layout
+// ============================================================================
 
 void SliderPanelComponent::layoutBackgroundMode(juce::Rectangle<int> bounds)
 {
-    // ZACHOVAT: Původní dvousloupcový layout pro background mode
-    auto leftColumn = bounds.removeFromLeft(150);
-    auto rightColumn = bounds.removeFromLeft(150);
+    // Hierarchický layout - 4 řádky sliderů (50/50 split) se separátory
     
-    // Levé slidery: Master controls
-    GuiHelpers::positionHorizontalSliderWithLabel(leftColumn, masterGainLabel.get(), masterGainSlider.get());
-    leftColumn.removeFromTop(4); // Extra spacing
-    GuiHelpers::positionHorizontalSliderWithLabel(leftColumn, masterPanLabel.get(), masterPanSlider.get());
+    // === ROW 1: Master Gain | Stereo Field ===
+    layoutSliderRow(bounds, 
+                    masterGainLabel.get(), masterGainSlider.get(),
+                    stereoFieldLabel.get(), stereoFieldSlider.get());
     
-    // Pravé slidery: ADSR + LFO (kompaktně)
-    GuiHelpers::positionHorizontalSliderWithLabel(rightColumn, attackLabel.get(), attackSlider.get());
-    GuiHelpers::positionHorizontalSliderWithLabel(rightColumn, releaseLabel.get(), releaseSlider.get());
-    rightColumn.removeFromTop(4); // Extra spacing
-    GuiHelpers::positionHorizontalSliderWithLabel(rightColumn, sustainLevelLabel.get(), sustainLevelSlider.get());
-    rightColumn.removeFromTop(4); // Extra spacing před LFO
+    // Separator
+    drawSeparator(bounds);
     
-    // LFO menší
-    if (lfoPanSpeedLabel) {
-        lfoPanSpeedLabel->setBounds(rightColumn.removeFromTop(14));
-        rightColumn.removeFromTop(1);
-    }
-    if (lfoPanSpeedSlider) {
-        lfoPanSpeedSlider->setBounds(rightColumn.removeFromTop(20)); // Menší výška
-        rightColumn.removeFromTop(3);
-    }
+    // === ROW 2: LFO Depth | LFO Speed ===
+    layoutSliderRow(bounds,
+                    lfoPanDepthLabel.get(), lfoPanDepthSlider.get(),
+                    lfoPanSpeedLabel.get(), lfoPanSpeedSlider.get());
     
-    if (lfoPanDepthLabel) {
-        lfoPanDepthLabel->setBounds(rightColumn.removeFromTop(14));
-        rightColumn.removeFromTop(1);
-    }
-    if (lfoPanDepthSlider) {
-        lfoPanDepthSlider->setBounds(rightColumn.removeFromTop(20)); // Menší výška
-    }
-
-    rightColumn.removeFromTop(4); // Extra spacing
-    if (stereoFieldLabel) {
-        stereoFieldLabel->setBounds(rightColumn.removeFromTop(14));
-        rightColumn.removeFromTop(1);
-    }
-    if (stereoFieldSlider) {
-        stereoFieldSlider->setBounds(rightColumn.removeFromTop(20));
-    }
-
+    // Separator
+    drawSeparator(bounds);
+    
+    // === ROW 3: Attack | Release ===
+    layoutSliderRow(bounds,
+                    attackLabel.get(), attackSlider.get(),
+                    releaseLabel.get(), releaseSlider.get());
+    
+    // Separator
+    drawSeparator(bounds);
+    
+    // === ROW 4: Sustain | Master Pan ===
+    layoutSliderRow(bounds,
+                    sustainLevelLabel.get(), sustainLevelSlider.get(),
+                    masterPanLabel.get(), masterPanSlider.get());
     
     GUI_DEBUG("SliderPanelComponent: Background mode layout completed");
 }
 
 void SliderPanelComponent::layoutDebugMode(juce::Rectangle<int> bounds)
 {
-    // DEBUG MODE: Jednoduché vertikální řazení
-    auto slidersArea = bounds.reduced(GuiConstants::COMPONENT_PADDING);
+    // Debug mode: vertikální layout bez separátorů
+    const int spacing = 4;
     
     // Master controls
-    GuiHelpers::positionHorizontalSliderWithLabel(slidersArea, masterGainLabel.get(), masterGainSlider.get());
-    GuiHelpers::positionHorizontalSliderWithLabel(slidersArea, masterPanLabel.get(), masterPanSlider.get());
+    GuiHelpers::positionHorizontalSliderWithLabel(bounds, 
+        masterGainLabel.get(), masterGainSlider.get());
+    bounds.removeFromTop(spacing);
     
-    slidersArea.removeFromTop(8); // Section spacing
+    GuiHelpers::positionHorizontalSliderWithLabel(bounds,
+        stereoFieldLabel.get(), stereoFieldSlider.get());
+    bounds.removeFromTop(spacing);
     
-    // ADSR
-    GuiHelpers::positionHorizontalSliderWithLabel(slidersArea, attackLabel.get(), attackSlider.get());
-    GuiHelpers::positionHorizontalSliderWithLabel(slidersArea, releaseLabel.get(), releaseSlider.get());
-    GuiHelpers::positionHorizontalSliderWithLabel(slidersArea, sustainLevelLabel.get(), sustainLevelSlider.get());
+    // LFO controls
+    GuiHelpers::positionHorizontalSliderWithLabel(bounds,
+        lfoPanDepthLabel.get(), lfoPanDepthSlider.get());
+    bounds.removeFromTop(spacing);
     
-    slidersArea.removeFromTop(8); // Section spacing
+    GuiHelpers::positionHorizontalSliderWithLabel(bounds,
+        lfoPanSpeedLabel.get(), lfoPanSpeedSlider.get());
+    bounds.removeFromTop(spacing);
     
-    // LFO
-    GuiHelpers::positionHorizontalSliderWithLabel(slidersArea, lfoPanSpeedLabel.get(), lfoPanSpeedSlider.get());
-    GuiHelpers::positionHorizontalSliderWithLabel(slidersArea, lfoPanDepthLabel.get(), lfoPanDepthSlider.get());
-
-    slidersArea.removeFromTop(8); // Section spacing
+    // ADSR controls
+    GuiHelpers::positionHorizontalSliderWithLabel(bounds,
+        attackLabel.get(), attackSlider.get());
+    bounds.removeFromTop(spacing);
     
-    // Stereo Field
-    GuiHelpers::positionHorizontalSliderWithLabel(slidersArea, stereoFieldLabel.get(), stereoFieldSlider.get());
+    GuiHelpers::positionHorizontalSliderWithLabel(bounds,
+        releaseLabel.get(), releaseSlider.get());
+    bounds.removeFromTop(spacing);
+    
+    GuiHelpers::positionHorizontalSliderWithLabel(bounds,
+        sustainLevelLabel.get(), sustainLevelSlider.get());
+    bounds.removeFromTop(spacing);
+    
+    GuiHelpers::positionHorizontalSliderWithLabel(bounds,
+        masterPanLabel.get(), masterPanSlider.get());
     
     GUI_DEBUG("SliderPanelComponent: Debug mode layout completed");
+}
+
+// ============================================================================
+// Private Helper Methods
+// ============================================================================
+
+void SliderPanelComponent::layoutSliderRow(juce::Rectangle<int>& bounds,
+                                           juce::Label* leftLabel, juce::Slider* leftSlider,
+                                           juce::Label* rightLabel, juce::Slider* rightSlider)
+{
+    // Vezme řádek z bounds a rozloží ho na 50/50 sloupce
+    auto rowArea = bounds.removeFromTop(GuiConstants::SLIDER_ROW_HEIGHT);
+    
+    // 50/50 split s malou mezerou
+    int halfWidth = rowArea.getWidth() / 2;
+    int columnSpacing = GuiConstants::COLUMN_SPACING;
+    
+    auto leftColumn = rowArea.removeFromLeft(halfWidth - columnSpacing / 2);
+    rowArea.removeFromLeft(columnSpacing); // Mezera mezi sloupci
+    auto rightColumn = rowArea;
+    
+    // Layout levého sloupce
+    GuiHelpers::positionHorizontalSliderWithLabel(leftColumn, leftLabel, leftSlider);
+    
+    // Layout pravého sloupce
+    GuiHelpers::positionHorizontalSliderWithLabel(rightColumn, rightLabel, rightSlider);
+    
+    // Mezera za řádkem
+    bounds.removeFromTop(GuiConstants::SECTION_SPACING);
+}
+
+void SliderPanelComponent::drawSeparator(juce::Rectangle<int>& bounds)
+{
+    // Uloží si pozici pro vykreslení separátoru
+    separatorPositions_.push_back(bounds.getY());
+    
+    // Malá mezera pro separator
+    bounds.removeFromTop(2);
+}
+
+void SliderPanelComponent::paintSeparators(juce::Graphics& g)
+{
+    // Vykreslí všechny separátory (volá se z paint())
+    if (debugMode_) {
+        return; // Žádné separátory v debug mode
+    }
+    
+    auto bounds = getLocalBounds();
+    int leftMargin = GuiConstants::SECTION_PADDING + 4;
+    int rightMargin = bounds.getWidth() - GuiConstants::SECTION_PADDING - 4;
+    
+    for (int y : separatorPositions_) {
+        GuiHelpers::drawSeparatorLine(g, leftMargin, y, rightMargin, y);
+    }
 }

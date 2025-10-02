@@ -17,8 +17,7 @@ IthacaPluginProcessor::IthacaPluginProcessor()
       samplerInitialized_(false),
       currentSampleRate_(0.0),
       currentBlockSize_(0),
-      processBlockCallCount_(0),
-      totalMidiEventsProcessed_(0)
+      processBlockCallCount_(0)
 {
     // Initialize logger first
     logger_ = std::make_unique<Logger>(".");
@@ -33,6 +32,10 @@ IthacaPluginProcessor::IthacaPluginProcessor()
     // Create async sample loader
     asyncLoader_ = std::make_unique<AsyncSampleLoader>();
     logSafe("IthacaPluginProcessor/constructor", "info", "Async sample loader created");
+    
+    // Create MIDI processor
+    midiProcessor_ = std::make_unique<MidiProcessor>();
+    logSafe("IthacaPluginProcessor/constructor", "info", "MIDI processor created");
     
     // Set default sample directory
     currentSampleDirectory_ = DEFAULT_SAMPLE_DIR;
@@ -198,8 +201,10 @@ void IthacaPluginProcessor::processBlock(juce::AudioBuffer<float>& buffer,
     // Uses original method: ParameterManager directly calls VoiceManager methods
     parameterManager_.updateSamplerParametersRTSafe(voiceManager_.get());
     
-    // Process MIDI events
-    processMidiEvents(midiMessages);
+    // Process MIDI events (delegated to MidiProcessor)
+    if (midiProcessor_) {
+        midiProcessor_->processMidiBuffer(midiMessages, voiceManager_.get(), parameters_);
+    }
     
     // Render audio through VoiceManager
     if (voiceManager_) {
@@ -345,75 +350,6 @@ void IthacaPluginProcessor::checkAndTransferVoiceManager()
             logSafe("IthacaPluginProcessor/checkAndTransfer", "error", 
                    "Failed to transfer VoiceManager (nullptr)");
         }
-    }
-}
-
-//==============================================================================
-// Private Methods - MIDI Processing
-
-void IthacaPluginProcessor::processMidiEvents(const juce::MidiBuffer& midiMessages)
-{
-    if (!voiceManager_) return;
-    
-    for (const auto& midiMetadata : midiMessages) {
-        auto message = midiMetadata.getMessage();
-        totalMidiEventsProcessed_.fetch_add(1);
-        
-        if (message.isNoteOn()) {
-            uint8_t midiNote = static_cast<uint8_t>(message.getNoteNumber());
-            uint8_t velocity = static_cast<uint8_t>(message.getVelocity());
-            voiceManager_->setNoteStateMIDI(midiNote, true, velocity);
-        }
-        else if (message.isNoteOff()) {
-            uint8_t midiNote = static_cast<uint8_t>(message.getNoteNumber());
-            voiceManager_->setNoteStateMIDI(midiNote, false);
-        }
-        else if (message.isController()) {
-            uint8_t ccNumber = static_cast<uint8_t>(message.getControllerNumber());
-            uint8_t ccValue = static_cast<uint8_t>(message.getControllerValue());
-            processMidiControlChange(ccNumber, ccValue);
-        }
-    }
-}
-
-void IthacaPluginProcessor::processMidiControlChange(uint8_t ccNumber, uint8_t ccValue)
-{
-    // Map MIDI CC to parameters
-    juce::RangedAudioParameter* param = nullptr;
-    
-    switch (ccNumber) {
-        case MidiCC::MASTER_GAIN:
-            param = parameters_.getParameter("masterGain");
-            break;
-        case MidiCC::MASTER_PAN:
-            param = parameters_.getParameter("masterPan");
-            break;
-        case MidiCC::ATTACK:
-            param = parameters_.getParameter("attack");
-            break;
-        case MidiCC::RELEASE:
-            param = parameters_.getParameter("release");
-            break;
-        case MidiCC::SUSTAIN_LEVEL:  // Changed from SUSTAIN
-            param = parameters_.getParameter("sustainLevel");
-            break;
-        case MidiCC::LFO_PAN_SPEED:  // Changed from LFO_SPEED
-            param = parameters_.getParameter("lfoPanSpeed");
-            break;
-        case MidiCC::LFO_PAN_DEPTH:  // Changed from LFO_DEPTH
-            param = parameters_.getParameter("lfoPanDepth");
-            break;
-        case MidiCC::STEREO_FIELD:
-            param = parameters_.getParameter("stereoField");
-            break;
-        default:
-            return;
-    }
-    
-    // Convert MIDI CC value (0-127) to normalized parameter value (0.0-1.0)
-    if (param) {
-        float normalizedValue = static_cast<float>(ccValue) / 127.0f;
-        param->setValueNotifyingHost(normalizedValue);
     }
 }
 

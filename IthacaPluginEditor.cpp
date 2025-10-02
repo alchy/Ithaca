@@ -1,63 +1,68 @@
 /**
- * @file IthacaPluginEditor.cpp (Refactored)
- * @brief Zjednodušená implementace hlavního editoru s delegací na komponenty
+ * @file IthacaPluginEditor.cpp
+ * @brief Implementace hlavního editoru
+ * 
+ * ============================================================================
+ * GUI REFACTORING - MAIN EDITOR IMPLEMENTATION (CLEAN VERSION)
+ * ============================================================================
  */
 
 #include "IthacaPluginEditor.h"
 #include "SliderPanelComponent.h"
-#include "InfoPanelComponent.h"
+#include "InfoHeaderComponent.h"
 #include "GuiHelpers.h"
 #include "GuiConstants.h"
 #include "decorators/BinaryData.h"
 #include <iostream>
 
-// ZACHOVAT: Všechny původní makra a konstanty
 #define BACKGROUND_PICTURE_OFF 0
 #define CURRENT_INSTRUMENT "Ithaca Grand Piano"
 #define PLUGIN_VERSION "1.0.0"
 
-// Makro pro debug výpisy (zachovat původní logiku)
 #if BACKGROUND_PICTURE_OFF
 #define GUI_DEBUG(msg) std::cout << msg << std::endl
 #else
 #define GUI_DEBUG(msg)
 #endif
 
-//==============================================================================
+// ============================================================================
+// Constructor / Destructor
+// ============================================================================
+
 IthacaPluginEditor::IthacaPluginEditor(IthacaPluginProcessor& p)
-    : AudioProcessorEditor(&p), processorRef(p), debugMode_(isDebugModeEnabled())
+    : AudioProcessorEditor(&p), 
+      processorRef(p), 
+      debugMode_(isDebugModeEnabled())
 {
-    GUI_DEBUG("IthacaGUI: Constructor starting with HORIZONTAL SLIDERS");
+    GUI_DEBUG("IthacaGUI: Constructor - Hierarchical Layout");
     
-    // ZACHOVAT: Původní velikost okna
-    setSize(GuiConstants::DEFAULT_WINDOW_WIDTH, GuiConstants::DEFAULT_WINDOW_HEIGHT);
+    setSize(GuiConstants::DEFAULT_WINDOW_WIDTH, 
+            GuiConstants::DEFAULT_WINDOW_HEIGHT);
     
-    setupBackground();        // Původní background logic
-    initializeComponents();   // Vytvoření specializovaných komponent
-    resized();               // Původní resized() volání
+    setupBackground();
+    initializeComponents();
+    resized();
     
-    GUI_DEBUG("IthacaGUI: Constructor completed with refactored components");
+    GUI_DEBUG("IthacaGUI: Constructor completed");
 }
 
 IthacaPluginEditor::~IthacaPluginEditor()
 {
-    // Specializované komponenty se automaticky vyčistí
-    GUI_DEBUG("IthacaGUI: Destructor called");
+    GUI_DEBUG("IthacaGUI: Destructor");
 }
 
-//==============================================================================
+// ============================================================================
+// Component Overrides
+// ============================================================================
+
 void IthacaPluginEditor::paint(juce::Graphics& g)
 {
-    // ZACHOVAT: Přesně původní paint logiku
-#if BACKGROUND_PICTURE_OFF
-    GuiHelpers::applyDebugBackground(g, getLocalBounds());
-#else
-    // BACKGROUND MODE: Overlay pro čitelnost (původní logika)
-    auto controlArea = getLocalBounds().removeFromTop(GuiConstants::CONTROL_AREA_HEIGHT);
-    GuiHelpers::applyControlAreaOverlay(g, controlArea);
-#endif
-    
-    GUI_DEBUG("IthacaGUI: Paint method - " << (debugMode_ ? "DEBUG" : "BACKGROUND") << " mode");
+    juce::ignoreUnused(g);
+    #if BACKGROUND_PICTURE_OFF
+        // Debug mode: šedé pozadí
+        GuiHelpers::applyDebugBackground(g, getLocalBounds());
+    #endif
+    // Background mode: komponenty se vykreslují samy přes background image
 }
 
 void IthacaPluginEditor::resized()
@@ -65,89 +70,91 @@ void IthacaPluginEditor::resized()
     auto bounds = getLocalBounds();
     
 #if !BACKGROUND_PICTURE_OFF
-    // ZACHOVAT: Původní layout logiku pro background mode
+    // === BACKGROUND MODE: Hierarchical layout ===
+    
+    // Background image na celé okno
     imageComponent.setBounds(bounds);
     
-    // === PŮVODNÍ LAYOUT: Sliders vlevo, info vpravo ===
-    auto workArea = bounds.reduced(GuiConstants::COMPONENT_PADDING);
+    // Vypočítat výšky sekcí podle ratio
+    int windowHeight = bounds.getHeight();
+    int infoHeight = static_cast<int>(windowHeight * 
+                                     GuiConstants::INFO_SECTION_HEIGHT_RATIO);
     
-    // Levá část: Sliders (původní proporce)
-    auto slidersArea = workArea.removeFromLeft(GuiConstants::SLIDERS_AREA_WIDTH);
-    slidersArea.removeFromTop(20); // Top spacing
+    // Content area s paddingem
+    auto contentArea = bounds.reduced(8);
     
-    // Pravá část: Info labels (původní pozice)
-    auto infoArea = workArea;
-    infoArea.removeFromTop(60); // Top spacing
+    // Info header nahoře (~30%)
+    if (infoHeader) {
+        infoHeader->setBounds(contentArea.removeFromTop(infoHeight));
+    }
     
-    // Delegace layoutu na specializované komponenty
+    // Mezera mezi sekcemi
+    contentArea.removeFromTop(GuiConstants::SECTION_GAP);
+    
+    // Slider panel dole (~70%, zbytek prostoru)
     if (sliderPanel) {
-        sliderPanel->setBounds(slidersArea);
+        sliderPanel->setBounds(contentArea);
     }
-    
-    if (infoPanel) {
-        infoPanel->setBounds(infoArea);
-    }
-    
-    // Version label speciální umístění (zachovat původní pozici)
-    // Bude handled v InfoPanelComponent, ale můžeme přepsat zde pro přesnou kontrolu
     
 #else
-    // DEBUG MODE: Původní debug layout
-    auto controlArea = bounds.removeFromRight(150).removeFromTop(450).reduced(8, 20);
+    // === DEBUG MODE: Kompaktní layout ===
     
-    if (infoPanel) {
-        infoPanel->setBounds(controlArea);
+    auto contentArea = bounds.reduced(GuiConstants::SECTION_PADDING);
+    
+    // Info header nahoře (fixní výška v debug mode)
+    if (infoHeader) {
+        infoHeader->setBounds(contentArea.removeFromTop(120));
+        contentArea.removeFromTop(GuiConstants::SECTION_GAP);
     }
     
-    // Slidery vlevo v debug módu
-    auto slidersArea = bounds.removeFromLeft(300).reduced(8, 20);
-    
+    // Slider panel (zbytek)
     if (sliderPanel) {
-        sliderPanel->setBounds(slidersArea);
+        sliderPanel->setBounds(contentArea);
     }
 #endif
     
-    GUI_DEBUG("IthacaGUI: Resized with specialized components layout");
+    GUI_DEBUG("IthacaGUI: Resized - "
+              << "info: " << (infoHeader ? infoHeader->getHeight() : 0) << "px, "
+              << "sliders: " << (sliderPanel ? sliderPanel->getHeight() : 0) << "px");
 }
 
 void IthacaPluginEditor::parentHierarchyChanged()
 {
-    GUI_DEBUG("IthacaGUI: parentHierarchyChanged - delegating to InfoPanel");
-    
-    // ZACHOVAT: Původní timer management, ale delegovat na InfoPanel
-    if (isShowing() && infoPanel) {
-        infoPanel->startUpdates();
+    // Start timer pro live updates v info header
+    if (isShowing() && infoHeader) {
+        infoHeader->startUpdates();
+        GUI_DEBUG("IthacaGUI: Info header timer started");
     }
 }
 
-//==============================================================================
+// ============================================================================
+// Private Methods - Setup
+// ============================================================================
+
 void IthacaPluginEditor::initializeComponents()
 {
-    GUI_DEBUG("IthacaGUI: Initializing specialized components");
+    GUI_DEBUG("IthacaGUI: Initializing hierarchical components");
     
-    // Vytvoření specializovaných komponent
-    sliderPanel = std::make_unique<SliderPanelComponent>(processorRef.getParameters());
+    // Info header (nahoře)
+    infoHeader = std::make_unique<InfoHeaderComponent>(processorRef);
+    if (infoHeader) {
+        infoHeader->setDebugMode(debugMode_);
+        addAndMakeVisible(infoHeader.get());
+        GUI_DEBUG("IthacaGUI: InfoHeaderComponent created");
+    }
+    
+    // Slider panel (dole)
+    sliderPanel = std::make_unique<SliderPanelComponent>(
+        processorRef.getParameters());
     if (sliderPanel) {
         sliderPanel->setDebugMode(debugMode_);
         addAndMakeVisible(sliderPanel.get());
-        GUI_DEBUG("IthacaGUI: SliderPanelComponent created and added");
+        GUI_DEBUG("IthacaGUI: SliderPanelComponent created");
     }
-    
-    infoPanel = std::make_unique<InfoPanelComponent>(processorRef);
-    if (infoPanel) {
-        infoPanel->setDebugMode(debugMode_);
-        addAndMakeVisible(infoPanel.get());
-        GUI_DEBUG("IthacaGUI: InfoPanelComponent created and added");
-    }
-    
-    // ZACHOVAT: VoiceActivityComponent pro kompatibilitu (prázdná implementace)
-    voiceActivityGrid = std::make_unique<VoiceActivityComponent>();
-    // Nepřidáváme do GUI - pouze pro kompatibilitu
 }
 
 void IthacaPluginEditor::setupBackground()
 {
-    // ZACHOVAT: Původní background logic
 #if !BACKGROUND_PICTURE_OFF
     juce::Image image = juce::ImageCache::getFromMemory(
         BinaryData::ithacaplayer1_jpg, 
@@ -157,65 +164,14 @@ void IthacaPluginEditor::setupBackground()
     imageComponent.setImagePlacement(juce::RectanglePlacement::stretchToFit);
     imageComponent.setInterceptsMouseClicks(false, false);
     addAndMakeVisible(imageComponent);
+    
     GUI_DEBUG("IthacaGUI: Background image loaded");
 #else
-    GUI_DEBUG("IthacaGUI: Background image DISABLED (debug mode)");
+    GUI_DEBUG("IthacaGUI: Background DISABLED (debug mode)");
 #endif
 }
 
 bool IthacaPluginEditor::isDebugModeEnabled() const
 {
     return BACKGROUND_PICTURE_OFF != 0;
-}
-
-//==============================================================================
-// ZACHOVAT: VoiceActivityComponent implementace pro kompatibilitu
-
-IthacaPluginEditor::VoiceActivityComponent::VoiceActivityComponent()
-{
-    voiceStates.fill(0);
-}
-
-void IthacaPluginEditor::VoiceActivityComponent::paint(juce::Graphics& g)
-{
-    // Prázdná implementace pro kompatibilitu
-    juce::ignoreUnused(g);
-}
-
-void IthacaPluginEditor::VoiceActivityComponent::resized()
-{
-    // Prázdná implementace pro kompatibilitu
-}
-
-void IthacaPluginEditor::VoiceActivityComponent::updateVoiceStates(int active, int sustaining, int releasing)
-{
-    // Prázdná implementace pro kompatibilitu
-    juce::ignoreUnused(active, sustaining, releasing);
-}
-
-void IthacaPluginEditor::VoiceActivityComponent::setVoiceState(uint8_t midiNote, bool isActive, int voiceState)
-{
-    // Prázdná implementace pro kompatibilitu
-    juce::ignoreUnused(midiNote, isActive, voiceState);
-}
-
-juce::Rectangle<int> IthacaPluginEditor::VoiceActivityComponent::getCellBounds(int row, int col) const
-{
-    // Prázdná implementace pro kompatibilitu
-    juce::ignoreUnused(row, col);
-    return juce::Rectangle<int>();
-}
-
-juce::Colour IthacaPluginEditor::VoiceActivityComponent::getStateColour(int state) const
-{
-    // Prázdná implementace pro kompatibilitu
-    juce::ignoreUnused(state);
-    return juce::Colour(0xff000000);
-}
-
-int IthacaPluginEditor::VoiceActivityComponent::getMidiNoteFromGrid(int row, int col) const
-{
-    // Prázdná implementace pro kompatibilitu
-    juce::ignoreUnused(row, col);
-    return 0;
 }

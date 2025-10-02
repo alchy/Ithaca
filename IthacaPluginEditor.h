@@ -1,6 +1,25 @@
 /**
- * @file IthacaPluginEditor.h (Refactored)
- * @brief Zjednodušený hlavní editor s horizontálními slidery - maximálně 200-300 řádků
+ * @file IthacaPluginEditor.h
+ * @brief Hlavní GUI editor s hierarchickým layoutem
+ * 
+ * ============================================================================
+ * GUI REFACTORING - MAIN EDITOR (CLEAN VERSION - BEZ LEGACY)
+ * ============================================================================
+ * 
+ * Změny v této verzi:
+ * - InfoHeaderComponent (nahoře, ~30%, 80% alpha)
+ * - SliderPanelComponent (dole, ~70%, 60% alpha)
+ * - Hierarchical font sizes (18px, 14px, 11px)
+ * - Rounded overlays (6px radius)
+ * - Separátory mezi slider řádky
+ * - ODSTRANĚNO: VoiceActivityComponent (legacy)
+ * 
+ * Zachováno:
+ * - Background image (480x650px okno)
+ * - Debug mode (BACKGROUND_PICTURE_OFF)
+ * - Parameter attachments
+ * - Timer management
+ * ============================================================================
  */
 
 #pragma once
@@ -8,77 +27,67 @@
 #include "IthacaPluginProcessor.h"
 #include <juce_gui_basics/juce_gui_basics.h>
 
-// Forward declarations pro specializované komponenty
+// Forward declarations
 class SliderPanelComponent;
-class InfoPanelComponent;
+class InfoHeaderComponent;
 
-//==============================================================================
 /**
- * @class IthacaPluginEditor - REFAKTOROVANÁ VERZE s horizontálními slidery
- * @brief Hlavní GUI editor s delegací na specializované komponenty
+ * @class IthacaPluginEditor
+ * @brief Hlavní GUI editor s hierarchickým layoutem
+ * 
+ * Layout:
+ * ┌──────────────────────────────────────────┐
+ * │ ▓▓ INFO HEADER (~30%, 80% alpha)      ▓▓ │
+ * │ ▓▓ - Ithaca Grand Piano (18px)        ▓▓ │
+ * │ ▓▓ - Version, Sample Rate, Stats      ▓▓ │
+ * ├──────────────────────────────────────────┤
+ * │ ▒▒ SLIDER PANEL (~70%, 60% alpha)     ▒▒ │
+ * │ ▒▒ - 4 řádky sliderů (50/50 split)    ▒▒ │
+ * │ ▒▒ - Separátory mezi řádky            ▒▒ │
+ * └──────────────────────────────────────────┘
  */
 class IthacaPluginEditor final : public juce::AudioProcessorEditor {
 public:
     explicit IthacaPluginEditor(IthacaPluginProcessor&);
     ~IthacaPluginEditor() override;
 
-    //==============================================================================
-    void paint(juce::Graphics&) override;   // ZACHOVAT: Původní paint logiku
-    void resized() override;                // ZJEDNODUŠIT: Pouze layout komponent
-    void parentHierarchyChanged() override; // ZACHOVAT: Timer management
+    // ========================================================================
+    // JUCE AudioProcessorEditor Interface
+    // ========================================================================
+    
+    void paint(juce::Graphics&) override;
+    void resized() override;
+    void parentHierarchyChanged() override;
 
 private:
     IthacaPluginProcessor& processorRef;
 
-    //==============================================================================
-    // Specializované komponenty
+    // ========================================================================
+    // Hierarchické komponenty
+    // ========================================================================
+    
+    /// Info header nahoře (~30% výšky)
+    std::unique_ptr<InfoHeaderComponent> infoHeader;
+    
+    /// Slider panel dole (~70% výšky)
     std::unique_ptr<SliderPanelComponent> sliderPanel;
-    std::unique_ptr<InfoPanelComponent> infoPanel;
-    juce::ImageComponent imageComponent;  // ZACHOVAT: Původní background
+    
+    /// Background image component
+    juce::ImageComponent imageComponent;
 
-    //==============================================================================
-    // ZACHOVAT: Debug mode handling a původní konstanty
-    bool debugMode_;
+    // ========================================================================
+    // State
+    // ========================================================================
     
-    // ZACHOVAT: Všechny původní makra a konstanty
-    static constexpr bool BACKGROUND_PICTURE_OFF_STATIC = false; // Compile-time constant
+    bool debugMode_;  // BACKGROUND_PICTURE_OFF flag
     
-    //==============================================================================
-    // Setup methods
+    // ========================================================================
+    // Setup Methods
+    // ========================================================================
+    
     void initializeComponents();
-    void setupBackground();    // ZACHOVAT: Původní background logic
-    
-    // Utility methods
+    void setupBackground();
     bool isDebugModeEnabled() const;
     
-    //==============================================================================
-    // ZACHOVAT: Původní VoiceActivityComponent pro kompatibilitu (prázdná implementace)
-    class VoiceActivityComponent : public juce::Component
-    {
-    public:
-        VoiceActivityComponent();
-        void paint(juce::Graphics& g) override;
-        void resized() override;
-        
-        void updateVoiceStates(int active, int sustaining, int releasing);
-        void setVoiceState(uint8_t midiNote, bool isActive, int voiceState);
-        
-    private:
-        static constexpr int GRID_COLS = 16;
-        static constexpr int GRID_ROWS = 8;
-        static constexpr int CELL_SIZE = 12;
-        static constexpr int CELL_PADDING = 1;
-        
-        std::array<int, 128> voiceStates{};
-        
-        juce::Rectangle<int> getCellBounds(int row, int col) const;
-        juce::Colour getStateColour(int state) const;
-        int getMidiNoteFromGrid(int row, int col) const;
-    };
-    
-    // Pro kompatibilitu s původním kódem
-    std::unique_ptr<VoiceActivityComponent> voiceActivityGrid;
-
-    //==============================================================================
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(IthacaPluginEditor)
 };

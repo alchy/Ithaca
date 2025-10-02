@@ -69,12 +69,16 @@ target_sources(IthacaPlayer
         # JUCE - Specialized GUI Components (IthacaPluginEditor)
         SliderPanelComponent.h
         SliderPanelComponent.cpp
-        InfoPanelComponent.h
-        InfoPanelComponent.cpp
+        InfoHeaderComponent.h
+        InfoHeaderComponent.cpp
 
         # Asynchronni loader samplu
         AsyncSampleLoader.h
         AsyncSampleLoader.cpp
+
+        # Midi processor
+        MidiProcessor.h
+        MidiProcessor.cpp
         
         # IthacaCore - Core Logger module
         ithaca-core/sampler/core_logger.cpp
