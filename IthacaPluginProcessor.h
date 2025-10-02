@@ -1,11 +1,11 @@
 /**
- * @file IthacaPluginProcessor.h (Refactored)
- * @brief Zjednodušený JUCE AudioProcessor s delegací parameter managementu
+ * @file IthacaPluginProcessor.h (Refactored with Async Loading)
+ * @brief JUCE AudioProcessor with asynchronous sample loading
  */
 
 #pragma once
 
-#include "IthacaConfig.h"  // musí být první
+#include "IthacaConfig.h"  // Must be first
 #include <juce_audio_processors/juce_audio_processors.h>
 #include <memory>
 #include <atomic>
@@ -21,28 +21,39 @@
 // MIDI CC definitions
 #include "MidiCCDefinitions.h"
 
+// Async loading
+#include "AsyncSampleLoader.h"
+
 //==============================================================================
 /**
- * @class IthacaPluginProcessor (Refactored)
- * @brief JUCE Audio Processor integrating IthacaCore sampler engine
+ * @class IthacaPluginProcessor (Refactored with Async Loading)
+ * @brief JUCE Audio Processor with non-blocking sample loading
  * 
- * REFAKTOR: Zjednodušený procesor s delegací responsibilities:
+ * Key Features:
+ * - Asynchronous sample loading in background thread
+ * - Non-blocking GUI initialization
+ * - Audio processing returns silence during loading
+ * - Graceful handling of multiple prepareToPlay() calls
+ * - Automatic VoiceManager ownership transfer after loading
+ * 
+ * Responsibilities:
  * - Audio processing pipeline (JUCE integration)
- * - IthacaCore VoiceManager lifecycle management
+ * - Async sample loading coordination
  * - MIDI event processing
  * - Sample directory management
  * - State save/load
  * 
- * Delegované responsibility:
+ * Delegated Responsibilities:
  * - Parameter layout creation → ParameterManager
  * - Parameter pointer management → ParameterManager
  * - RT-safe parameter updates → ParameterManager
- * - Parameter value conversion → ParameterManager
+ * - Sample loading logic → AsyncSampleLoader
  * 
  * Thread Safety:
- * - processBlock() je RT-safe
- * - prepareToPlay/releaseResources jsou audio thread
- * - createEditor/state management jsou main thread
+ * - processBlock() is RT-safe
+ * - prepareToPlay/releaseResources are audio thread
+ * - createEditor/state management are main thread
+ * - Async loading runs in dedicated background thread
  */
 class IthacaPluginProcessor final : public juce::AudioProcessor
 {
@@ -95,65 +106,94 @@ public:
     
     /**
      * @brief Get reference to VoiceManager for GUI access
-     * @return Pointer to VoiceManager (může být nullptr)
+     * @return Pointer to VoiceManager (may be nullptr during loading)
      */
     VoiceManager* getVoiceManager() const { return voiceManager_.get(); }
     
     /**
      * @brief Get current sampler statistics for GUI display
+     * @return SamplerStats structure with voice counts and sample rate
      */
     struct SamplerStats {
         int activeVoices = 0;
         int sustainingVoices = 0;
         int releasingVoices = 0;
-        int totalLoadedSamples = 0;
         int currentSampleRate = 0;
+        int totalLoadedSamples = 0;
     };
-    
     SamplerStats getSamplerStats() const;
     
     /**
-     * @brief Change sample directory and reload samples
+     * @brief Change sample directory and trigger reload
      * @param newPath New sample directory path
-     * @note Non-RT: may allocate and log
+     * @note This will trigger async reload if sample rate is valid
      */
     void changeSampleDirectory(const juce::String& newPath);
 
     //==============================================================================
-    // Parameter Management - Delegated to ParameterManager
+    // Async Loading - Public API for GUI
     
     /**
-     * @brief Get reference to JUCE parameter state
-     * @return Reference to ValueTreeState for GUI attachments
+     * @brief Check if sample loading is currently in progress
+     * @return true if loading is running in background
+     * @note Thread-safe, can be called from GUI thread
+     */
+    bool isLoadingInProgress() const;
+    
+    /**
+     * @brief Check if loading encountered an error
+     * @return true if loading failed
+     * @note Thread-safe, can be called from GUI thread
+     */
+    bool hasLoadingError() const;
+    
+    /**
+     * @brief Get error message from failed loading
+     * @return Error message string (empty if no error)
+     * @note Thread-safe, can be called from GUI thread
+     */
+    std::string getLoadingErrorMessage() const;
+
+    //==============================================================================
+    // Parameter Management - Public API
+    
+    /**
+     * @brief Get reference to parameter manager
+     * @return Reference to ParameterManager instance
+     */
+    ParameterManager& getParameterManager() { return parameterManager_; }
+    
+    /**
+     * @brief Get reference to APVTS for attachments
+     * @return Reference to AudioProcessorValueTreeState
      */
     juce::AudioProcessorValueTreeState& getParameters() { return parameters_; }
-    
-    /**
-     * @brief Get current parameter values in MIDI format
-     * @return ParameterManager for advanced parameter access
-     */
-    const ParameterManager& getParameterManager() const { return parameterManager_; }
 
 private:
     //==============================================================================
     // Core Components
     
-    std::unique_ptr<Logger> logger_;                    // IthacaCore logging system
-    std::unique_ptr<VoiceManager> voiceManager_;       // IthacaCore audio engine
-    ParameterManager parameterManager_;                // JUCE parameter management
-    juce::AudioProcessorValueTreeState parameters_;    // JUCE parameter state
+    std::unique_ptr<Logger> logger_;                    // IthacaCore logger
+    std::unique_ptr<VoiceManager> voiceManager_;        // IthacaCore voice manager
+    std::unique_ptr<AsyncSampleLoader> asyncLoader_;    // Async sample loader
     
     //==============================================================================
-    // Audio Processing State
+    // Parameter Management (delegated to ParameterManager)
     
-    double currentSampleRate_;     // Current audio sample rate
-    int currentBlockSize_;         // Current audio buffer size
-    bool samplerInitialized_;      // Sampler initialization status
+    juce::AudioProcessorValueTreeState parameters_;     // JUCE parameter tree
+    ParameterManager parameterManager_;                 // Parameter management delegate
+    
+    //==============================================================================
+    // Sampler State
+    
+    bool samplerInitialized_;                          // Initialization flag
+    double currentSampleRate_;                         // Current sample rate
+    int currentBlockSize_;                             // Current buffer size
     
     //==============================================================================
     // Sample Management
     
-    juce::String currentSampleDirectory_;  // Active sample directory
+    juce::String currentSampleDirectory_;              // Active sample directory
     
     //==============================================================================
     // Performance Monitoring
@@ -162,14 +202,13 @@ private:
     mutable std::atomic<int> totalMidiEventsProcessed_; // MIDI event counter
 
     //==============================================================================
-    // Private Methods - IthacaCore Management
+    // Private Methods - Audio Processing
     
     /**
-     * @brief Initialize IthacaCore sampler system
-     * @return true if initialization successful
-     * @note Non-RT: may allocate and log
+     * @brief Check and transfer VoiceManager from async loader if ready
+     * @note Called from processBlock() to detect loading completion
      */
-    bool initializeSampler();
+    void checkAndTransferVoiceManager();
     
     /**
      * @brief Process MIDI events from JUCE MidiBuffer

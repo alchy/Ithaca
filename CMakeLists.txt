@@ -71,6 +71,10 @@ target_sources(IthacaPlayer
         SliderPanelComponent.cpp
         InfoPanelComponent.h
         InfoPanelComponent.cpp
+
+        # Asynchronni loader samplu
+        AsyncSampleLoader.h
+        AsyncSampleLoader.cpp
         
         # IthacaCore - Core Logger module
         ithaca-core/sampler/core_logger.cpp

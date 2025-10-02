@@ -1,86 +1,85 @@
 /**
- * @file InfoPanelComponent.cpp
- * @brief Implementace komponenty pro info labely a live data updates
+ * @file InfoPanelComponent.cpp (Refactored with Loading Status)
+ * @brief Info panel with async loading status display
  */
 
 #include "InfoPanelComponent.h"
 #include "GuiConstants.h"
 #include <iostream>
 
-// DEBUG: Přepínač pro vypnutí background obrázku (zachovat původní logiku)
+// Debug macro (matches IthacaPluginEditor)
 #define BACKGROUND_PICTURE_OFF 0
+#define CURRENT_INSTRUMENT "Ithaca Grand Piano"
+#define PLUGIN_VERSION "1.0.0"
 
-// Makro pro debug výpisy (zachovat původní logiku) 
 #if BACKGROUND_PICTURE_OFF
 #define GUI_DEBUG(msg) std::cout << msg << std::endl
 #else
 #define GUI_DEBUG(msg)
 #endif
 
-// Definice konstant (zachovat původní hodnoty)
-#ifndef CURRENT_INSTRUMENT
-#define CURRENT_INSTRUMENT "Ithaca Grand Piano"
-#endif
-
-#ifndef PLUGIN_VERSION  
-#define PLUGIN_VERSION "1.0.0"
-#endif
-
-// Static member definition
+// Static initialization
 bool InfoPanelComponent::staticInfoSet_ = false;
 
+//==============================================================================
+// Constructor / Destructor
+
 InfoPanelComponent::InfoPanelComponent(IthacaPluginProcessor& processor)
-    : processorRef_(processor), debugMode_(GuiHelpers::isDebugModeEnabled())
+    : processorRef_(processor), debugMode_(false)
 {
     GUI_DEBUG("InfoPanelComponent: Constructor starting");
     
+    // Setup all labels
     setupAllLabels();
     
-    // ZACHOVAT: Původní timer logiku
-    startUpdates();
-    
-    GUI_DEBUG("InfoPanelComponent: Constructor completed - " << getNumChildComponents() << " child components");
+    // Don't start timer yet - wait for parentHierarchyChanged
+    GUI_DEBUG("InfoPanelComponent: Constructor completed");
 }
 
 InfoPanelComponent::~InfoPanelComponent()
 {
-    stopUpdates();
-    GUI_DEBUG("InfoPanelComponent: Destructor called");
+    stopTimer();
+    GUI_DEBUG("InfoPanelComponent: Destructor - timer stopped");
 }
+
+//==============================================================================
+// Component Overrides
 
 void InfoPanelComponent::paint(juce::Graphics& g)
 {
-    // TRANSPARENTNÍ - bez pozadí, nechá hlavní editor vykreslit overlay
+    // Transparent - no background painting
     juce::ignoreUnused(g);
-    GUI_DEBUG("InfoPanelComponent: Paint method - transparent mode");
 }
 
 void InfoPanelComponent::resized()
 {
     auto bounds = getLocalBounds();
     
+    // Different layouts based on debug mode
     if (debugMode_) {
         layoutDebugMode(bounds);
     } else {
         layoutBackgroundMode(bounds);
     }
-    
-    GUI_DEBUG("InfoPanelComponent: Resized with bounds " << bounds.toString().toStdString());
 }
+
+//==============================================================================
+// Timer Override
 
 void InfoPanelComponent::timerCallback()
 {
-    // ZACHOVAT: Přesně původní timer logiku včetně fallback bounds
-    applyFallbackBounds();
+    // Update live data from processor
     updateLiveData();
 }
+
+//==============================================================================
+// Public Control Methods
 
 void InfoPanelComponent::startUpdates()
 {
     if (!isTimerRunning()) {
         startTimer(TIMER_INTERVAL_MS);
-        timerCallback(); // První update
-        GUI_DEBUG("InfoPanelComponent: Timer updates started");
+        GUI_DEBUG("InfoPanelComponent: Timer started (" << TIMER_INTERVAL_MS << "ms interval)");
     }
 }
 
@@ -88,31 +87,32 @@ void InfoPanelComponent::stopUpdates()
 {
     if (isTimerRunning()) {
         stopTimer();
-        GUI_DEBUG("InfoPanelComponent: Timer updates stopped");
+        GUI_DEBUG("InfoPanelComponent: Timer stopped");
     }
 }
 
 void InfoPanelComponent::setDebugMode(bool enabled)
 {
-    if (debugMode_ != enabled) {
-        debugMode_ = enabled;
-        
-        // Přestylovat všechny komponenty
-        setupAllLabels();
-        resized();
-        
-        GUI_DEBUG("InfoPanelComponent: Debug mode " << (enabled ? "ENABLED" : "DISABLED"));
-    }
+    debugMode_ = enabled;
+    
+    // Recreate labels with new debug mode
+    setupAllLabels();
+    resized();
+    
+    GUI_DEBUG("InfoPanelComponent: Debug mode " << (enabled ? "ENABLED" : "DISABLED"));
 }
+
+//==============================================================================
+// Private Methods - Setup
 
 void InfoPanelComponent::setupAllLabels()
 {
     GUI_DEBUG("InfoPanelComponent: Setting up all labels - START");
     
-    // Vymazat existující komponenty
+    // Remove existing components
     removeAllChildren();
     
-    // ZACHOVAT: Všechny původní info labely s původními texty
+    // Create all info labels with current debug mode
     activeVoicesLabel = GuiHelpers::createSmallLabel("Active: 0", debugMode_);
     if (activeVoicesLabel) {
         addAndMakeVisible(activeVoicesLabel.get());
@@ -137,6 +137,7 @@ void InfoPanelComponent::setupAllLabels()
         GUI_DEBUG("InfoPanelComponent: sampleRateLabel created");
     }
     
+    // IMPORTANT: Instrument label now shows loading status
     instrumentLabel = GuiHelpers::createSmallLabel("Instrument: " + juce::String(CURRENT_INSTRUMENT), debugMode_);
     if (instrumentLabel) {
         addAndMakeVisible(instrumentLabel.get());
@@ -152,192 +153,252 @@ void InfoPanelComponent::setupAllLabels()
     GUI_DEBUG("InfoPanelComponent: All labels setup completed");
 }
 
+//==============================================================================
+// Private Methods - Data Update
+
 void InfoPanelComponent::updateLiveData()
 {
-    // ZACHOVAT: Přesně původní logiku aktualizace živých dat
-    try {
-        if (processorRef_.getVoiceManager()) {
-            auto stats = processorRef_.getSamplerStats();
-            
-            // Voice counters - živé údaje (PŮVODNÍ FORMÁT)
-            if (activeVoicesLabel) {
-                GuiHelpers::updateLabelText(activeVoicesLabel.get(), 
-                    juce::String(GuiConstants::TextConstants::ACTIVE_VOICES_PREFIX) + juce::String(stats.activeVoices));
-            }
-            
-            if (sustainingVoicesLabel) {
-                GuiHelpers::updateLabelText(sustainingVoicesLabel.get(), 
-                    juce::String(GuiConstants::TextConstants::SUSTAINING_VOICES_PREFIX) + juce::String(stats.sustainingVoices));
-            }
-            
-            if (releasingVoicesLabel) {
-                GuiHelpers::updateLabelText(releasingVoicesLabel.get(), 
-                    juce::String(GuiConstants::TextConstants::RELEASING_VOICES_PREFIX) + juce::String(stats.releasingVoices));
-            }
-            
-            // Sample rate - živý údaj (PŮVODNÍ FORMÁT)
-            if (sampleRateLabel) {
-                GuiHelpers::updateLabelText(sampleRateLabel.get(), 
-                    juce::String(GuiConstants::TextConstants::SAMPLE_RATE_PREFIX) + juce::String(stats.currentSampleRate) + "Hz");
-            }
-            
-            // Statické informace - nastavit pouze jednou
-            if (!staticInfoSet_) {
-                if (instrumentLabel) {
-                    GuiHelpers::updateLabelText(instrumentLabel.get(), 
-                        juce::String(GuiConstants::TextConstants::INSTRUMENT_PREFIX) + juce::String(CURRENT_INSTRUMENT));
-                }
-                if (versionLabel) {
-                    GuiHelpers::updateLabelText(versionLabel.get(), 
-                        juce::String(GuiConstants::TextConstants::VERSION_PREFIX) + juce::String(PLUGIN_VERSION));
-                }
-                staticInfoSet_ = true;
-                GUI_DEBUG("InfoPanelComponent: Static info labels set");
-            }
-            
-        } else {
-            // Engine není ready - zobrazit fallback hodnoty (PŮVODNÍ FORMÁT)
-            if (activeVoicesLabel) {
-                GuiHelpers::updateLabelText(activeVoicesLabel.get(), 
-                    juce::String(GuiConstants::TextConstants::ACTIVE_VOICES_PREFIX) + GuiConstants::TextConstants::FALLBACK_VALUE);
-            }
-            if (sustainingVoicesLabel) {
-                GuiHelpers::updateLabelText(sustainingVoicesLabel.get(), 
-                    juce::String(GuiConstants::TextConstants::SUSTAINING_VOICES_PREFIX) + GuiConstants::TextConstants::FALLBACK_VALUE);
-            }
-            if (releasingVoicesLabel) {
-                GuiHelpers::updateLabelText(releasingVoicesLabel.get(), 
-                    juce::String(GuiConstants::TextConstants::RELEASING_VOICES_PREFIX) + GuiConstants::TextConstants::FALLBACK_VALUE);
-            }
-            if (sampleRateLabel) {
-                GuiHelpers::updateLabelText(sampleRateLabel.get(), 
-                    juce::String(GuiConstants::TextConstants::SAMPLE_RATE_PREFIX) + GuiConstants::TextConstants::FALLBACK_VALUE);
-            }
+    auto* vm = processorRef_.getVoiceManager();
+    
+    // ========================================================================
+    // CRITICAL: Check async loading status first
+    // ========================================================================
+    
+    if (processorRef_.isLoadingInProgress()) {
+        // Currently loading - show loading status
+        if (instrumentLabel) {
+            instrumentLabel->setText("Loading samples...", juce::dontSendNotification);
         }
         
-    } catch (...) {
-        GUI_DEBUG("InfoPanelComponent: EXCEPTION in updateLiveData");
-        
-        // Fallback při chybě
+        // Keep other stats at zero during loading
         if (activeVoicesLabel) {
-            GuiHelpers::updateLabelText(activeVoicesLabel.get(), 
-                juce::String(GuiConstants::TextConstants::ACTIVE_VOICES_PREFIX) + GuiConstants::TextConstants::ERROR_VALUE);
+            activeVoicesLabel->setText("Active: --", juce::dontSendNotification);
         }
         if (sustainingVoicesLabel) {
-            GuiHelpers::updateLabelText(sustainingVoicesLabel.get(), 
-                juce::String(GuiConstants::TextConstants::SUSTAINING_VOICES_PREFIX) + GuiConstants::TextConstants::ERROR_VALUE);
+            sustainingVoicesLabel->setText("Sustaining: --", juce::dontSendNotification);
         }
         if (releasingVoicesLabel) {
-            GuiHelpers::updateLabelText(releasingVoicesLabel.get(), 
-                juce::String(GuiConstants::TextConstants::RELEASING_VOICES_PREFIX) + GuiConstants::TextConstants::ERROR_VALUE);
+            releasingVoicesLabel->setText("Releasing: --", juce::dontSendNotification);
         }
-        if (sampleRateLabel) {
-            GuiHelpers::updateLabelText(sampleRateLabel.get(), 
-                juce::String(GuiConstants::TextConstants::SAMPLE_RATE_PREFIX) + GuiConstants::TextConstants::ERROR_VALUE);
+        
+        GUI_DEBUG("InfoPanelComponent: Showing loading status");
+        return;
+    }
+    
+    if (processorRef_.hasLoadingError()) {
+        // Loading failed - show error
+        if (instrumentLabel) {
+            instrumentLabel->setText("Sample load error", juce::dontSendNotification);
+        }
+        
+        GUI_DEBUG("InfoPanelComponent: Showing error status");
+        return;
+    }
+    
+    // ========================================================================
+    // Loading completed - show normal info
+    // ========================================================================
+    
+    // Update instrument label to show instrument name
+    if (instrumentLabel && !staticInfoSet_) {
+        instrumentLabel->setText("Instrument: " + juce::String(CURRENT_INSTRUMENT), 
+                                juce::dontSendNotification);
+        staticInfoSet_ = true;
+        GUI_DEBUG("InfoPanelComponent: Static info set - instrument name displayed");
+    }
+    
+    // ========================================================================
+    // Update live voice statistics
+    // ========================================================================
+    
+    if (vm) {
+        // Get stats from processor
+        auto stats = processorRef_.getSamplerStats();
+        
+        // Update active voices
+        if (activeVoicesLabel) {
+            activeVoicesLabel->setText(
+                juce::String(GuiConstants::TextConstants::ACTIVE_VOICES_PREFIX) + juce::String(stats.activeVoices),
+                juce::dontSendNotification
+            );
+        }
+        
+        // Update sustaining voices
+        if (sustainingVoicesLabel) {
+            sustainingVoicesLabel->setText(
+                juce::String(GuiConstants::TextConstants::SUSTAINING_VOICES_PREFIX) + juce::String(stats.sustainingVoices),
+                juce::dontSendNotification
+            );
+        }
+        
+        // Update releasing voices
+        if (releasingVoicesLabel) {
+            releasingVoicesLabel->setText(
+                juce::String(GuiConstants::TextConstants::RELEASING_VOICES_PREFIX) + juce::String(stats.releasingVoices),
+                juce::dontSendNotification
+            );
+        }
+        
+        // Update sample rate (if not already set)
+        if (sampleRateLabel && stats.currentSampleRate > 0) {
+            sampleRateLabel->setText(
+                juce::String(GuiConstants::TextConstants::SAMPLE_RATE_PREFIX) + 
+                juce::String(stats.currentSampleRate) + "Hz",
+                juce::dontSendNotification
+            );
+        }
+        
+    } else {
+        // No VoiceManager yet - show fallback values
+        if (activeVoicesLabel) {
+            activeVoicesLabel->setText(
+                juce::String(GuiConstants::TextConstants::ACTIVE_VOICES_PREFIX) + 
+                GuiConstants::TextConstants::FALLBACK_VALUE,
+                juce::dontSendNotification
+            );
+        }
+        
+        if (sustainingVoicesLabel) {
+            sustainingVoicesLabel->setText(
+                juce::String(GuiConstants::TextConstants::SUSTAINING_VOICES_PREFIX) + 
+                GuiConstants::TextConstants::FALLBACK_VALUE,
+                juce::dontSendNotification
+            );
+        }
+        
+        if (releasingVoicesLabel) {
+            releasingVoicesLabel->setText(
+                juce::String(GuiConstants::TextConstants::RELEASING_VOICES_PREFIX) + 
+                GuiConstants::TextConstants::FALLBACK_VALUE,
+                juce::dontSendNotification
+            );
         }
     }
 }
 
-void InfoPanelComponent::applyFallbackBounds()
-{
-    // ZACHOVAT: Přesně původní fallback bounds logiku
-    static bool boundsFixed = false;
-    if (!boundsFixed) {
-        GUI_DEBUG("InfoPanelComponent: Fixing bounds via fallback mode");
-        
-        // Fallback bounds pro případ, že resized() nefunguje správně
-        if (activeVoicesLabel && activeVoicesLabel->getBounds().isEmpty()) {
-            activeVoicesLabel->setBounds(340, 80, 130, 18);
-        }
-        if (sustainingVoicesLabel && sustainingVoicesLabel->getBounds().isEmpty()) {
-            sustainingVoicesLabel->setBounds(340, 102, 130, 18);
-        }
-        if (releasingVoicesLabel && releasingVoicesLabel->getBounds().isEmpty()) {
-            releasingVoicesLabel->setBounds(340, 124, 130, 18);
-        }
-        if (sampleRateLabel && sampleRateLabel->getBounds().isEmpty()) {
-            sampleRateLabel->setBounds(340, 150, 130, 18);
-        }
-        if (instrumentLabel && instrumentLabel->getBounds().isEmpty()) {
-            instrumentLabel->setBounds(340, 172, 130, 18);
-        }
-        if (versionLabel && versionLabel->getBounds().isEmpty()) {
-            versionLabel->setBounds(340, 600, 130, 18);
-        }
-        
-        boundsFixed = true;
-        GUI_DEBUG("InfoPanelComponent: All bounds fixed with fallback positions");
-    }
-}
+//==============================================================================
+// Private Methods - Layout
 
 void InfoPanelComponent::layoutBackgroundMode(juce::Rectangle<int> bounds)
 {
-    // ZACHOVAT: Původní layout pozice pro background mode
-    auto infoArea = bounds;
+    // BACKGROUND MODE: Original vertical stacking layout
+    // (This matches the original IthacaPluginEditor layout)
+    
+    const int labelHeight = 20;
+    const int spacing = 4;
     
     if (activeVoicesLabel) {
-        activeVoicesLabel->setBounds(infoArea.removeFromTop(18));
-        infoArea.removeFromTop(4);
+        activeVoicesLabel->setBounds(bounds.removeFromTop(labelHeight));
+        bounds.removeFromTop(spacing);
     }
+    
     if (sustainingVoicesLabel) {
-        sustainingVoicesLabel->setBounds(infoArea.removeFromTop(18));
-        infoArea.removeFromTop(4);
+        sustainingVoicesLabel->setBounds(bounds.removeFromTop(labelHeight));
+        bounds.removeFromTop(spacing);
     }
+    
     if (releasingVoicesLabel) {
-        releasingVoicesLabel->setBounds(infoArea.removeFromTop(18));
-        infoArea.removeFromTop(8);
+        releasingVoicesLabel->setBounds(bounds.removeFromTop(labelHeight));
+        bounds.removeFromTop(spacing);
     }
+    
     if (sampleRateLabel) {
-        sampleRateLabel->setBounds(infoArea.removeFromTop(18));
-        infoArea.removeFromTop(4);
+        sampleRateLabel->setBounds(bounds.removeFromTop(labelHeight));
+        bounds.removeFromTop(spacing);
     }
+    
+    // Instrument label (shows loading status or instrument name)
     if (instrumentLabel) {
-        instrumentLabel->setBounds(infoArea.removeFromTop(18));
-        infoArea.removeFromTop(20);
+        instrumentLabel->setBounds(bounds.removeFromTop(labelHeight));
+        bounds.removeFromTop(spacing);
     }
     
-    // Version label speciální umístění - bude umístěn hlavním editorem
+    // Version label at bottom
+    if (versionLabel) {
+        versionLabel->setBounds(bounds.removeFromTop(labelHeight));
+    }
     
-    GUI_DEBUG("InfoPanelComponent: Background mode layout completed");
+    GUI_DEBUG("InfoPanelComponent: Background mode layout applied");
 }
 
 void InfoPanelComponent::layoutDebugMode(juce::Rectangle<int> bounds)
 {
-    // DEBUG MODE: Původní layout pro debug
-    auto controlArea = bounds.reduced(GuiConstants::COMPONENT_PADDING);
+    // DEBUG MODE: Compact vertical stacking
     
-    controlArea.removeFromTop(30); // Top spacing
+    const int labelHeight = 18;
+    const int spacing = 2;
     
     if (activeVoicesLabel) {
-        activeVoicesLabel->setBounds(controlArea.removeFromTop(18));
-        controlArea.removeFromTop(4);
+        activeVoicesLabel->setBounds(bounds.removeFromTop(labelHeight));
+        bounds.removeFromTop(spacing);
     }
     
     if (sustainingVoicesLabel) {
-        sustainingVoicesLabel->setBounds(controlArea.removeFromTop(18));
-        controlArea.removeFromTop(4);
+        sustainingVoicesLabel->setBounds(bounds.removeFromTop(labelHeight));
+        bounds.removeFromTop(spacing);
     }
     
     if (releasingVoicesLabel) {
-        releasingVoicesLabel->setBounds(controlArea.removeFromTop(18));
-        controlArea.removeFromTop(8);
+        releasingVoicesLabel->setBounds(bounds.removeFromTop(labelHeight));
+        bounds.removeFromTop(spacing);
     }
     
     if (sampleRateLabel) {
-        sampleRateLabel->setBounds(controlArea.removeFromTop(18));
-        controlArea.removeFromTop(4);
+        sampleRateLabel->setBounds(bounds.removeFromTop(labelHeight));
+        bounds.removeFromTop(spacing);
     }
     
     if (instrumentLabel) {
-        instrumentLabel->setBounds(controlArea.removeFromTop(18));
-        controlArea.removeFromTop(20);
+        instrumentLabel->setBounds(bounds.removeFromTop(labelHeight));
+        bounds.removeFromTop(spacing);
     }
     
-    // Version label - speciální umístění v debug módu
     if (versionLabel) {
-        auto versionArea = bounds.removeFromBottom(25).reduced(8);
-        versionLabel->setBounds(versionArea);
+        versionLabel->setBounds(bounds.removeFromTop(labelHeight));
     }
     
-    GUI_DEBUG("InfoPanelComponent: Debug mode layout completed");
+    GUI_DEBUG("InfoPanelComponent: Debug mode layout applied");
+}
+
+void InfoPanelComponent::applyFallbackBounds()
+{
+    // Fallback layout if resized() wasn't called properly
+    // (Original implementation preserved)
+    
+    const int x = 10;
+    int y = 10;
+    const int width = getWidth() - 20;
+    const int height = 20;
+    const int spacing = 25;
+    
+    if (activeVoicesLabel) {
+        activeVoicesLabel->setBounds(x, y, width, height);
+        y += spacing;
+    }
+    
+    if (sustainingVoicesLabel) {
+        sustainingVoicesLabel->setBounds(x, y, width, height);
+        y += spacing;
+    }
+    
+    if (releasingVoicesLabel) {
+        releasingVoicesLabel->setBounds(x, y, width, height);
+        y += spacing;
+    }
+    
+    if (sampleRateLabel) {
+        sampleRateLabel->setBounds(x, y, width, height);
+        y += spacing;
+    }
+    
+    if (instrumentLabel) {
+        instrumentLabel->setBounds(x, y, width, height);
+        y += spacing;
+    }
+    
+    if (versionLabel) {
+        versionLabel->setBounds(x, y, width, height);
+    }
+    
+    GUI_DEBUG("InfoPanelComponent: Fallback bounds applied");
 }
