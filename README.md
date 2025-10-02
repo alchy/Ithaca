@@ -73,6 +73,48 @@ C:\Users\Jindra\Documents\Repos\Ithaca\build\IthacaPlayer_artefacts\Debug\Standa
 ```
 
 ---
+### Inicializace Ithaca Player
+
+Mermaid diagram ukazuje postupnou inicializaci celého Ithaca Player od spuštění pluginu (konstruktor procesoru) přes přípravu audio až po vytvoření GUI. Diagram je sekvenční.
+
+```mermaid
+sequenceDiagram
+    participant DAW as DAW/Host
+    participant Processor as IthacaAudioProcessor
+    participant Core as IthacaCore (Envelope, VoiceManager, etc.)
+    participant Editor as IthacaAudioProcessorEditor
+    participant Panel as SliderPanelComponent
+    participant Helpers as GuiHelpers & Attachments
+
+    DAW->>Processor: Načtení pluginu (konstruktor)
+    Processor->>Core: Inicializace Logger
+    Processor->>Core: EnvelopeStaticData::initialize(logger) [non-RT, předpočítané data]
+    Processor->>Core: Inicializace SamplerIO (scan samples)
+    Processor->>Core: Inicializace InstrumentLoader & VoiceManager (128 hlasů)
+    Processor->>Processor: Nastavení výchozích parametrů (gain=100, etc.)
+
+    DAW->>Processor: prepareToPlay(sampleRate, samplesPerBlock)
+    Processor->>Core: InstrumentLoader::loadInstrument() [načtení samplů, sync/async rozšířitelné]
+    Processor->>Core: VoiceManager::initializeAll(loader, sampleRate) [per-voice setup]
+    Processor->>Processor: Alokace LFO & stereo bufferů
+
+    DAW->>Processor: createEditor()
+    Processor->>Editor: Vytvoření editoru s referencí na parametry
+    Editor->>Panel: Vytvoření SliderPanelComponent s parametry & MidiLearnManager
+    Panel->>Helpers: setupAllControls() [vytvoření sliderů & labelů]
+    Panel->>Helpers: setupSliderAttachments() [bindingy k parametrům]
+    Panel->>Helpers: GuiHelpers::styleSlider() [styly: barvy, fonty]
+    Editor->>Editor: resized() [layout panelu]
+
+    Note over DAW,Helpers: Inicializace dokončena – připraveno na processBlock & GUI interakce
+```
+
+#### Krátké vysvětlení diagramu
+- **Sekvence**: Začíná načtením v DAW, pokračuje inicializací core (IthacaCore), přípravou audio a končí GUI setupem.
+- **Klíčové body**: Inicializace je non-RT (konstruktor), příprava RT-safe (prepareToPlay). Načítání samplů je sync, ale lze přidat async thread pro optimalizaci.
+- **Závislosti**: Procesor je centrem – volá core pro data, editor pro GUI. Změny v panelu (slidery) se vrací zpět do procesoru přes attachmenty.
+
+---
 ## Popis souborů projektu Ithaca
 
 ### Diagram závislostí
