@@ -1,13 +1,13 @@
 /**
- * @file IthacaPluginProcessor.cpp (Refactored with Async Loading)
- * @brief Implementation with non-blocking sample loading
+ * @file IthacaPluginProcessor.cpp (COMPLETE with MIDI Learn)
+ * @brief Implementation with non-blocking sample loading and MIDI Learn
  */
 
 #include "IthacaPluginProcessor.h"
 #include "IthacaPluginEditor.h"
 
 //==============================================================================
-// Constructor - Initialize with async loader
+// Constructor - Initialize with async loader and MIDI Learn
 
 IthacaPluginProcessor::IthacaPluginProcessor()
     : AudioProcessor(BusesProperties()
@@ -37,6 +37,10 @@ IthacaPluginProcessor::IthacaPluginProcessor()
     midiProcessor_ = std::make_unique<MidiProcessor>();
     logSafe("IthacaPluginProcessor/constructor", "info", "MIDI processor created");
     
+    // Create MIDI Learn Manager
+    midiLearnManager_ = std::make_unique<MidiLearnManager>();
+    logSafe("IthacaPluginProcessor/constructor", "info", "MIDI Learn Manager created");
+    
     // Set default sample directory
     currentSampleDirectory_ = DEFAULT_SAMPLE_DIR;
     
@@ -45,6 +49,8 @@ IthacaPluginProcessor::IthacaPluginProcessor()
            "Default sample directory: " + currentSampleDirectory_.toStdString());
     logSafe("IthacaPluginProcessor/constructor", "info", 
            "Async loading enabled - samples will load in background");
+    logSafe("IthacaPluginProcessor/constructor", "info", 
+           "MIDI Learn enabled - right-click sliders to assign CC");
 }
 
 IthacaPluginProcessor::~IthacaPluginProcessor()
@@ -66,6 +72,12 @@ IthacaPluginProcessor::~IthacaPluginProcessor()
         voiceManager_->resetAllVoices(*logger_);
         voiceManager_.reset();
         logSafe("IthacaPluginProcessor/destructor", "info", "VoiceManager cleaned up");
+    }
+    
+    // Cleanup MIDI Learn Manager
+    if (midiLearnManager_) {
+        midiLearnManager_.reset();
+        logSafe("IthacaPluginProcessor/destructor", "info", "MIDI Learn Manager cleaned up");
     }
     
     // Cleanup envelope static data
@@ -198,12 +210,16 @@ void IthacaPluginProcessor::processBlock(juce::AudioBuffer<float>& buffer,
     }
     
     // Update VoiceManager parameters (RT-safe through ParameterManager)
-    // Uses original method: ParameterManager directly calls VoiceManager methods
     parameterManager_.updateSamplerParametersRTSafe(voiceManager_.get());
     
-    // Process MIDI events (delegated to MidiProcessor)
+    // Process MIDI events (delegated to MidiProcessor with MIDI Learn)
     if (midiProcessor_) {
-        midiProcessor_->processMidiBuffer(midiMessages, voiceManager_.get(), parameters_);
+        midiProcessor_->processMidiBuffer(
+            midiMessages, 
+            voiceManager_.get(), 
+            parameters_,
+            midiLearnManager_.get()  // Pass MIDI Learn Manager
+        );
     }
     
     // Render audio through VoiceManager
@@ -230,33 +246,69 @@ bool IthacaPluginProcessor::hasEditor() const
 }
 
 //==============================================================================
-// State Management
+// State Management - WITH MIDI Learn Mappings
 
 void IthacaPluginProcessor::getStateInformation(juce::MemoryBlock& destData)
 {
-    // Save parameter state
-    auto state = parameters_.copyState();
-    std::unique_ptr<juce::XmlElement> xml(state.createXml());
-    copyXmlToBinary(*xml, destData);
+    // Create root XML element
+    auto rootXml = std::make_unique<juce::XmlElement>("IthacaPluginState");
     
-    logSafe("IthacaPluginProcessor/getStateInformation", "info", "Plugin state saved");
+    // 1. Save parameter state
+    auto parameterState = parameters_.copyState();
+    auto parameterXml = parameterState.createXml();
+    if (parameterXml) {
+        rootXml->addChildElement(parameterXml.release());
+    }
+    
+    // 2. Save MIDI Learn mappings
+    if (midiLearnManager_) {
+        auto midiLearnXml = midiLearnManager_->saveToXml();
+        if (midiLearnXml) {
+            rootXml->addChildElement(midiLearnXml.release());
+        }
+    }
+    
+    // Convert to binary
+    copyXmlToBinary(*rootXml, destData);
+    
+    logSafe("IthacaPluginProcessor/getStateInformation", "info", 
+           "Plugin state saved (including MIDI Learn mappings)");
 }
 
 void IthacaPluginProcessor::setStateInformation(const void* data, int sizeInBytes)
 {
-    // Restore parameter state
     std::unique_ptr<juce::XmlElement> xmlState(getXmlFromBinary(data, sizeInBytes));
     
     if (xmlState.get() != nullptr) {
-        if (xmlState->hasTagName(parameters_.state.getType())) {
+        // Check for root element (new format with MIDI Learn)
+        if (xmlState->hasTagName("IthacaPluginState")) {
+            // 1. Restore parameter state
+            auto* parameterXml = xmlState->getChildByName(parameters_.state.getType());
+            if (parameterXml != nullptr) {
+                parameters_.replaceState(juce::ValueTree::fromXml(*parameterXml));
+                logSafe("IthacaPluginProcessor/setStateInformation", "info", 
+                       "Parameters restored");
+            }
+            
+            // 2. Restore MIDI Learn mappings
+            auto* midiLearnXml = xmlState->getChildByName("MidiLearnMappings");
+            if (midiLearnXml != nullptr && midiLearnManager_) {
+                midiLearnManager_->loadFromXml(midiLearnXml);
+                logSafe("IthacaPluginProcessor/setStateInformation", "info", 
+                       "MIDI Learn mappings restored");
+            }
+        }
+        // Legacy format compatibility (old saves without MIDI Learn)
+        else if (xmlState->hasTagName(parameters_.state.getType())) {
             parameters_.replaceState(juce::ValueTree::fromXml(*xmlState));
-            logSafe("IthacaPluginProcessor/setStateInformation", "info", "Plugin state restored");
+            logSafe("IthacaPluginProcessor/setStateInformation", "info", 
+                   "Legacy state restored (no MIDI Learn data)");
         }
     }
 }
 
 //==============================================================================
-// IthacaCore Integration - Public API
+// IthacaCore Integration - Public API for GUI
 
 IthacaPluginProcessor::SamplerStats IthacaPluginProcessor::getSamplerStats() const
 {
@@ -267,7 +319,6 @@ IthacaPluginProcessor::SamplerStats IthacaPluginProcessor::getSamplerStats() con
         stats.sustainingVoices = voiceManager_->getSustainingVoicesCount();
         stats.releasingVoices = voiceManager_->getReleasingVoicesCount();
         stats.currentSampleRate = voiceManager_->getCurrentSampleRate();
-        // Note: totalLoadedSamples would need to be exposed from InstrumentLoader
     }
     
     return stats;

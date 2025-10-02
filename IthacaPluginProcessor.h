@@ -1,6 +1,6 @@
 /**
- * @file IthacaPluginProcessor.h (Refactored with Async Loading)
- * @brief JUCE AudioProcessor with asynchronous sample loading
+ * @file IthacaPluginProcessor.h (COMPLETE with MIDI Learn)
+ * @brief JUCE AudioProcessor with asynchronous sample loading and MIDI Learn
  */
 
 #pragma once
@@ -27,30 +27,38 @@
 // MIDI processing
 #include "MidiProcessor.h"
 
+// MIDI Learn
+#include "MidiLearnManager.h"
+
 //==============================================================================
 /**
- * @class IthacaPluginProcessor (Refactored with Async Loading)
- * @brief JUCE Audio Processor with non-blocking sample loading
+ * @class IthacaPluginProcessor (Complete with MIDI Learn)
+ * @brief JUCE Audio Processor with non-blocking sample loading and MIDI Learn
  * 
  * Key Features:
  * - Asynchronous sample loading in background thread
  * - Non-blocking GUI initialization
+ * - MIDI Learn functionality for all parameters
  * - Audio processing returns silence during loading
  * - Graceful handling of multiple prepareToPlay() calls
  * - Automatic VoiceManager ownership transfer after loading
+ * - Save/Load MIDI Learn mappings with plugin state
  * 
  * Responsibilities:
  * - Audio processing pipeline (JUCE integration)
  * - Async sample loading coordination
  * - MIDI event processing
+ * - MIDI Learn management
  * - Sample directory management
- * - State save/load
+ * - State save/load (parameters + MIDI mappings)
  * 
  * Delegated Responsibilities:
  * - Parameter layout creation → ParameterManager
  * - Parameter pointer management → ParameterManager
  * - RT-safe parameter updates → ParameterManager
  * - Sample loading logic → AsyncSampleLoader
+ * - MIDI CC processing → MidiProcessor
+ * - MIDI Learn logic → MidiLearnManager
  * 
  * Thread Safety:
  * - processBlock() is RT-safe
@@ -172,6 +180,16 @@ public:
      */
     juce::AudioProcessorValueTreeState& getParameters() { return parameters_; }
 
+    //==============================================================================
+    // MIDI Learn - Public API for GUI
+    
+    /**
+     * @brief Get pointer to MIDI Learn Manager
+     * @return Pointer to MidiLearnManager (never nullptr)
+     * @note Used by GUI components to access MIDI Learn functionality
+     */
+    MidiLearnManager* getMidiLearnManager() { return midiLearnManager_.get(); }
+
 private:
     //==============================================================================
     // Core Components
@@ -180,6 +198,7 @@ private:
     std::unique_ptr<VoiceManager> voiceManager_;        // IthacaCore voice manager
     std::unique_ptr<AsyncSampleLoader> asyncLoader_;    // Async sample loader
     std::unique_ptr<MidiProcessor> midiProcessor_;      // MIDI event processor
+    std::unique_ptr<MidiLearnManager> midiLearnManager_; // MIDI Learn manager
     
     //==============================================================================
     // Parameter Management (delegated to ParameterManager)
@@ -203,7 +222,6 @@ private:
     // Performance Monitoring
     
     mutable std::atomic<int> processBlockCallCount_;    // Process block counter
-    // Note: MIDI event counter moved to MidiProcessor
 
     //==============================================================================
     // Private Methods - Audio Processing

@@ -72,6 +72,10 @@ target_sources(IthacaPlayer
         InfoHeaderComponent.h
         InfoHeaderComponent.cpp
 
+        # MIDI learn
+        MidiLearnManager.h
+        MidiLearnManager.cpp
+        
         # Asynchronni loader samplu
         AsyncSampleLoader.h
         AsyncSampleLoader.cpp
