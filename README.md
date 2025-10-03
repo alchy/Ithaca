@@ -1,3 +1,14 @@
+## K implementaci
+
+https://anotherproducer.com/online-tools-for-musicians/midi-cc-list/ 
+
+- All Sound Off           MIDI CC 120:  Mutes all sound. It does so regardless of release time or sustain. (See MIDI CC 123)
+- All Notes Off           MIDI CC 123:  Mutes all sounding notes. Release time will still be maintained, and notes held by sustain will not turn off until sustain pedal is depressed.
+- Balance (MSB)           MIDI CC 8:    Controls the left and right balance, generally for stereo patches. A value of 64 equals the center.
+- Pan (MSB)               MIDI CC 10:   Controls the left and right balance, generally for mono patches. A value of 64 equals the center.
+- Volume (MSB)            MIDI CC 7:    Controls the volume of the channel. 
+- Modulation Wheel (MSB)  MIDI CC 1:    Generally this CC controls a vibrato effect (pitch, loudness, brighness). What is modulated is based on the patch.
+
 ## Požadavky
 - Visual Studio Code s rozšířeními CMake Tools a C/C++ od Microsoftu.
 - Visual Studio 2022 Build Tools nebo Community Edition (C++ komponenty).
