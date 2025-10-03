@@ -24,8 +24,11 @@ namespace BuildInfo {
     constexpr const char* GIT_HASH = "@GIT_HASH@";
     constexpr const char* GIT_BRANCH = "@GIT_BRANCH@";
     
-    // Plugin verze (zachována z IthacaConfig.h)
+    // Plugin verze (z CMake PROJECT_VERSION)
     constexpr const char* PLUGIN_VERSION = "@PROJECT_VERSION@";
+    
+    // Alternativně pro C-style použití:
+    #define ITHACA_PLUGIN_VERSION "@PROJECT_VERSION@"
     
     /**
      * @brief Získej kompletní build string pro GUI

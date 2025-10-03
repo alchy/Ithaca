@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.22)
 
-# Project definition - název pro JUCE plugin
+# Project definition - ZMĚNA: jiný název pro JUCE plugin
 project(ITHACA_PLAYER_JUCE VERSION 1.1.0)
 
 # Set C++ standard to 17 (required for IthacaCore)

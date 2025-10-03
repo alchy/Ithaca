@@ -126,9 +126,10 @@ void InfoHeaderComponent::setupAllLabels()
         addAndMakeVisible(instrumentNameLabel.get());
     }
     
-    // Version - STŘEDNÍ FONT (14px)
+    // Build ID - STŘEDNÍ FONT (14px)
     versionLabel = GuiHelpers::createInfoLabel(
-        "Version: " + juce::String(PLUGIN_VERSION), debugMode_);
+        BuildInfo::getBuildString(),  // "Build: 20250103_143022_DESKTOP-PC"
+        debugMode_);
     if (versionLabel) {
         addAndMakeVisible(versionLabel.get());
     }
