@@ -49,19 +49,19 @@ namespace GuiConstants {
     // =========================================================================
     
     /// Info header výška (~30% okna)
-    constexpr float INFO_SECTION_HEIGHT_RATIO = 0.30f;
+    constexpr float INFO_SECTION_HEIGHT_RATIO = 0.20f;
     
     /// Slider panel výška (~70% okna)
-    constexpr float SLIDER_SECTION_HEIGHT_RATIO = 0.70f;
+    constexpr float SLIDER_SECTION_HEIGHT_RATIO = 0.80f;
     
     /// Vnitřní padding sekcí (okraje)
-    constexpr int SECTION_PADDING = 12;
+    constexpr int SECTION_PADDING = 0; // 12;
     
     /// Mezera mezi řádky sliderů
-    constexpr int SECTION_SPACING = 8;
+    constexpr int SECTION_SPACING = 0; // 4; // 8;
     
     /// Mezera mezi info a slider sekcí
-    constexpr int SECTION_GAP = 8;
+    constexpr int SECTION_GAP = 0; // 4; // 8;
     
     // =========================================================================
     // OVERLAY STYLING - Rounded corners a alpha
@@ -74,13 +74,13 @@ namespace GuiConstants {
     constexpr float SLIDER_OVERLAY_ALPHA = 0.6f;
     
     /// Poloměr zaoblení rohů overlay panelů
-    constexpr float PANEL_CORNER_RADIUS = 6.0f;
+    constexpr float PANEL_CORNER_RADIUS = 0; // 6.0f;
     
     /// Alpha pro separátory mezi slider řádky
     constexpr float SEPARATOR_ALPHA = 0.6f;
     
     /// Tloušťka separační čáry
-    constexpr int SEPARATOR_THICKNESS = 1;
+    constexpr int SEPARATOR_THICKNESS = 2; // 1;
     
     // =========================================================================
     // FONT SIZES - Hierarchie fontů
@@ -140,7 +140,7 @@ namespace GuiConstants {
     // =========================================================================
     
     constexpr juce::uint32 SLIDER_TRACK_COLOR = 0xff444444;
-    constexpr juce::uint32 SLIDER_THUMB_COLOR = 0xff0066cc;
+    constexpr juce::uint32 SLIDER_THUMB_COLOR = 0xffffffff;  // BÍLÝ thumb 
     constexpr juce::uint32 SLIDER_TEXT_COLOR = 0xffffffff;
     
     constexpr juce::uint32 TEXT_COLOR = 0xffffffff;        // Bílý text

@@ -88,7 +88,7 @@ void IthacaPluginEditor::resized()
     GUI_DEBUG("IthacaGUI: Resized - Window size: " << bounds.getWidth() 
               << "x" << bounds.getHeight());
 
-#if !BACKGROUND_PICTURE_OFF
+    #if !BACKGROUND_PICTURE_OFF
     // === BACKGROUND MODE: Hierarchical layout ===
     
     // Background image na celé okno (non-interactive)
@@ -104,8 +104,9 @@ void IthacaPluginEditor::resized()
               << "px (~" << (GuiConstants::INFO_SECTION_HEIGHT_RATIO * 100) << "%)");
     
     // Content area s paddingem
-    auto contentArea = bounds.reduced(8);
-    
+    //auto contentArea = bounds.reduced(8);
+    auto contentArea = bounds;
+
     // Info header nahoře (~30%)
     if (infoHeader) {
         infoHeader->setBounds(contentArea.removeFromTop(infoHeight));
