@@ -315,7 +315,7 @@ void SliderPanelComponent::updateSliderLearningVisuals(juce::Slider* slider, boo
         GuiHelpers::styleSlider(*slider, debugMode_);
     }
 
-    slider->repaint();
+    // REMOVED: slider->repaint(); - JUCE automatically repaints when colors change via setColour()
 }
 
 // ============================================================================
