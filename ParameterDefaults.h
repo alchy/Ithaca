@@ -16,6 +16,8 @@
 #define DEFAULT_LFO_PAN_SPEED       32   // Výchozí rychlost LFO pro panorama
 #define DEFAULT_LFO_PAN_DEPTH       127  // Výchozí hloubka LFO pro panorama
 #define DEFAULT_STEREO_FIELD        0    // Výchozí stereo field (vypnuto)
+#define DEFAULT_BBE_DEFINITION      64   // Výchozí BBE clarity/definition (50%, MIDI 64)
+#define DEFAULT_BBE_BASS_BOOST      32   // Výchozí BBE bass boost (25%, MIDI 32)
 
 // === ROZSAHY PARAMETRŮ ===
 // Definují rozsahy hodnot pro MIDI parametry
@@ -33,6 +35,8 @@
 #define PARAM_ID_LFO_PAN_SPEED      "lfoPanSpeed"
 #define PARAM_ID_LFO_PAN_DEPTH      "lfoPanDepth"
 #define PARAM_ID_STEREO_FIELD       "stereoField"
+#define PARAM_ID_BBE_DEFINITION     "bbeDefinition"
+#define PARAM_ID_BBE_BASS_BOOST     "bbeBassBoost"
 
 // === NÁZVY PARAMETRŮ ===
 // Uživatelsky přívětivé názvy pro GUI
@@ -44,6 +48,8 @@
 #define PARAM_NAME_LFO_PAN_SPEED    "LFO Pan Speed"
 #define PARAM_NAME_LFO_PAN_DEPTH    "LFO Pan Depth"
 #define PARAM_NAME_STEREO_FIELD     "Stereo Field"
+#define PARAM_NAME_BBE_DEFINITION   "BBE Definition"
+#define PARAM_NAME_BBE_BASS_BOOST   "BBE Bass Boost"
 
 // === MAPOVÁNÍ MIDI CC ===
 // MIDI Control Change čísla pro ovládání parametrů

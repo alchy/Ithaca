@@ -169,6 +169,8 @@ namespace GuiConstants {
         constexpr const char* LFO_SPEED_LABEL = "LFO Speed";
         constexpr const char* LFO_DEPTH_LABEL = "LFO Depth";
         constexpr const char* STEREO_FIELD_LABEL = "Stereo Field";
+        constexpr const char* BBE_DEFINITION_LABEL = "BBE Definition";
+        constexpr const char* BBE_BASS_BOOST_LABEL = "BBE Bass";
         
         // Info section prefixy
         constexpr const char* ACTIVE_VOICES_PREFIX = "Active: ";

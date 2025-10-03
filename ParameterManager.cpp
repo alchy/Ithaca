@@ -37,7 +37,13 @@ juce::AudioProcessorValueTreeState::ParameterLayout ParameterManager::createPara
 
     // Stereo Field (0-127, default 0 = disabled)
     parameters.push_back(createMidiParameter("stereoField", "Stereo Field", 0.0f));
-    
+
+    // BBE Effect - Definition (0-127, default 64 = 50%)
+    parameters.push_back(createMidiParameter("bbeDefinition", "BBE Definition", 64.0f));
+
+    // BBE Effect - Bass Boost (0-127, default 32 = 25%)
+    parameters.push_back(createMidiParameter("bbeBassBoost", "BBE Bass Boost", 32.0f));
+
     return { parameters.begin(), parameters.end() };
 }
 
@@ -54,10 +60,12 @@ bool ParameterManager::initializeParameterPointers(juce::AudioProcessorValueTree
     lfoPanSpeedParam_ = parameters.getRawParameterValue("lfoPanSpeed");
     lfoPanDepthParam_ = parameters.getRawParameterValue("lfoPanDepth");
     stereoFieldParam_ = parameters.getRawParameterValue("stereoField");
-    
+    bbeDefinitionParam_ = parameters.getRawParameterValue("bbeDefinition");
+    bbeBassBoostParam_ = parameters.getRawParameterValue("bbeBassBoost");
+
     // Zkontroluj zda byly všechny parametry nalezeny
     bool allValid = areParametersValid();
-    
+
     if (!allValid) {
         // Log které parametry chybí
         if (!masterGainParam_) { /* log error */ }
@@ -68,14 +76,16 @@ bool ParameterManager::initializeParameterPointers(juce::AudioProcessorValueTree
         if (!lfoPanSpeedParam_) { /* log error */ }
         if (!lfoPanDepthParam_) { /* log error */ }
         if (!stereoFieldParam_) { /* log error */ }
+        if (!bbeDefinitionParam_) { /* log error */ }
+        if (!bbeBassBoostParam_) { /* log error */ }
     }
-    
+
     return allValid;
 }
 
 // ===== RT-SAFE PARAMETER UPDATES =====
 
-void ParameterManager::updateSamplerParametersRTSafe(VoiceManager* voiceManager)
+void ParameterManager::updateSamplerParametersRTSafe(VoiceManager* voiceManager, Logger& logger)
 {
     // Early exit pokud VoiceManager není dostupný
     if (!voiceManager || !areParametersValid()) {
@@ -159,6 +169,24 @@ void ParameterManager::updateSamplerParametersRTSafe(VoiceManager* voiceManager)
             voiceManager->setAllVoicesStereoFieldAmountMIDI(currentStereoField); // RT-safe
         }
     }
+
+    // BBE Definition - pouze při změně (vyžaduje Logger)
+    if (bbeDefinitionParam_) {
+        uint8_t currentBbeDefinition = getCurrentBbeDefinition();
+        if (currentBbeDefinition != lastBbeDefinition_) {
+            lastBbeDefinition_ = currentBbeDefinition;
+            voiceManager->setBBEDefinitionMIDI(currentBbeDefinition, logger);
+        }
+    }
+
+    // BBE Bass Boost - pouze při změně (vyžaduje Logger)
+    if (bbeBassBoostParam_) {
+        uint8_t currentBbeBassBoost = getCurrentBbeBassBoost();
+        if (currentBbeBassBoost != lastBbeBassBoost_) {
+            lastBbeBassBoost_ = currentBbeBassBoost;
+            voiceManager->setBBEBassBoostMIDI(currentBbeBassBoost, logger);
+        }
+    }
 }
 
 // ===== PARAMETER ACCESS =====
@@ -203,6 +231,16 @@ uint8_t ParameterManager::getCurrentStereoField() const
     return stereoFieldParam_ ? convertToMidiValue(stereoFieldParam_->load()) : 0;
 }
 
+uint8_t ParameterManager::getCurrentBbeDefinition() const
+{
+    return bbeDefinitionParam_ ? convertToMidiValue(bbeDefinitionParam_->load()) : 64;
+}
+
+uint8_t ParameterManager::getCurrentBbeBassBoost() const
+{
+    return bbeBassBoostParam_ ? convertToMidiValue(bbeBassBoostParam_->load()) : 32;
+}
+
 // ===== VALIDATION =====
 
 bool ParameterManager::areParametersValid() const
@@ -214,7 +252,9 @@ bool ParameterManager::areParametersValid() const
            sustainLevelParam_ != nullptr &&
            lfoPanSpeedParam_ != nullptr &&
            lfoPanDepthParam_ != nullptr &&
-           stereoFieldParam_ != nullptr;
+           stereoFieldParam_ != nullptr &&
+           bbeDefinitionParam_ != nullptr &&
+           bbeBassBoostParam_ != nullptr;
 }
 
 // ===== HELPER METHODS =====

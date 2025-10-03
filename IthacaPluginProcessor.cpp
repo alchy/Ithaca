@@ -210,7 +210,9 @@ void IthacaPluginProcessor::processBlock(juce::AudioBuffer<float>& buffer,
     }
     
     // Update VoiceManager parameters (RT-safe through ParameterManager)
-    parameterManager_.updateSamplerParametersRTSafe(voiceManager_.get());
+    if (logger_) {
+        parameterManager_.updateSamplerParametersRTSafe(voiceManager_.get(), *logger_);
+    }
     
     // Process MIDI events (delegated to MidiProcessor with MIDI Learn)
     if (midiProcessor_) {

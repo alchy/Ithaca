@@ -41,7 +41,11 @@ namespace MidiCC {
 
     // Stereo field
     constexpr uint8_t STEREO_FIELD = 76;    // Sound Controller 7 (Stereo Field)
-    
+
+    // BBE Effect Controls
+    constexpr uint8_t BBE_DEFINITION = 77;  // Sound Controller 8 (BBE Clarity/Definition)
+    constexpr uint8_t BBE_BASS_BOOST = 78;  // Sound Controller 9 (BBE Bass Boost)
+
     // ===== ALTERNATIVE CC ASSIGNMENTS =====
     
     /**
@@ -93,7 +97,9 @@ namespace MidiCC {
         {SUSTAIN_LEVEL, "sustainLevel", "Sustain Level", "Envelope sustain level (CC 71)"},
         {LFO_PAN_SPEED, "lfoPanSpeed", "LFO Pan Speed", "Auto-pan LFO speed (CC 74)"},
         {LFO_PAN_DEPTH, "lfoPanDepth", "LFO Pan Depth", "Auto-pan LFO depth (CC 75)"},
-        {STEREO_FIELD, "stereoField", "Stereo Field", "Piano stereo width simulation (CC 76)"} 
+        {STEREO_FIELD, "stereoField", "Stereo Field", "Piano stereo width simulation (CC 76)"},
+        {BBE_DEFINITION, "bbeDefinition", "BBE Definition", "BBE clarity/harmonic enhancement (CC 77)"},
+        {BBE_BASS_BOOST, "bbeBassBoost", "BBE Bass Boost", "BBE low-frequency boost (CC 78)"}
     };
     
     /**

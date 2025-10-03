@@ -58,12 +58,12 @@ public:
     /**
      * @brief RT-safe update všech parametrů do VoiceManager
      * @param voiceManager Pointer na VoiceManager (může být nullptr)
-     * @param logger Reference na Logger pro non-RT parametry
-     * 
+     * @param logger Reference na Logger pro non-RT parametry (používá se pro BBE)
+     *
      * @note Volána z processBlock() - musí být RT-safe
      * @note Konvertuje GUI hodnoty na MIDI formát (0-127)
      */
-    void updateSamplerParametersRTSafe(VoiceManager* voiceManager);
+    void updateSamplerParametersRTSafe(VoiceManager* voiceManager, Logger& logger);
     
     // ===== PARAMETER ACCESS =====
     
@@ -114,7 +114,19 @@ public:
      * @return MIDI hodnota 0-127
      */
     uint8_t getCurrentStereoField() const;
-    
+
+    /**
+     * @brief Získej aktuální hodnotu BBE definition
+     * @return MIDI hodnota 0-127
+     */
+    uint8_t getCurrentBbeDefinition() const;
+
+    /**
+     * @brief Získej aktuální hodnotu BBE bass boost
+     * @return MIDI hodnota 0-127
+     */
+    uint8_t getCurrentBbeBassBoost() const;
+
     // ===== VALIDATION =====
     
     /**
@@ -135,10 +147,12 @@ private:
     std::atomic<float>* lfoPanSpeedParam_ = nullptr;
     std::atomic<float>* lfoPanDepthParam_ = nullptr;
     std::atomic<float>* stereoFieldParam_ = nullptr;
-    
+    std::atomic<float>* bbeDefinitionParam_ = nullptr;
+    std::atomic<float>* bbeBassBoostParam_ = nullptr;
+
     // ===== CHANGE DETECTION =====
     // Cached hodnoty pro detekci změn - eliminuje zbytečné VoiceManager volání
-    
+
     uint8_t lastMasterGain_ = 100;
     uint8_t lastMasterPan_ = 64;
     uint8_t lastAttack_ = 0;
@@ -147,6 +161,8 @@ private:
     uint8_t lastLfoPanSpeed_ = 0;
     uint8_t lastLfoPanDepth_ = 0;
     uint8_t lastStereoField_ = 0;
+    uint8_t lastBbeDefinition_ = 64;
+    uint8_t lastBbeBassBoost_ = 32;
     
     // ===== HELPER METHODS =====
     

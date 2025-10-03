@@ -196,11 +196,14 @@ void InfoHeaderComponent::updateLiveData()
     // ========================================================================
     // Loading completed - show normal info
     // ========================================================================
-    
-    // Update instrument name (once)
-    if (instrumentNameLabel && !staticInfoSet_) {
-        instrumentNameLabel->setText(CURRENT_INSTRUMENT, juce::dontSendNotification);
-        staticInfoSet_ = true;
+
+    // Update instrument name (always update after loading completes)
+    if (instrumentNameLabel) {
+        // Only update if text is different (avoid unnecessary repaints)
+        if (instrumentNameLabel->getText() != CURRENT_INSTRUMENT) {
+            instrumentNameLabel->setText(CURRENT_INSTRUMENT, juce::dontSendNotification);
+            staticInfoSet_ = true;  // Mark that we've set it at least once
+        }
     }
     
     // ========================================================================

@@ -20,7 +20,9 @@ public:
         juce::Slider* sustainLevel = nullptr;
         juce::Slider* lfoPanSpeed = nullptr;
         juce::Slider* lfoPanDepth = nullptr;
-        juce::Slider* stereoField = nullptr; 
+        juce::Slider* stereoField = nullptr;
+        juce::Slider* bbeDefinition = nullptr;
+        juce::Slider* bbeBassBoost = nullptr;
     };
     
     ParameterAttachmentManager() = default;

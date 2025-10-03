@@ -148,9 +148,14 @@ target_sources(IthacaPlayer
         InfoHeaderComponent.h
         InfoHeaderComponent.cpp
 
+        # JUCE - Slider Factory (DRY principle for slider creation)
+        SliderFactory.h
+        SliderFactory.cpp
+
         # MIDI learn
         MidiLearnManager.h
         MidiLearnManager.cpp
+        MidiLearnSlider.h
         
         # Asynchronni loader samplu
         AsyncSampleLoader.h

@@ -90,10 +90,25 @@ bool ParameterAttachmentManager::createAllAttachments(
     } else if (sliders.stereoField) {
         GUI_DEBUG("ParameterAttachmentManager: WARNING - stereoField parameter not found!");
     }
-    
-    GUI_DEBUG("ParameterAttachmentManager: Attachments completed - " << successCount 
+
+    // BBE Effect
+    if (sliders.bbeDefinition && createAttachment(parameters, "bbeDefinition", sliders.bbeDefinition)) {
+        successCount++;
+        GUI_DEBUG("ParameterAttachmentManager: bbeDefinition attachment created");
+    } else if (sliders.bbeDefinition) {
+        GUI_DEBUG("ParameterAttachmentManager: WARNING - bbeDefinition parameter not found!");
+    }
+
+    if (sliders.bbeBassBoost && createAttachment(parameters, "bbeBassBoost", sliders.bbeBassBoost)) {
+        successCount++;
+        GUI_DEBUG("ParameterAttachmentManager: bbeBassBoost attachment created");
+    } else if (sliders.bbeBassBoost) {
+        GUI_DEBUG("ParameterAttachmentManager: WARNING - bbeBassBoost parameter not found!");
+    }
+
+    GUI_DEBUG("ParameterAttachmentManager: Attachments completed - " << successCount
               << "/" << attachments_.size() << " attachments created successfully");
-    
+
     return allSuccess;
 }
 
