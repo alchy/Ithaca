@@ -9,11 +9,12 @@
 
 #include "InfoHeaderComponent.h"
 #include "GuiConstants.h"
+#include "BuildID.h"
 #include <iostream>
 
 #define BACKGROUND_PICTURE_OFF 0
-#define CURRENT_INSTRUMENT "Ithaca Grand Piano"
-#define PLUGIN_VERSION "1.0.0"
+#define CURRENT_INSTRUMENT "VintageV Electric Piano"
+
 
 #if BACKGROUND_PICTURE_OFF
 #define GUI_DEBUG(msg) std::cout << msg << std::endl

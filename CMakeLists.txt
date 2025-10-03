@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.22)
 
-# Project definition - ZMĚNA: jiný název pro JUCE plugin
+# Project definition - název pro JUCE plugin
 project(ITHACA_PLAYER_JUCE VERSION 1.1.0)
 
 # Set C++ standard to 17 (required for IthacaCore)
@@ -12,11 +12,87 @@ if(NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE Debug)
 endif()
 
+# =============================================================================
+# BUILD ID GENERATION - Automatická generace unikátního BUILD ID
+# =============================================================================
+
+# Získat timestamp buildu (UTC formát: YYYYMMDD_HHMMSS)
+string(TIMESTAMP BUILD_TIMESTAMP "%Y%m%d_%H%M%S" UTC)
+
+# Získat hostname (počítač kde probíhá build)
+cmake_host_system_information(RESULT BUILD_HOST QUERY HOSTNAME)
+
+# Získat Git informace (pokud je projekt v Git repozitáři)
+find_package(Git QUIET)
+if(GIT_FOUND)
+    # Git hash (zkrácený - prvních 7 znaků)
+    execute_process(
+        COMMAND ${GIT_EXECUTABLE} rev-parse --short HEAD
+        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+        OUTPUT_VARIABLE GIT_HASH
+        OUTPUT_STRIP_TRAILING_WHITESPACE
+        ERROR_QUIET
+    )
+    
+    # Git branch
+    execute_process(
+        COMMAND ${GIT_EXECUTABLE} rev-parse --abbrev-ref HEAD
+        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+        OUTPUT_VARIABLE GIT_BRANCH
+        OUTPUT_STRIP_TRAILING_WHITESPACE
+        ERROR_QUIET
+    )
+else()
+    set(GIT_HASH "nogit")
+    set(GIT_BRANCH "unknown")
+endif()
+
+# Sestavit BUILD ID - vyberte preferovaný formát:
+
+# VARIANTA 1: Timestamp + Host (DOPORUČENO - krátké, čitelné, unikátní)
+set(BUILD_ID "${BUILD_TIMESTAMP}_${BUILD_HOST}")
+
+# VARIANTA 2: Git Hash + Timestamp (pro Git tracking)
+# set(BUILD_ID "${GIT_HASH}_${BUILD_TIMESTAMP}")
+
+# VARIANTA 3: Kompletní (maximum info - dlouhé)
+# set(BUILD_ID "${GIT_HASH}_${GIT_BRANCH}_${BUILD_TIMESTAMP}_${BUILD_HOST}")
+
+# VARIANTA 4: Pouze Git hash (minimální, vyžaduje Git)
+# set(BUILD_ID "${GIT_HASH}")
+
+# Výpis BUILD ID do konzole při konfiguraci
+message(STATUS "=== BUILD ID GENERATION ===")
+message(STATUS "Timestamp: ${BUILD_TIMESTAMP}")
+message(STATUS "Host: ${BUILD_HOST}")
+message(STATUS "Git Hash: ${GIT_HASH}")
+message(STATUS "Git Branch: ${GIT_BRANCH}")
+message(STATUS "Final BUILD_ID: ${BUILD_ID}")
+message(STATUS "===========================")
+
+# Vytvořit adresář pro generované soubory
+file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/generated)
+
+# Vygenerovat header soubor s BUILD ID z template
+configure_file(
+    ${CMAKE_CURRENT_SOURCE_DIR}/BuildID.h.in
+    ${CMAKE_CURRENT_BINARY_DIR}/generated/BuildID.h
+    @ONLY
+)
+
+# =============================================================================
+# JUCE a knihovny
+# =============================================================================
+
 # KRITICKÉ: Add JUCE subdirectory PŘED plugin definicí
 add_subdirectory(JUCE)
 
 # Add libsndfile for IthacaCore
 add_subdirectory(libsndfile)
+
+# =============================================================================
+# JUCE Plugin definice
+# =============================================================================
 
 # KLÍČOVÁ ZMĚNA: juce_add_plugin místo add_executable
 juce_add_plugin(IthacaPlayer
@@ -131,13 +207,21 @@ target_sources(IthacaPlayer
         ithaca-core/sampler/tests/tests.h
 )
 
+# =============================================================================
 # Include directories
+# =============================================================================
+
 target_include_directories(IthacaPlayer PRIVATE 
     ${CMAKE_CURRENT_SOURCE_DIR}                             # Root directory - IthacaConfig.h zde
     ${CMAKE_CURRENT_SOURCE_DIR}/ithaca-core                 # IthacaCore modules
     ${CMAKE_CURRENT_SOURCE_DIR}/ithaca-core/sampler         # IthacaCore sampler modules
     ${CMAKE_CURRENT_SOURCE_DIR}/ithaca-core/sampler/tests   # Test framework
+    ${CMAKE_CURRENT_BINARY_DIR}/generated                   # PŘIDÁNO: Pro BuildID.h
 )
+
+# =============================================================================
+# Compile definitions
+# =============================================================================
 
 # JUCE compile definitions
 target_compile_definitions(IthacaPlayer
@@ -157,6 +241,10 @@ target_compile_definitions(IthacaPlayer
         $<$<PLATFORM_ID:Windows>:_CRT_SECURE_NO_WARNINGS>
 )
 
+# =============================================================================
+# Compiler options
+# =============================================================================
+
 # Compiler-specific optimizations
 if(MSVC)
     target_compile_options(IthacaPlayer PRIVATE
@@ -171,6 +259,10 @@ else()
         $<$<CONFIG:Release>:-O3 -DNDEBUG>     # Release: maximum optimization
     )
 endif()
+
+# =============================================================================
+# Link libraries
+# =============================================================================
 
 # KRITICKÉ: Link libraries - JUCE first, then IthacaCore dependencies
 target_link_libraries(IthacaPlayer
@@ -189,7 +281,10 @@ target_link_libraries(IthacaPlayer
         juce::juce_recommended_warning_flags
 )
 
+# =============================================================================
 # Platform-specific settings
+# =============================================================================
+
 if(WIN32)
     # Windows-specific installation
     install(TARGETS IthacaPlayer
@@ -204,6 +299,10 @@ if(WIN32)
     )
 endif()
 
+# =============================================================================
+# Build information output
+# =============================================================================
+
 # Output information
 message(STATUS "=== IthacaCore + JUCE Plugin Build Configuration ===")
 message(STATUS "Project: ${PROJECT_NAME} v${PROJECT_VERSION}")
@@ -217,6 +316,10 @@ message(STATUS "GUI framework: JUCE")
 message(STATUS "Audio I/O: libsndfile")
 message(STATUS "Testing: ${ENABLE_TESTS}")
 message(STATUS "====================================================")
+
+# =============================================================================
+# Development targets
+# =============================================================================
 
 # Development targets for IthacaCore compatibility
 add_custom_target(clean-logs
@@ -235,6 +338,10 @@ add_custom_target(clean-all-ithaca
     COMMENT "Cleaning all IthacaCore logs and exports"
 )
 
+# =============================================================================
+# Debug build information
+# =============================================================================
+
 # Debug target information
 if(CMAKE_BUILD_TYPE STREQUAL "Debug")
     message(STATUS "=== Debug Build Information ===")
@@ -242,6 +349,7 @@ if(CMAKE_BUILD_TYPE STREQUAL "Debug")
     message(STATUS "JUCE assertions: ENABLED")
     message(STATUS "Runtime checks: ENABLED")
     message(STATUS "Optimization: DISABLED")
+    message(STATUS "BUILD_ID: ${BUILD_ID}")
     message(STATUS "Available targets:")
     message(STATUS "  - IthacaPlayer: Build JUCE plugin")
     message(STATUS "  - clean-logs: Remove IthacaCore logs")
@@ -250,13 +358,92 @@ if(CMAKE_BUILD_TYPE STREQUAL "Debug")
     message(STATUS "==============================")
 endif()
 
+# =============================================================================
 # Post-build information
+# =============================================================================
+
+# Post-build information s BUILD ID
 add_custom_command(TARGET IthacaPlayer POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E echo "=== IthacaCore + JUCE Plugin Build Completed ==="
     COMMAND ${CMAKE_COMMAND} -E echo "Plugin: $<TARGET_FILE:IthacaPlayer>"
+    COMMAND ${CMAKE_COMMAND} -E echo "Build ID: ${BUILD_ID}"
+    COMMAND ${CMAKE_COMMAND} -E echo "Build Time: ${BUILD_TIMESTAMP}"
+    COMMAND ${CMAKE_COMMAND} -E echo "Build Host: ${BUILD_HOST}"
+    COMMAND ${CMAKE_COMMAND} -E echo "Git Hash: ${GIT_HASH}"
+    COMMAND ${CMAKE_COMMAND} -E echo "Git Branch: ${GIT_BRANCH}"
     COMMAND ${CMAKE_COMMAND} -E echo "Audio Engine: IthacaCore VoiceManager (128 voices)"
     COMMAND ${CMAKE_COMMAND} -E echo "Formats: AU, VST3, Standalone"
     COMMAND ${CMAKE_COMMAND} -E echo "Sample directory: Check IthacaConfig.h for DEFAULT_SAMPLE_DIR"
     COMMAND ${CMAKE_COMMAND} -E echo "Logs: ./core_logger/core_logger.log"
     COMMAND ${CMAKE_COMMAND} -E echo "================================================="
+)# =============================================================================
+# BUILD ID GENERATION - Přidat před juce_add_plugin
+# =============================================================================
+
+# Získat timestamp buildu
+string(TIMESTAMP BUILD_TIMESTAMP "%Y%m%d_%H%M%S" UTC)
+
+# Získat hostname (počítač kde probíhá build)
+cmake_host_system_information(RESULT BUILD_HOST QUERY HOSTNAME)
+
+# Získat Git hash (pokud je projekt v Git repozitáři)
+find_package(Git QUIET)
+if(GIT_FOUND)
+    execute_process(
+        COMMAND ${GIT_EXECUTABLE} rev-parse --short HEAD
+        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+        OUTPUT_VARIABLE GIT_HASH
+        OUTPUT_STRIP_TRAILING_WHITESPACE
+        ERROR_QUIET
+    )
+    
+    execute_process(
+        COMMAND ${GIT_EXECUTABLE} rev-parse --abbrev-ref HEAD
+        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+        OUTPUT_VARIABLE GIT_BRANCH
+        OUTPUT_STRIP_TRAILING_WHITESPACE
+        ERROR_QUIET
+    )
+else()
+    set(GIT_HASH "nogit")
+    set(GIT_BRANCH "unknown")
+endif()
+
+# Sestavit BUILD ID (vyberte preferovaný formát)
+
+# VARIANTA 1: Timestamp + Host (krátké, čitelné)
+set(BUILD_ID "${BUILD_TIMESTAMP}_${BUILD_HOST}")
+
+# VARIANTA 2: Git Hash + Timestamp (pro Git tracking)
+# set(BUILD_ID "${GIT_HASH}_${BUILD_TIMESTAMP}")
+
+# VARIANTA 3: Kompletní (maximum info)
+# set(BUILD_ID "${GIT_HASH}_${GIT_BRANCH}_${BUILD_TIMESTAMP}_${BUILD_HOST}")
+
+# VARIANTA 4: Pouze Git hash (minimální, pro Git workflow)
+# set(BUILD_ID "${GIT_HASH}")
+
+# Výpis BUILD ID do konzole
+message(STATUS "=== BUILD ID GENERATION ===")
+message(STATUS "Timestamp: ${BUILD_TIMESTAMP}")
+message(STATUS "Host: ${BUILD_HOST}")
+message(STATUS "Git Hash: ${GIT_HASH}")
+message(STATUS "Git Branch: ${GIT_BRANCH}")
+message(STATUS "Final BUILD_ID: ${BUILD_ID}")
+message(STATUS "===========================")
+
+# Vygenerovat header soubor s BUILD ID
+configure_file(
+    ${CMAKE_CURRENT_SOURCE_DIR}/BuildID.h.in
+    ${CMAKE_CURRENT_BINARY_DIR}/generated/BuildID.h
+    @ONLY
+)
+
+# Přidat do include paths
+target_include_directories(IthacaPlayer PRIVATE 
+    ${CMAKE_CURRENT_SOURCE_DIR}
+    ${CMAKE_CURRENT_SOURCE_DIR}/ithaca-core
+    ${CMAKE_CURRENT_SOURCE_DIR}/ithaca-core/sampler
+    ${CMAKE_CURRENT_SOURCE_DIR}/ithaca-core/sampler/tests
+    ${CMAKE_CURRENT_BINARY_DIR}/generated  # PŘIDÁNO: Pro BuildID.h
 )

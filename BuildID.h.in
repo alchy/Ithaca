@@ -1,0 +1,58 @@
+/**
+ * @file BuildID.h
+ * @brief Automaticky generovaný BUILD ID
+ * 
+ * TENTO SOUBOR JE GENEROVÁN AUTOMATICKY PřI KAŽDÉM BUILDU!
+ * Neupravujte ručně - změny budou přepsány.
+ * 
+ * Generováno z: BuildID.h.in
+ * CMake nahradí @VARIABLE@ skutečnými hodnotami.
+ */
+
+#pragma once
+
+#include <string>
+
+namespace BuildInfo {
+    
+    // Unikátní BUILD ID (hlavní identifikátor)
+    constexpr const char* BUILD_ID = "@BUILD_ID@";
+    
+    // Detailní informace (pro logování/debug)
+    constexpr const char* BUILD_TIMESTAMP = "@BUILD_TIMESTAMP@";
+    constexpr const char* BUILD_HOST = "@BUILD_HOST@";
+    constexpr const char* GIT_HASH = "@GIT_HASH@";
+    constexpr const char* GIT_BRANCH = "@GIT_BRANCH@";
+    
+    // Plugin verze (zachována z IthacaConfig.h)
+    constexpr const char* PLUGIN_VERSION = "@PROJECT_VERSION@";
+    
+    /**
+     * @brief Získej kompletní build string pro GUI
+     * @return Formátovaný string s BUILD ID
+     * 
+     * Příklady výstupu:
+     * - "Build: 20250103_143022_DESKTOP-PC" (timestamp + host)
+     * - "Build: a3f2c1b_20250103_143022" (git + timestamp)
+     * - "Build: a3f2c1b" (pouze git hash)
+     */
+    inline std::string getBuildString() {
+        return std::string("Build: ") + BUILD_ID;
+    }
+    
+    /**
+     * @brief Získej detailní build info pro logging
+     * @return Multi-line string s kompletními informacemi
+     */
+    inline std::string getDetailedBuildInfo() {
+        std::string info;
+        info += "Plugin Version: " + std::string(PLUGIN_VERSION) + "\n";
+        info += "Build ID: " + std::string(BUILD_ID) + "\n";
+        info += "Build Time: " + std::string(BUILD_TIMESTAMP) + "\n";
+        info += "Build Host: " + std::string(BUILD_HOST) + "\n";
+        info += "Git Hash: " + std::string(GIT_HASH) + "\n";
+        info += "Git Branch: " + std::string(GIT_BRANCH);
+        return info;
+    }
+    
+} // namespace BuildInfo
