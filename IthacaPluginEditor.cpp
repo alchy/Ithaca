@@ -12,7 +12,6 @@
 #include "InfoHeaderComponent.h"
 #include "GuiHelpers.h"
 #include "GuiConstants.h"
-#include "decorators/BinaryData.h"
 #include <iostream>
 
 #define BACKGROUND_PICTURE_OFF 0
@@ -89,7 +88,7 @@ void IthacaPluginEditor::resized()
               << "x" << bounds.getHeight());
 
     #if !BACKGROUND_PICTURE_OFF
-    // === BACKGROUND MODE: Hierarchical layout ===
+    // === BACKGROUND MODE: Hierarchical layout bez mezer ===
     
     // Background image na celé okno (non-interactive)
     imageComponent.setBounds(bounds);
@@ -103,18 +102,17 @@ void IthacaPluginEditor::resized()
     GUI_DEBUG("IthacaGUI: Info header height: " << infoHeight 
               << "px (~" << (GuiConstants::INFO_SECTION_HEIGHT_RATIO * 100) << "%)");
     
-    // Content area s paddingem
-    //auto contentArea = bounds.reduced(8);
-    auto contentArea = bounds;
-
+    // ZMĚNĚNO: Content area BEZ paddingu - použije celou plochu okna
+    auto contentArea = bounds;  // Původně: bounds.reduced(8)
+    
     // Info header nahoře (~30%)
     if (infoHeader) {
         infoHeader->setBounds(contentArea.removeFromTop(infoHeight));
         GUI_DEBUG("IthacaGUI: Info header positioned");
     }
     
-    // Mezera mezi sekcemi
-    contentArea.removeFromTop(GuiConstants::SECTION_GAP);
+    // Mezera mezi sekcemi - NYNÍ 0, takže žádná mezera
+    contentArea.removeFromTop(GuiConstants::SECTION_GAP);  // = 0
     
     // Slider panel dole (~70%, zbytek prostoru)
     if (sliderPanel) {
@@ -123,19 +121,18 @@ void IthacaPluginEditor::resized()
                   << contentArea.getHeight() << "px");
     }
     
-#else
+    #else
     // === DEBUG MODE: Kompaktní layout ===
     
-    auto contentArea = bounds.reduced(GuiConstants::SECTION_PADDING);
+    // ZMĚNĚNO: BEZ paddingu v debug režimu
+    auto contentArea = bounds;  // Původně: bounds.reduced(GuiConstants::SECTION_PADDING)
     
-    // Info header nahoře (fixní výška v debug mode)
     if (infoHeader) {
         infoHeader->setBounds(contentArea.removeFromTop(120));
-        contentArea.removeFromTop(GuiConstants::SECTION_GAP);
+        contentArea.removeFromTop(GuiConstants::SECTION_GAP);  // = 0
         GUI_DEBUG("IthacaGUI: Debug - Info header: 120px");
     }
     
-    // Slider panel (zbytek)
     if (sliderPanel) {
         sliderPanel->setBounds(contentArea);
         GUI_DEBUG("IthacaGUI: Debug - Slider panel: " 
@@ -197,21 +194,58 @@ void IthacaPluginEditor::initializeComponents()
 void IthacaPluginEditor::setupBackground()
 {
 #if !BACKGROUND_PICTURE_OFF
-    // Load background image from binary data
-    juce::Image image = juce::ImageCache::getFromMemory(
-        BinaryData::ithacaplayer1_jpg, 
-        BinaryData::ithacaplayer1_jpgSize);
+    // ZMĚNĚNO: Dynamické načítání background.jpg ze složky decorators
     
-    if (image.isValid()) {
-        imageComponent.setImage(image);
-        imageComponent.setImagePlacement(juce::RectanglePlacement::stretchToFit);
-        imageComponent.setInterceptsMouseClicks(false, false);  // Non-interactive
-        addAndMakeVisible(imageComponent);
+    // 1. Zkusit načíst relativně k executable (pro development)
+    juce::File backgroundFile = juce::File::getSpecialLocation(
+        juce::File::currentExecutableFile).getParentDirectory().getChildFile("decorators/background.jpg");
+    
+    // 2. Fallback: Zkusit relativně k current working directory
+    if (!backgroundFile.existsAsFile()) {
+        backgroundFile = juce::File::getCurrentWorkingDirectory().getChildFile("decorators/background.jpg");
+    }
+    
+    // 3. Fallback: Zkusit absolutní cestu (pro installed plugin)
+    #ifdef _WIN32
+    if (!backgroundFile.existsAsFile()) {
+        backgroundFile = juce::File("C:/ProgramData/IthacaPlayer/decorators/background.jpg");
+    }
+    #elif __APPLE__
+    if (!backgroundFile.existsAsFile()) {
+        backgroundFile = juce::File("~/Library/Application Support/IthacaPlayer/decorators/background.jpg");
+    }
+    #endif
+    
+    // Načíst obrázek ze souboru
+    if (backgroundFile.existsAsFile()) {
+        juce::Image image = juce::ImageFileFormat::loadFrom(backgroundFile);
         
-        GUI_DEBUG("IthacaGUI: Background image loaded successfully - "
-                  << image.getWidth() << "x" << image.getHeight() << "px");
+        if (image.isValid()) {
+            imageComponent.setImage(image);
+            imageComponent.setImagePlacement(juce::RectanglePlacement::stretchToFit);
+            imageComponent.setInterceptsMouseClicks(false, false);  // Non-interactive
+            addAndMakeVisible(imageComponent);
+            
+            GUI_DEBUG("IthacaGUI: Background image loaded successfully from: " 
+                      << backgroundFile.getFullPathName().toStdString());
+            GUI_DEBUG("IthacaGUI: Image size: " << image.getWidth() << "x" 
+                      << image.getHeight() << "px");
+        } else {
+            GUI_DEBUG("IthacaGUI: ERROR - Failed to decode image from file: " 
+                      << backgroundFile.getFullPathName().toStdString());
+            createFallbackBackground();
+        }
     } else {
-        GUI_DEBUG("IthacaGUI: ERROR - Failed to load background image from BinaryData");
+        GUI_DEBUG("IthacaGUI: WARNING - background.jpg not found at: " 
+                  << backgroundFile.getFullPathName().toStdString());
+        GUI_DEBUG("IthacaGUI: Searched paths:");
+        GUI_DEBUG("  1. " << juce::File::getSpecialLocation(
+            juce::File::currentExecutableFile).getParentDirectory()
+            .getChildFile("decorators/background.jpg").getFullPathName().toStdString());
+        GUI_DEBUG("  2. " << juce::File::getCurrentWorkingDirectory()
+            .getChildFile("decorators/background.jpg").getFullPathName().toStdString());
+        
+        createFallbackBackground();
     }
 #else
     GUI_DEBUG("IthacaGUI: Background DISABLED (debug mode - BACKGROUND_PICTURE_OFF)");
@@ -261,4 +295,43 @@ void IthacaPluginEditor::setupMidiLearnCallbacks()
 bool IthacaPluginEditor::isDebugModeEnabled() const
 {
     return BACKGROUND_PICTURE_OFF != 0;
+}
+
+void IthacaPluginEditor::createFallbackBackground()
+{
+    // Vytvořit jednobarevné fallback pozadí když se nepodaří načíst obrázek
+    juce::Image fallbackImage(juce::Image::RGB, 
+                             GuiConstants::DEFAULT_WINDOW_WIDTH,
+                             GuiConstants::DEFAULT_WINDOW_HEIGHT, 
+                             true);
+    
+    juce::Graphics g(fallbackImage);
+    
+    // Gradient pozadí (tmavě šedý)
+    juce::ColourGradient gradient(
+        juce::Colour(0xff2a2a2a), 0.0f, 0.0f,
+        juce::Colour(0xff1a1a1a), 0.0f, static_cast<float>(fallbackImage.getHeight()),
+        false
+    );
+    g.setGradientFill(gradient);
+    g.fillAll();
+    
+    // Nápis uprostřed
+    g.setColour(juce::Colours::white.withAlpha(0.3f));
+    g.setFont(juce::FontOptions(24.0f, juce::Font::bold));
+    g.drawText("Background image not found", 
+               fallbackImage.getBounds(), 
+               juce::Justification::centred);
+    
+    g.setFont(juce::FontOptions(14.0f));
+    g.drawText("Place background.jpg in decorators/ folder", 
+               fallbackImage.getBounds().reduced(20).removeFromBottom(100), 
+               juce::Justification::centred);
+    
+    imageComponent.setImage(fallbackImage);
+    imageComponent.setImagePlacement(juce::RectanglePlacement::stretchToFit);
+    imageComponent.setInterceptsMouseClicks(false, false);
+    addAndMakeVisible(imageComponent);
+    
+    GUI_DEBUG("IthacaGUI: Created fallback background");
 }

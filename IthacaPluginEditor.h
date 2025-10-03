@@ -152,6 +152,12 @@ private:
     void setupBackground();
     
     /**
+     * @brief Create fallback background when image not found
+     * @note Creates gradient with text message
+     */
+    void createFallbackBackground();
+
+    /**
      * @brief Register MIDI Learn callbacks with processor
      * @note Sets up lambda callback for learning state changes
      * @note Forwards state changes to SliderPanel for visual updates

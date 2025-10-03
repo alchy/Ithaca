@@ -116,9 +116,9 @@ target_sources(IthacaPlayer
         # Configuration
         IthacaConfig.h
         
-        # Binary data
-        decorators/BinaryData.cpp
-        decorators/BinaryData.h
+        # ODSTRANĚNO: Binary data (už se nepoužívá, background.jpg se načítá dynamicky)
+        # decorators/BinaryData.cpp
+        # decorators/BinaryData.h
         
         # JUCE - MIDI Control (Centralized)
         MidiCCDefinitions.h
@@ -235,6 +235,10 @@ target_compile_definitions(IthacaPlayer
         ENABLE_TESTS=1              # Enable test framework integration
         ITHACA_JUCE_INTEGRATION=1   # Enable JUCE-specific features
         
+        # Resource paths for development
+        ITHACA_SOURCE_DIR="${CMAKE_CURRENT_SOURCE_DIR}"
+        ITHACA_BINARY_DIR="${CMAKE_CURRENT_BINARY_DIR}"
+        
     PRIVATE
         # Platform-specific definitions
         $<$<PLATFORM_ID:Windows>:WIN32_LEAN_AND_MEAN>
@@ -282,6 +286,41 @@ target_link_libraries(IthacaPlayer
 )
 
 # =============================================================================
+# Copy resources (background image) to build directory
+# =============================================================================
+
+# Create decorators folder in build directory
+file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/decorators)
+
+# Copy background.jpg to multiple locations for different build scenarios
+add_custom_command(TARGET IthacaPlayer POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+        ${CMAKE_CURRENT_SOURCE_DIR}/decorators/background.jpg
+        ${CMAKE_CURRENT_BINARY_DIR}/decorators/background.jpg
+    COMMENT "Copying background.jpg to build directory"
+)
+
+# Also copy to Standalone executable location (Debug)
+add_custom_command(TARGET IthacaPlayer POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E make_directory
+        ${CMAKE_CURRENT_BINARY_DIR}/IthacaPlayer_artefacts/Debug/Standalone/decorators
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+        ${CMAKE_CURRENT_SOURCE_DIR}/decorators/background.jpg
+        ${CMAKE_CURRENT_BINARY_DIR}/IthacaPlayer_artefacts/Debug/Standalone/decorators/background.jpg
+    COMMENT "Copying background.jpg to Standalone Debug location"
+)
+
+# Copy to Standalone executable location (Release)
+add_custom_command(TARGET IthacaPlayer POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E make_directory
+        ${CMAKE_CURRENT_BINARY_DIR}/IthacaPlayer_artefacts/Release/Standalone/decorators
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+        ${CMAKE_CURRENT_SOURCE_DIR}/decorators/background.jpg
+        ${CMAKE_CURRENT_BINARY_DIR}/IthacaPlayer_artefacts/Release/Standalone/decorators/background.jpg
+    COMMENT "Copying background.jpg to Standalone Release location"
+)
+
+# =============================================================================
 # Platform-specific settings
 # =============================================================================
 
@@ -295,6 +334,13 @@ if(WIN32)
     # Copy libsndfile DLL on Windows
     install(FILES $<TARGET_FILE:sndfile>
         DESTINATION bin
+        CONFIGURATIONS Release
+    )
+    
+    # Install background image
+    install(FILES
+        ${CMAKE_CURRENT_SOURCE_DIR}/decorators/background.jpg
+        DESTINATION bin/decorators
         CONFIGURATIONS Release
     )
 endif()
