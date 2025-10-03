@@ -18,12 +18,17 @@ namespace MidiCC {
      * Follows General MIDI standard where applicable:
      * - CC 7: Volume (0-127)
      * - CC 10: Pan (0=left, 64=center, 127=right)
+     * - CC 64: Damper Pedal (≤63=off, ≥64=on) - Sustain Pedal
      * - CC 71-79: Sound Controller range
      */
     
     // Master Controls (Standard MIDI)
     constexpr uint8_t MASTER_GAIN = 7;      // Standard Volume CC
     constexpr uint8_t MASTER_PAN = 10;      // Standard Pan CC
+    
+    // Sustain Pedal (Standard MIDI) - NOVĚ PŘIDÁNO
+    constexpr uint8_t DAMPER_PEDAL = 64;    // Standard Sustain/Damper Pedal CC
+                                             // ≤63 = OFF, ≥64 = ON
     
     // ADSR Envelope Controls (Sound Controller range)
     constexpr uint8_t ATTACK = 73;          // Sound Controller 4 (Attack Time)
@@ -35,7 +40,7 @@ namespace MidiCC {
     constexpr uint8_t LFO_PAN_DEPTH = 75;   // Sound Controller 6 (LFO Depth)
 
     // Stereo field
-    constexpr uint8_t STEREO_FIELD = 76;   // Sound Controller 7 (Stereo Field)
+    constexpr uint8_t STEREO_FIELD = 76;    // Sound Controller 7 (Stereo Field)
     
     // ===== ALTERNATIVE CC ASSIGNMENTS =====
     
@@ -77,6 +82,8 @@ namespace MidiCC {
     
     /**
      * @brief Array of all CC mappings for easy iteration
+     * @note CC64 (Damper Pedal) is NOT included here because it's not a parameter
+     *       but a real-time control that affects voice behavior directly
      */
     constexpr CCMapping CC_MAPPINGS[] = {
         {MASTER_GAIN, "masterGain", "Master Gain", "Main volume control (CC 7)"},
@@ -133,6 +140,15 @@ namespace MidiCC {
         return getParameterIDForCC(ccNumber) != nullptr;
     }
     
+    /**
+     * @brief Check if CC number is Damper Pedal (CC64)
+     * @param ccNumber MIDI CC number to check
+     * @return true if CC is damper pedal
+     */
+    inline bool isDamperPedal(uint8_t ccNumber) {
+        return ccNumber == DAMPER_PEDAL;
+    }
+    
     // ===== MIDI VALUE CONVERSION =====
     
     /**
@@ -154,6 +170,15 @@ namespace MidiCC {
         // GUI: -64=full left, 0=center, +63=full right
         float panValue = static_cast<float>(ccValue) - 64.0f; // Convert to -64 to +63
         return (panValue + 64.0f) / 127.0f; // Normalize to 0-1
+    }
+    
+    /**
+     * @brief Convert MIDI damper pedal value to boolean state
+     * @param ccValue MIDI CC value (0-127)
+     * @return true if pedal is down (≥64), false if up (≤63)
+     */
+    inline bool ccValueToPedalState(uint8_t ccValue) {
+        return ccValue >= 64;
     }
     
     /**

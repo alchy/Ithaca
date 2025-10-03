@@ -1,6 +1,6 @@
 /**
- * @file MidiProcessor.cpp (s MIDI Learn podporou)
- * @brief Implementace MIDI processingu s learning
+ * @file MidiProcessor.cpp (s MIDI Learn podporou a Sustain Pedal)
+ * @brief Implementace MIDI processingu s learning a sustain pedal
  */
 
 #include "MidiProcessor.h"
@@ -46,14 +46,26 @@ void MidiProcessor::processMidiBuffer(const juce::MidiBuffer& midiMessages,
             uint8_t ccNumber = static_cast<uint8_t>(message.getControllerNumber());
             uint8_t ccValue = static_cast<uint8_t>(message.getControllerValue());
             
-            // MIDI Learn má prioritu - pokud je learning mode aktivní
+            // ================================================================
+            // PRIORITA 1: Sustain Pedal (CC64) - NOVĚ PŘIDÁNO
+            // ================================================================
+            if (MidiCC::isDamperPedal(ccNumber)) {
+                processSustainPedal(ccValue, voiceManager);
+                continue; // Skip další processing pro CC64
+            }
+            
+            // ================================================================
+            // PRIORITA 2: MIDI Learn (pokud je aktivní)
+            // ================================================================
             if (midiLearnManager && midiLearnManager->isLearning()) {
                 if (midiLearnManager->tryLearnCC(ccNumber)) {
                     continue; // CC bylo naučeno, neprocházej dál
                 }
             }
             
-            // Normální CC processing (s learned mappings)
+            // ================================================================
+            // PRIORITA 3: Normální CC processing (s learned mappings)
+            // ================================================================
             processMidiControlChange(ccNumber, ccValue, parameters, midiLearnManager);
         }
     }
@@ -76,6 +88,26 @@ void MidiProcessor::resetStatistics()
 // ============================================================================
 // Private Processing Methods
 // ============================================================================
+
+void MidiProcessor::processSustainPedal(uint8_t ccValue, VoiceManager* voiceManager)
+{
+    if (!voiceManager) return;
+    
+    // Convert MIDI value to pedal state
+    // Standard MIDI: ≤63 = OFF, ≥64 = ON
+    bool pedalDown = MidiCC::ccValueToPedalState(ccValue);
+    
+    // Delegate to VoiceManager (RT-safe)
+    voiceManager->setSustainPedalMIDI(pedalDown);
+    
+    // Optional: Log in debug mode (non-RT context only)
+#if ENABLE_MIDI_CC_LOGGING
+    std::cout << "[MidiProcessor] Sustain Pedal (CC64): " 
+              << (pedalDown ? "DOWN" : "UP") 
+              << " (value=" << static_cast<int>(ccValue) << ")" 
+              << std::endl;
+#endif
+}
 
 void MidiProcessor::processMidiControlChange(uint8_t ccNumber, 
                                             uint8_t ccValue,
