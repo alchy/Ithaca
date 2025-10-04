@@ -16,8 +16,8 @@ endif()
 # BUILD ID GENERATION - Automatická generace unikátního BUILD ID
 # =============================================================================
 
-# Získat timestamp buildu (UTC formát: YYYYMMDD_HHMMSS)
-string(TIMESTAMP BUILD_TIMESTAMP "%Y%m%d_%H%M%S" UTC)
+# Získat timestamp buildu (lokální čas: YYMMDDHHMMSS)
+string(TIMESTAMP BUILD_TIMESTAMP "%y%m%d%H%M%S")
 
 # Získat hostname (počítač kde probíhá build)
 cmake_host_system_information(RESULT BUILD_HOST QUERY HOSTNAME)
@@ -49,8 +49,8 @@ endif()
 
 # Sestavit BUILD ID - vyberte preferovaný formát:
 
-# VARIANTA 1: Timestamp + Host (DOPORUČENO - krátké, čitelné, unikátní)
-set(BUILD_ID "${BUILD_TIMESTAMP}_${BUILD_HOST}")
+# VARIANTA 1: Timestamp (Hostname) - formát: YYMMDDHHMMSS (Hostname)
+set(BUILD_ID "${BUILD_TIMESTAMP} (${BUILD_HOST})")
 
 # VARIANTA 2: Git Hash + Timestamp (pro Git tracking)
 # set(BUILD_ID "${GIT_HASH}_${BUILD_TIMESTAMP}")
@@ -445,8 +445,8 @@ add_custom_command(TARGET IthacaPlayer POST_BUILD
 # BUILD ID GENERATION - Přidat před juce_add_plugin
 # =============================================================================
 
-# Získat timestamp buildu
-string(TIMESTAMP BUILD_TIMESTAMP "%Y%m%d_%H%M%S" UTC)
+# Získat timestamp buildu (lokální čas: YYMMDDHHMMSS)
+string(TIMESTAMP BUILD_TIMESTAMP "%y%m%d%H%M%S")
 
 # Získat hostname (počítač kde probíhá build)
 cmake_host_system_information(RESULT BUILD_HOST QUERY HOSTNAME)
@@ -476,8 +476,8 @@ endif()
 
 # Sestavit BUILD ID (vyberte preferovaný formát)
 
-# VARIANTA 1: Timestamp + Host (krátké, čitelné)
-set(BUILD_ID "${BUILD_TIMESTAMP}_${BUILD_HOST}")
+# VARIANTA 1: Timestamp (Hostname) - formát: YYMMDDHHMMSS (Hostname)
+set(BUILD_ID "${BUILD_TIMESTAMP} (${BUILD_HOST})")
 
 # VARIANTA 2: Git Hash + Timestamp (pro Git tracking)
 # set(BUILD_ID "${GIT_HASH}_${BUILD_TIMESTAMP}")
