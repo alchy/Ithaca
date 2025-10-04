@@ -15,15 +15,11 @@
 #define BACKGROUND_PICTURE_OFF 0
 #define CURRENT_INSTRUMENT "VintageV Electric Piano"
 
-
 #if BACKGROUND_PICTURE_OFF
 #define GUI_DEBUG(msg) std::cout << msg << std::endl
 #else
 #define GUI_DEBUG(msg)
 #endif
-
-// Static initialization
-bool InfoHeaderComponent::staticInfoSet_ = false;
 
 // ============================================================================
 // Constructor / Destructor
@@ -196,11 +192,18 @@ void InfoHeaderComponent::updateLiveData()
     // ========================================================================
     // Loading completed - show normal info
     // ========================================================================
-    
-    // Update instrument name (once)
-    if (instrumentNameLabel && !staticInfoSet_) {
-        instrumentNameLabel->setText(CURRENT_INSTRUMENT, juce::dontSendNotification);
-        staticInfoSet_ = true;
+
+    // Update instrument name (always restore after loading)
+    if (instrumentNameLabel) {
+        // FIXED: Vždy obnovit název nástroje po dokončení loadingu
+        // (resetuje "Loading samples..." zpět na název nástroje)
+        auto currentText = instrumentNameLabel->getText();
+        if (currentText == GuiConstants::TextConstants::LOADING_TEXT ||
+            currentText == GuiConstants::TextConstants::ERROR_TEXT ||
+            currentText.isEmpty()) {
+            instrumentNameLabel->setText(CURRENT_INSTRUMENT, juce::dontSendNotification);
+            GUI_DEBUG("InfoHeaderComponent: Restored instrument name after loading");
+        }
     }
     
     // ========================================================================
