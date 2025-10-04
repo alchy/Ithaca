@@ -220,9 +220,52 @@ private:
     
     //==============================================================================
     // Performance Monitoring
-    
+
     mutable std::atomic<int> processBlockCallCount_;    // Process block counter
 
+    // RT-safe performance metrics (lock-free)
+    mutable std::atomic<double> averageProcessTimeUs_{0.0};  // Average processing time (microseconds)
+    mutable std::atomic<double> peakProcessTimeUs_{0.0};     // Peak processing time (microseconds)
+    mutable std::atomic<double> cpuLoadPercent_{0.0};        // CPU load percentage
+    mutable std::atomic<bool> hadOverrun_{false};            // True if processing exceeded available time
+
+public:
+    //==============================================================================
+    // Performance Monitoring - Public API for GUI
+
+    /**
+     * @brief Get average audio processing time
+     * @return Average time in microseconds (smoothed over ~1 second)
+     */
+    double getAverageProcessTimeUs() const { return averageProcessTimeUs_.load(std::memory_order_relaxed); }
+
+    /**
+     * @brief Get peak audio processing time
+     * @return Peak time in microseconds (since last reset)
+     */
+    double getPeakProcessTimeUs() const { return peakProcessTimeUs_.load(std::memory_order_relaxed); }
+
+    /**
+     * @brief Get CPU load percentage
+     * @return CPU load as percentage (0-100+)
+     */
+    double getCPULoadPercent() const { return cpuLoadPercent_.load(std::memory_order_relaxed); }
+
+    /**
+     * @brief Check if audio processing had timing overrun
+     * @return true if processing time exceeded available buffer time
+     */
+    bool hadProcessingOverrun() const { return hadOverrun_.load(std::memory_order_relaxed); }
+
+    /**
+     * @brief Reset peak metrics
+     */
+    void resetPeakMetrics() {
+        peakProcessTimeUs_.store(0.0, std::memory_order_relaxed);
+        hadOverrun_.store(false, std::memory_order_relaxed);
+    }
+
+private:
     //==============================================================================
     // Private Methods - Audio Processing
     

@@ -95,6 +95,8 @@ private:
     std::unique_ptr<juce::Label> sampleRateLabel;       // 11px
     std::unique_ptr<juce::Label> activeVoicesLabel;     // 11px
     std::unique_ptr<juce::Label> sustainingVoicesLabel; // 11px
+    std::unique_ptr<juce::Label> dspStatusLabel;        // 11px - DSP: On/Off
+    std::unique_ptr<juce::Label> cpuLoadLabel;          // 11px - CPU: X.X%
     
     // ========================================================================
     // State

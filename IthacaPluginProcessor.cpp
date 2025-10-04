@@ -5,6 +5,7 @@
 
 #include "IthacaPluginProcessor.h"
 #include "IthacaPluginEditor.h"
+#include <chrono>
 
 //==============================================================================
 // Constructor - Initialize with async loader and MIDI Learn
@@ -194,36 +195,41 @@ void IthacaPluginProcessor::processBlock(juce::AudioBuffer<float>& buffer,
                                          juce::MidiBuffer& midiMessages)
 {
     juce::ScopedNoDenormals noDenormals;
-    
+
+    // ========================================================================
+    // PERFORMANCE MONITORING - START
+    // ========================================================================
+    const auto startTime = std::chrono::high_resolution_clock::now();
+
     // Increment process block counter
     processBlockCallCount_.fetch_add(1);
-    
+
     // Always clear buffer first
     buffer.clear();
-    
+
     // Check if async loading has completed and transfer VoiceManager
     checkAndTransferVoiceManager();
-    
+
     // If not initialized, return silence
     if (!samplerInitialized_ || !voiceManager_) {
         return;  // Silent output during loading
     }
-    
+
     // Update VoiceManager parameters (RT-safe through ParameterManager)
     if (logger_) {
         parameterManager_.updateSamplerParametersRTSafe(voiceManager_.get(), *logger_);
     }
-    
+
     // Process MIDI events (delegated to MidiProcessor with MIDI Learn)
     if (midiProcessor_) {
         midiProcessor_->processMidiBuffer(
-            midiMessages, 
-            voiceManager_.get(), 
+            midiMessages,
+            voiceManager_.get(),
             parameters_,
             midiLearnManager_.get()  // Pass MIDI Learn Manager
         );
     }
-    
+
     // Render audio through VoiceManager
     if (voiceManager_) {
         voiceManager_->processBlockUninterleaved(
@@ -231,6 +237,42 @@ void IthacaPluginProcessor::processBlock(juce::AudioBuffer<float>& buffer,
             buffer.getWritePointer(1),
             buffer.getNumSamples()
         );
+    }
+
+    // ========================================================================
+    // PERFORMANCE MONITORING - END
+    // ========================================================================
+    const auto endTime = std::chrono::high_resolution_clock::now();
+    const auto processingDuration = std::chrono::duration_cast<std::chrono::microseconds>(endTime - startTime);
+    const double processingTimeUs = static_cast<double>(processingDuration.count());
+
+    // Calculate available time based on buffer size and sample rate
+    // availableTimeUs = (numSamples / sampleRate) * 1,000,000
+    const double availableTimeUs = (buffer.getNumSamples() / currentSampleRate_) * 1000000.0;
+
+    // Calculate CPU load percentage
+    const double cpuLoad = (processingTimeUs / availableTimeUs) * 100.0;
+
+    // Update average with exponential smoothing (alpha = 0.05 for ~20 buffer smoothing)
+    const double alpha = 0.05;
+    const double currentAverage = averageProcessTimeUs_.load(std::memory_order_relaxed);
+    const double newAverage = (currentAverage * (1.0 - alpha)) + (processingTimeUs * alpha);
+    averageProcessTimeUs_.store(newAverage, std::memory_order_relaxed);
+
+    // Update peak
+    const double currentPeak = peakProcessTimeUs_.load(std::memory_order_relaxed);
+    if (processingTimeUs > currentPeak) {
+        peakProcessTimeUs_.store(processingTimeUs, std::memory_order_relaxed);
+    }
+
+    // Update CPU load (also smoothed)
+    const double currentCpuLoad = cpuLoadPercent_.load(std::memory_order_relaxed);
+    const double newCpuLoad = (currentCpuLoad * (1.0 - alpha)) + (cpuLoad * alpha);
+    cpuLoadPercent_.store(newCpuLoad, std::memory_order_relaxed);
+
+    // Check for overrun (processing time exceeded available time)
+    if (processingTimeUs > availableTimeUs) {
+        hadOverrun_.store(true, std::memory_order_relaxed);
     }
 }
 

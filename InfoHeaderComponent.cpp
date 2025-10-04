@@ -151,7 +151,19 @@ void InfoHeaderComponent::setupAllLabels()
     if (sustainingVoicesLabel) {
         addAndMakeVisible(sustainingVoicesLabel.get());
     }
-    
+
+    // DSP status - MALÝ FONT (11px)
+    dspStatusLabel = GuiHelpers::createSmallLabel("DSP: Off", debugMode_);
+    if (dspStatusLabel) {
+        addAndMakeVisible(dspStatusLabel.get());
+    }
+
+    // CPU load - MALÝ FONT (11px)
+    cpuLoadLabel = GuiHelpers::createSmallLabel("CPU: 0.0%", debugMode_);
+    if (cpuLoadLabel) {
+        addAndMakeVisible(cpuLoadLabel.get());
+    }
+
     GUI_DEBUG("InfoHeaderComponent: All labels created");
 }
 
@@ -232,11 +244,11 @@ void InfoHeaderComponent::updateLiveData()
         // Sample rate (if not set)
         if (sampleRateLabel && stats.currentSampleRate > 0) {
             sampleRateLabel->setText(
-                juce::String(GuiConstants::TextConstants::SAMPLE_RATE_PREFIX) + 
+                juce::String(GuiConstants::TextConstants::SAMPLE_RATE_PREFIX) +
                 juce::String(stats.currentSampleRate) + " Hz",
                 juce::dontSendNotification);
         }
-        
+
     } else {
         // No VoiceManager yet
         if (activeVoicesLabel) {
@@ -244,6 +256,51 @@ void InfoHeaderComponent::updateLiveData()
         }
         if (sustainingVoicesLabel) {
             sustainingVoicesLabel->setText("Sustaining: --", juce::dontSendNotification);
+        }
+    }
+
+    // ========================================================================
+    // Update DSP status (BBE definition parameter)
+    // ========================================================================
+
+    if (dspStatusLabel) {
+        auto* definitionParam = processorRef_.getParameters().getParameter("bbeDefinition");
+        if (definitionParam) {
+            float definitionValue = definitionParam->getValue();
+            bool dspEnabled = (definitionValue > 0.0f);
+            dspStatusLabel->setText(dspEnabled ? "DSP: On" : "DSP: Off",
+                                   juce::dontSendNotification);
+
+            // Color coding: green for On, gray for Off
+            if (dspEnabled) {
+                dspStatusLabel->setColour(juce::Label::textColourId, juce::Colours::lightgreen);
+            } else {
+                dspStatusLabel->setColour(juce::Label::textColourId, juce::Colours::lightgrey);
+            }
+        }
+    }
+
+    // ========================================================================
+    // Update CPU load performance metrics
+    // ========================================================================
+
+    if (cpuLoadLabel) {
+        double cpuLoad = processorRef_.getCPULoadPercent();
+        bool hadOverrun = processorRef_.hadProcessingOverrun();
+
+        // Format: "CPU: X.X%"
+        juce::String cpuText = juce::String("CPU: ") +
+                              juce::String(cpuLoad, 1) + "%";
+
+        cpuLoadLabel->setText(cpuText, juce::dontSendNotification);
+
+        // Color coding: red if overrun, yellow if >80%, green if <80%
+        if (hadOverrun || cpuLoad > 100.0) {
+            cpuLoadLabel->setColour(juce::Label::textColourId, juce::Colours::red);
+        } else if (cpuLoad > 80.0) {
+            cpuLoadLabel->setColour(juce::Label::textColourId, juce::Colours::yellow);
+        } else {
+            cpuLoadLabel->setColour(juce::Label::textColourId, juce::Colours::lightgreen);
         }
     }
 }
@@ -280,13 +337,24 @@ void InfoHeaderComponent::layoutBackgroundMode(juce::Rectangle<int> bounds)
     
     // Voice stats row - 50/50 split
     auto voiceStatsRow = bounds.removeFromTop(GuiConstants::INFO_VOICE_STATS_HEIGHT);
-    
+
     if (activeVoicesLabel && sustainingVoicesLabel) {
         int halfWidth = voiceStatsRow.getWidth() / 2;
         activeVoicesLabel->setBounds(voiceStatsRow.removeFromLeft(halfWidth));
         sustainingVoicesLabel->setBounds(voiceStatsRow);
     }
-    
+
+    bounds.removeFromTop(GuiConstants::INFO_ROW_SPACING);
+
+    // Performance stats row - 50/50 split (DSP | CPU)
+    auto perfStatsRow = bounds.removeFromTop(GuiConstants::INFO_VOICE_STATS_HEIGHT);
+
+    if (dspStatusLabel && cpuLoadLabel) {
+        int halfWidth = perfStatsRow.getWidth() / 2;
+        dspStatusLabel->setBounds(perfStatsRow.removeFromLeft(halfWidth));
+        cpuLoadLabel->setBounds(perfStatsRow);
+    }
+
     GUI_DEBUG("InfoHeaderComponent: Background mode layout applied");
 }
 
@@ -314,13 +382,25 @@ void InfoHeaderComponent::layoutDebugMode(juce::Rectangle<int> bounds)
     // Voice stats - 50/50
     auto voiceRow = bounds.removeFromTop(labelHeight);
     int halfWidth = voiceRow.getWidth() / 2;
-    
+
     if (activeVoicesLabel) {
         activeVoicesLabel->setBounds(voiceRow.removeFromLeft(halfWidth));
     }
     if (sustainingVoicesLabel) {
         sustainingVoicesLabel->setBounds(voiceRow);
     }
-    
+
+    bounds.removeFromTop(spacing);
+
+    // Performance stats - 50/50 (DSP | CPU)
+    auto perfRow = bounds.removeFromTop(labelHeight);
+
+    if (dspStatusLabel) {
+        dspStatusLabel->setBounds(perfRow.removeFromLeft(halfWidth));
+    }
+    if (cpuLoadLabel) {
+        cpuLoadLabel->setBounds(perfRow);
+    }
+
     GUI_DEBUG("InfoHeaderComponent: Debug mode layout applied");
 }
