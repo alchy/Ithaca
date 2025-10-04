@@ -206,6 +206,7 @@ target_sources(IthacaPlayer
         ithaca-core/sampler/lfopan.h
 
         # DSP / BBE Processor
+        ithaca-core/sampler/dsp/biquad_filter.cpp
         ithaca-core/sampler/dsp/biquad_filter.h
         ithaca-core/sampler/dsp/harmonic_enhancer.cpp
         ithaca-core/sampler/dsp/harmonic_enhancer.h
