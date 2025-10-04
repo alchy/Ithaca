@@ -7,3 +7,6 @@
 [submodule "ithaca-core"]
 	path = ithaca-core
 	url = https://github.com/alchy/IthacaCore.git
+[submodule "json"]
+	path = json
+	url = https://github.com/nlohmann/json.git
