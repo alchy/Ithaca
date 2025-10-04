@@ -145,6 +145,8 @@ target_sources(IthacaPlayer
         # JUCE - Specialized GUI Components (IthacaPluginEditor)
         SliderPanelComponent.h
         SliderPanelComponent.cpp
+        SliderFactory.h
+        SliderFactory.cpp
         InfoHeaderComponent.h
         InfoHeaderComponent.cpp
 

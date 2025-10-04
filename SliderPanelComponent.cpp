@@ -1,6 +1,6 @@
 /**
- * @file SliderPanelComponent.cpp (COMPLETE with MidiLearnSlider)
- * @brief Kompletní implementace s MIDI Learn funkčností
+ * @file SliderPanelComponent.cpp (REFACTORED with SliderFactory)
+ * @brief Refaktorovaná implementace využívající SliderFactory
  */
 
 #include "SliderPanelComponent.h"
@@ -23,16 +23,16 @@
 SliderPanelComponent::SliderPanelComponent(
     juce::AudioProcessorValueTreeState& parameters,
     MidiLearnManager* midiLearnManager)
-    : parameters_(parameters), 
+    : parameters_(parameters),
       midiLearnManager_(midiLearnManager),
       debugMode_(GuiHelpers::isDebugModeEnabled())
 {
-    GUI_DEBUG("SliderPanelComponent: Constructor with MIDI Learn");
-    
+    GUI_DEBUG("SliderPanelComponent: Constructor with SliderFactory");
+
     setupAllControls();
-    setupSliderAttachments();
-    
-    GUI_DEBUG("SliderPanelComponent: Constructor completed");
+
+    GUI_DEBUG("SliderPanelComponent: Constructor completed - "
+              << sliders_.size() << " sliders created");
 }
 
 SliderPanelComponent::~SliderPanelComponent()
@@ -97,24 +97,12 @@ void SliderPanelComponent::setDebugMode(bool enabled)
 void SliderPanelComponent::onLearningStateChanged(bool isLearning, const juce::String& parameterID)
 {
     currentLearningParameterID_ = isLearning ? parameterID : juce::String();
-    
-    // Update visuals pro všechny slidery
-    updateSliderLearningVisuals(masterGainSlider.get(), 
-        isLearning && parameterID == "masterGain");
-    updateSliderLearningVisuals(masterPanSlider.get(), 
-        isLearning && parameterID == "masterPan");
-    updateSliderLearningVisuals(attackSlider.get(), 
-        isLearning && parameterID == "attack");
-    updateSliderLearningVisuals(releaseSlider.get(), 
-        isLearning && parameterID == "release");
-    updateSliderLearningVisuals(sustainLevelSlider.get(), 
-        isLearning && parameterID == "sustainLevel");
-    updateSliderLearningVisuals(lfoPanSpeedSlider.get(), 
-        isLearning && parameterID == "lfoPanSpeed");
-    updateSliderLearningVisuals(lfoPanDepthSlider.get(), 
-        isLearning && parameterID == "lfoPanDepth");
-    updateSliderLearningVisuals(stereoFieldSlider.get(), 
-        isLearning && parameterID == "stereoField");
+
+    // REFACTORED: Iterace přes všechny slidery - DRY
+    for (auto& bundle : sliders_) {
+        bool isThisSliderLearning = (isLearning && bundle.config.parameterID == parameterID);
+        updateSliderLearningVisuals(bundle.slider.get(), isThisSliderLearning);
+    }
 }
 
 // ============================================================================
@@ -123,243 +111,65 @@ void SliderPanelComponent::onLearningStateChanged(bool isLearning, const juce::S
 
 void SliderPanelComponent::setupAllControls()
 {
-    GUI_DEBUG("SliderPanelComponent: Setting up all controls");
-    
+    GUI_DEBUG("SliderPanelComponent: Setting up all controls with SliderFactory");
+
     removeAllChildren();
-    
-    createMasterControls();
-    createLFOControls();
-    createADSRControls();
-    createPanControl();
-    
-    GUI_DEBUG("SliderPanelComponent: All controls created");
+    sliders_.clear();
+    sliderMap_.clear();
+
+    createAllSliders();
+
+    GUI_DEBUG("SliderPanelComponent: All controls created via factory");
 }
 
-void SliderPanelComponent::createMasterControls()
+void SliderPanelComponent::createAllSliders()
 {
-    // Master Gain (left)
-    masterGainLabel = GuiHelpers::createSliderLabel(
-        GuiConstants::TextConstants::MASTER_GAIN_LABEL, debugMode_);
-    if (masterGainLabel) {
-        addAndMakeVisible(masterGainLabel.get());
-    }
-    
-    // CHANGED: Create MidiLearnSlider
-    masterGainSlider = std::make_unique<MidiLearnSlider>(
-        juce::Slider::LinearHorizontal, 
-        juce::Slider::NoTextBox);
-    if (masterGainSlider) {
-        masterGainSlider->setRange(0.0, 127.0, 1.0);
-        masterGainSlider->setValue(100.0);
-        GuiHelpers::styleSlider(*masterGainSlider, debugMode_);
-        masterGainSlider->addListener(this);
-        
-        // ADDED: Set right-click callback
-        masterGainSlider->setRightClickCallback([this](juce::Point<int> pos) {
-            GUI_DEBUG("Master Gain slider right-clicked!");
-            showMidiLearnMenu(masterGainSlider.get(), pos);
-        });
-        
-        addAndMakeVisible(masterGainSlider.get());
-    }
-    
-    // Stereo Field (right)
-    stereoFieldLabel = GuiHelpers::createSliderLabel(
-        GuiConstants::TextConstants::STEREO_FIELD_LABEL, debugMode_);
-    if (stereoFieldLabel) {
-        addAndMakeVisible(stereoFieldLabel.get());
-    }
-    
-    stereoFieldSlider = std::make_unique<MidiLearnSlider>(
-        juce::Slider::LinearHorizontal, 
-        juce::Slider::NoTextBox);
-    if (stereoFieldSlider) {
-        stereoFieldSlider->setRange(0.0, 127.0, 1.0);
-        stereoFieldSlider->setValue(0.0);
-        GuiHelpers::styleSlider(*stereoFieldSlider, debugMode_);
-        stereoFieldSlider->addListener(this);
-        
-        stereoFieldSlider->setRightClickCallback([this](juce::Point<int> pos) {
-            GUI_DEBUG("Stereo Field slider right-clicked!");
-            showMidiLearnMenu(stereoFieldSlider.get(), pos);
-        });
-        
-        addAndMakeVisible(stereoFieldSlider.get());
-    }
-}
+    // REFACTORED: Všechny slidery vytvoří SliderFactory podle konfigurace
+    // Callback pro right-click (MIDI Learn menu)
+    auto rightClickCallback = [this](MidiLearnSlider* slider, juce::Point<int> pos) {
+        showMidiLearnMenu(slider, pos);
+    };
 
-void SliderPanelComponent::createLFOControls()
-{
-    // LFO Depth (left)
-    lfoPanDepthLabel = GuiHelpers::createSliderLabel(
-        GuiConstants::TextConstants::LFO_DEPTH_LABEL, debugMode_);
-    if (lfoPanDepthLabel) {
-        addAndMakeVisible(lfoPanDepthLabel.get());
-    }
-    
-    lfoPanDepthSlider = std::make_unique<MidiLearnSlider>(
-        juce::Slider::LinearHorizontal, 
-        juce::Slider::NoTextBox);
-    if (lfoPanDepthSlider) {
-        lfoPanDepthSlider->setRange(0.0, 127.0, 1.0);
-        lfoPanDepthSlider->setValue(0.0);
-        GuiHelpers::styleSlider(*lfoPanDepthSlider, debugMode_);
-        lfoPanDepthSlider->addListener(this);
-        
-        lfoPanDepthSlider->setRightClickCallback([this](juce::Point<int> pos) {
-            GUI_DEBUG("LFO Depth slider right-clicked!");
-            showMidiLearnMenu(lfoPanDepthSlider.get(), pos);
-        });
-        
-        addAndMakeVisible(lfoPanDepthSlider.get());
-    }
-    
-    // LFO Speed (right)
-    lfoPanSpeedLabel = GuiHelpers::createSliderLabel(
-        GuiConstants::TextConstants::LFO_SPEED_LABEL, debugMode_);
-    if (lfoPanSpeedLabel) {
-        addAndMakeVisible(lfoPanSpeedLabel.get());
-    }
-    
-    lfoPanSpeedSlider = std::make_unique<MidiLearnSlider>(
-        juce::Slider::LinearHorizontal, 
-        juce::Slider::NoTextBox);
-    if (lfoPanSpeedSlider) {
-        lfoPanSpeedSlider->setRange(0.0, 127.0, 1.0);
-        lfoPanSpeedSlider->setValue(0.0);
-        GuiHelpers::styleSlider(*lfoPanSpeedSlider, debugMode_);
-        lfoPanSpeedSlider->addListener(this);
-        
-        lfoPanSpeedSlider->setRightClickCallback([this](juce::Point<int> pos) {
-            GUI_DEBUG("LFO Speed slider right-clicked!");
-            showMidiLearnMenu(lfoPanSpeedSlider.get(), pos);
-        });
-        
-        addAndMakeVisible(lfoPanSpeedSlider.get());
-    }
-}
+    // Definice všech sliderů v pořadí podle layoutu
+    std::vector<SliderConfig> configs = {
+        // Row 1: Master Gain, Stereo Field
+        SliderConfig("masterGain", "Master Gain", GuiConstants::TextConstants::MASTER_GAIN_LABEL, 100.0),
+        SliderConfig("stereoField", "Stereo Field", GuiConstants::TextConstants::STEREO_FIELD_LABEL, 0.0),
 
-void SliderPanelComponent::createADSRControls()
-{
-    // Attack (left)
-    attackLabel = GuiHelpers::createSliderLabel(
-        GuiConstants::TextConstants::ATTACK_LABEL, debugMode_);
-    if (attackLabel) {
-        addAndMakeVisible(attackLabel.get());
-    }
-    
-    attackSlider = std::make_unique<MidiLearnSlider>(
-        juce::Slider::LinearHorizontal, 
-        juce::Slider::NoTextBox);
-    if (attackSlider) {
-        attackSlider->setRange(0.0, 127.0, 1.0);
-        attackSlider->setValue(0.0);
-        GuiHelpers::styleSlider(*attackSlider, debugMode_);
-        attackSlider->addListener(this);
-        
-        attackSlider->setRightClickCallback([this](juce::Point<int> pos) {
-            GUI_DEBUG("Attack slider right-clicked!");
-            showMidiLearnMenu(attackSlider.get(), pos);
-        });
-        
-        addAndMakeVisible(attackSlider.get());
-    }
-    
-    // Release (right)
-    releaseLabel = GuiHelpers::createSliderLabel(
-        GuiConstants::TextConstants::RELEASE_LABEL, debugMode_);
-    if (releaseLabel) {
-        addAndMakeVisible(releaseLabel.get());
-    }
-    
-    releaseSlider = std::make_unique<MidiLearnSlider>(
-        juce::Slider::LinearHorizontal, 
-        juce::Slider::NoTextBox);
-    if (releaseSlider) {
-        releaseSlider->setRange(0.0, 127.0, 1.0);
-        releaseSlider->setValue(4.0);
-        GuiHelpers::styleSlider(*releaseSlider, debugMode_);
-        releaseSlider->addListener(this);
-        
-        releaseSlider->setRightClickCallback([this](juce::Point<int> pos) {
-            GUI_DEBUG("Release slider right-clicked!");
-            showMidiLearnMenu(releaseSlider.get(), pos);
-        });
-        
-        addAndMakeVisible(releaseSlider.get());
-    }
-    
-    // Sustain (left)
-    sustainLevelLabel = GuiHelpers::createSliderLabel(
-        GuiConstants::TextConstants::SUSTAIN_LABEL, debugMode_);
-    if (sustainLevelLabel) {
-        addAndMakeVisible(sustainLevelLabel.get());
-    }
-    
-    sustainLevelSlider = std::make_unique<MidiLearnSlider>(
-        juce::Slider::LinearHorizontal, 
-        juce::Slider::NoTextBox);
-    if (sustainLevelSlider) {
-        sustainLevelSlider->setRange(0.0, 127.0, 1.0);
-        sustainLevelSlider->setValue(127.0);
-        GuiHelpers::styleSlider(*sustainLevelSlider, debugMode_);
-        sustainLevelSlider->addListener(this);
-        
-        sustainLevelSlider->setRightClickCallback([this](juce::Point<int> pos) {
-            GUI_DEBUG("Sustain Level slider right-clicked!");
-            showMidiLearnMenu(sustainLevelSlider.get(), pos);
-        });
-        
-        addAndMakeVisible(sustainLevelSlider.get());
-    }
-}
+        // Row 2: LFO Depth, LFO Speed
+        SliderConfig("lfoPanDepth", "LFO Depth", GuiConstants::TextConstants::LFO_DEPTH_LABEL, 0.0),
+        SliderConfig("lfoPanSpeed", "LFO Speed", GuiConstants::TextConstants::LFO_SPEED_LABEL, 0.0),
 
-void SliderPanelComponent::createPanControl()
-{
-    // Master Pan (right)
-    masterPanLabel = GuiHelpers::createSliderLabel(
-        GuiConstants::TextConstants::MASTER_PAN_LABEL, debugMode_);
-    if (masterPanLabel) {
-        addAndMakeVisible(masterPanLabel.get());
-    }
-    
-    masterPanSlider = std::make_unique<MidiLearnSlider>(
-        juce::Slider::LinearHorizontal, 
-        juce::Slider::NoTextBox);
-    if (masterPanSlider) {
-        masterPanSlider->setRange(0.0, 127.0, 1.0);
-        masterPanSlider->setValue(64.0);
-        GuiHelpers::styleSlider(*masterPanSlider, debugMode_);
-        masterPanSlider->addListener(this);
-        
-        masterPanSlider->setRightClickCallback([this](juce::Point<int> pos) {
-            GUI_DEBUG("Master Pan slider right-clicked!");
-            showMidiLearnMenu(masterPanSlider.get(), pos);
-        });
-        
-        addAndMakeVisible(masterPanSlider.get());
-    }
-}
+        // Row 3: Attack, Release
+        SliderConfig("attack", "Attack", GuiConstants::TextConstants::ATTACK_LABEL, 0.0),
+        SliderConfig("release", "Release", GuiConstants::TextConstants::RELEASE_LABEL, 4.0),
 
-void SliderPanelComponent::setupSliderAttachments()
-{
-    GUI_DEBUG("SliderPanelComponent: Setting up slider attachments");
-    
-    ParameterAttachmentManager::SliderSet sliderSet;
-    sliderSet.masterGain = masterGainSlider.get();
-    sliderSet.masterPan = masterPanSlider.get();
-    sliderSet.attack = attackSlider.get();
-    sliderSet.release = releaseSlider.get();
-    sliderSet.sustainLevel = sustainLevelSlider.get();
-    sliderSet.lfoPanSpeed = lfoPanSpeedSlider.get();
-    sliderSet.lfoPanDepth = lfoPanDepthSlider.get();
-    sliderSet.stereoField = stereoFieldSlider.get();
-    
-    bool success = attachmentManager_.createAllAttachments(parameters_, sliderSet);
-    
-    if (success) {
-        GUI_DEBUG("SliderPanelComponent: All attachments created successfully");
+        // Row 4: Sustain Level, Master Pan
+        SliderConfig("sustainLevel", "Sustain Level", GuiConstants::TextConstants::SUSTAIN_LABEL, 127.0),
+        SliderConfig("masterPan", "Master Pan", GuiConstants::TextConstants::MASTER_PAN_LABEL, 64.0)
+    };
+
+    // Vytvoření všech sliderů pomocí factory
+    sliders_.reserve(configs.size());
+    for (const auto& config : configs) {
+        auto bundle = SliderFactory::createSlider(config, parameters_, debugMode_, rightClickCallback);
+
+        // Přidat listener pro value changes
+        if (bundle.slider) {
+            bundle.slider->addListener(this);
+        }
+
+        // Přidat do komponenty
+        SliderFactory::addToComponent(*this, bundle);
+
+        // Uložit bundle
+        sliders_.push_back(std::move(bundle));
     }
+
+    // Vytvořit mapu pro rychlý lookup
+    sliderMap_ = SliderFactory::createParameterMap(sliders_);
+
+    GUI_DEBUG("SliderPanelComponent: Created " << sliders_.size() << " sliders via factory");
 }
 
 // ============================================================================
@@ -368,60 +178,31 @@ void SliderPanelComponent::setupSliderAttachments()
 
 void SliderPanelComponent::layoutBackgroundMode(juce::Rectangle<int> bounds)
 {
-    layoutSliderRow(bounds, 
-                    masterGainLabel.get(), masterGainSlider.get(),
-                    stereoFieldLabel.get(), stereoFieldSlider.get());
-    drawSeparator(bounds);
-    
-    layoutSliderRow(bounds,
-                    lfoPanDepthLabel.get(), lfoPanDepthSlider.get(),
-                    lfoPanSpeedLabel.get(), lfoPanSpeedSlider.get());
-    drawSeparator(bounds);
-    
-    layoutSliderRow(bounds,
-                    attackLabel.get(), attackSlider.get(),
-                    releaseLabel.get(), releaseSlider.get());
-    drawSeparator(bounds);
-    
-    layoutSliderRow(bounds,
-                    sustainLevelLabel.get(), sustainLevelSlider.get(),
-                    masterPanLabel.get(), masterPanSlider.get());
+    // REFACTORED: Layout sliderů ve dvojicích (2 slidery per řádek)
+    // Indexy: 0-1, 2-3, 4-5, 6-7
+    for (size_t i = 0; i < sliders_.size(); i += 2) {
+        if (i + 1 < sliders_.size()) {
+            layoutSliderRow(bounds,
+                          sliders_[i].label.get(), sliders_[i].slider.get(),
+                          sliders_[i + 1].label.get(), sliders_[i + 1].slider.get());
+            if (i + 2 < sliders_.size()) { // Separátor pouze mezi řádky
+                drawSeparator(bounds);
+            }
+        }
+    }
 }
 
 void SliderPanelComponent::layoutDebugMode(juce::Rectangle<int> bounds)
 {
     const int spacing = 4;
-    
-    GuiHelpers::positionHorizontalSliderWithLabel(bounds, 
-        masterGainLabel.get(), masterGainSlider.get());
-    bounds.removeFromTop(spacing);
-    
-    GuiHelpers::positionHorizontalSliderWithLabel(bounds,
-        stereoFieldLabel.get(), stereoFieldSlider.get());
-    bounds.removeFromTop(spacing);
-    
-    GuiHelpers::positionHorizontalSliderWithLabel(bounds,
-        lfoPanDepthLabel.get(), lfoPanDepthSlider.get());
-    bounds.removeFromTop(spacing);
-    
-    GuiHelpers::positionHorizontalSliderWithLabel(bounds,
-        lfoPanSpeedLabel.get(), lfoPanSpeedSlider.get());
-    bounds.removeFromTop(spacing);
-    
-    GuiHelpers::positionHorizontalSliderWithLabel(bounds,
-        attackLabel.get(), attackSlider.get());
-    bounds.removeFromTop(spacing);
-    
-    GuiHelpers::positionHorizontalSliderWithLabel(bounds,
-        releaseLabel.get(), releaseSlider.get());
-    bounds.removeFromTop(spacing);
-    
-    GuiHelpers::positionHorizontalSliderWithLabel(bounds,
-        sustainLevelLabel.get(), sustainLevelSlider.get());
-    bounds.removeFromTop(spacing);
-    
-    GuiHelpers::positionHorizontalSliderWithLabel(bounds,
-        masterPanLabel.get(), masterPanSlider.get());
+
+    // REFACTORED: Iterace přes všechny slidery - single column layout
+    for (auto& bundle : sliders_) {
+        GuiHelpers::positionHorizontalSliderWithLabel(bounds,
+                                                     bundle.label.get(),
+                                                     bundle.slider.get());
+        bounds.removeFromTop(spacing);
+    }
 }
 
 void SliderPanelComponent::layoutSliderRow(juce::Rectangle<int>& bounds,
@@ -466,30 +247,39 @@ void SliderPanelComponent::paintSeparators(juce::Graphics& g)
 // MIDI Learn Methods
 // ============================================================================
 
-void SliderPanelComponent::showMidiLearnMenu(juce::Slider* slider, juce::Point<int> position)
+void SliderPanelComponent::showMidiLearnMenu(MidiLearnSlider* slider, juce::Point<int> position)
 {
     juce::ignoreUnused(position);
 
+    if (!slider || !midiLearnManager_) return;
+
     juce::PopupMenu menu;
-    
-    juce::String parameterID = getParameterIDForSlider(slider);
-    if (parameterID.isEmpty()) return;
-    
-    int assignedCC = midiLearnManager_->getCCNumberForParameter(parameterID);
-    
+
+    // REFACTORED: Najít config podle pointeru na slider
+    const SliderConfig* config = nullptr;
+    for (const auto& bundle : sliders_) {
+        if (bundle.slider.get() == slider) {
+            config = &bundle.config;
+            break;
+        }
+    }
+
+    if (!config) return;
+
+    int assignedCC = midiLearnManager_->getCCNumberForParameter(config->parameterID);
+
     if (assignedCC >= 0) {
         menu.addItem(1, "Learn MIDI CC (currently: CC " + juce::String(assignedCC) + ")");
         menu.addItem(2, "Clear MIDI CC");
     } else {
         menu.addItem(1, "Learn MIDI CC...");
     }
-    
+
     menu.showMenuAsync(juce::PopupMenu::Options().withTargetComponent(this),
-        [this, slider, parameterID](int result) {
+        [this, parameterID = config->parameterID, displayName = config->displayName](int result) {
             if (result == 1) {
-                juce::String displayName = getDisplayNameForSlider(slider);
                 midiLearnManager_->startLearning(parameterID, displayName);
-                
+
                 juce::AlertWindow::showMessageBoxAsync(
                     juce::AlertWindow::InfoIcon,
                     "MIDI Learn Active",
@@ -502,55 +292,24 @@ void SliderPanelComponent::showMidiLearnMenu(juce::Slider* slider, juce::Point<i
         });
 }
 
-juce::String SliderPanelComponent::getParameterIDForSlider(juce::Slider* slider) const
+void SliderPanelComponent::updateSliderLearningVisuals(MidiLearnSlider* slider, bool isLearning)
 {
-    if (slider == masterGainSlider.get()) return "masterGain";
-    if (slider == masterPanSlider.get()) return "masterPan";
-    if (slider == attackSlider.get()) return "attack";
-    if (slider == releaseSlider.get()) return "release";
-    if (slider == sustainLevelSlider.get()) return "sustainLevel";
-    if (slider == lfoPanSpeedSlider.get()) return "lfoPanSpeed";
-    if (slider == lfoPanDepthSlider.get()) return "lfoPanDepth";
-    if (slider == stereoFieldSlider.get()) return "stereoField";
-    return {};
+    // REFACTORED: Využívá SliderFactory pro nastavení visuálů
+    SliderFactory::setLearningVisuals(slider, isLearning, debugMode_);
 }
 
-juce::String SliderPanelComponent::getDisplayNameForSlider(juce::Slider* slider) const
+MidiLearnSlider* SliderPanelComponent::findSliderByParameterID(const juce::String& parameterID)
 {
-    if (slider == masterGainSlider.get()) return "Master Gain";
-    if (slider == masterPanSlider.get()) return "Master Pan";
-    if (slider == attackSlider.get()) return "Attack";
-    if (slider == releaseSlider.get()) return "Release";
-    if (slider == sustainLevelSlider.get()) return "Sustain Level";
-    if (slider == lfoPanSpeedSlider.get()) return "LFO Speed";
-    if (slider == lfoPanDepthSlider.get()) return "LFO Depth";
-    if (slider == stereoFieldSlider.get()) return "Stereo Field";
-    return {};
+    // REFACTORED: Využívá mapu pro O(log n) lookup
+    auto it = sliderMap_.find(parameterID);
+    return (it != sliderMap_.end()) ? it->second : nullptr;
 }
 
-void SliderPanelComponent::updateSliderLearningVisuals(juce::Slider* slider, bool isLearning)
-{
-    if (!slider) return;
-    
-    if (isLearning) {
-        slider->setColour(juce::Slider::thumbColourId, juce::Colours::red);
-        slider->setColour(juce::Slider::trackColourId, juce::Colours::orange.darker());
-    } else {
-        GuiHelpers::styleSlider(*slider, debugMode_);
-    }
-    
-    slider->repaint();
-}
+// ============================================================================
+// Helper Methods
+// ============================================================================
 
-juce::Slider* SliderPanelComponent::findSliderByParameterID(const juce::String& parameterID)
+SliderBundle* SliderPanelComponent::getSlider(size_t index)
 {
-    if (parameterID == "masterGain") return masterGainSlider.get();
-    if (parameterID == "masterPan") return masterPanSlider.get();
-    if (parameterID == "attack") return attackSlider.get();
-    if (parameterID == "release") return releaseSlider.get();
-    if (parameterID == "sustainLevel") return sustainLevelSlider.get();
-    if (parameterID == "lfoPanSpeed") return lfoPanSpeedSlider.get();
-    if (parameterID == "lfoPanDepth") return lfoPanDepthSlider.get();
-    if (parameterID == "stereoField") return stereoFieldSlider.get();
-    return nullptr;
+    return (index < sliders_.size()) ? &sliders_[index] : nullptr;
 }
