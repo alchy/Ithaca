@@ -211,6 +211,13 @@ target_sources(IthacaPlayer
         ithaca-core/sampler/lfopan.cpp
         ithaca-core/sampler/lfopan.h
 
+        # IthacaCore - DSP Effects
+        ithaca-core/dsp/dsp_effect.h
+        ithaca-core/dsp/dsp_chain.h
+        ithaca-core/dsp/dsp_chain.cpp
+        ithaca-core/dsp/limiter/limiter.h
+        ithaca-core/dsp/limiter/limiter.cpp
+
         # IthacaCore - Tests (optional - can be excluded for release)
         ithaca-core/sampler/tests/test_helpers.cpp
         ithaca-core/sampler/tests/test_helpers.h
