@@ -24,6 +24,9 @@
 // Async loading
 #include "ithaca/audio/AsyncSampleLoader.h"
 
+// Performance monitoring
+#include "ithaca/audio/PerformanceMonitor.h"
+
 // MIDI processing
 #include "ithaca/midi/MidiProcessor.h"
 
@@ -123,7 +126,7 @@ public:
     
     /**
      * @brief Get current sampler statistics for GUI display
-     * @return SamplerStats structure with voice counts and sample rate
+     * @return SamplerStats structure with voice counts, sample rate, and performance metrics
      */
     struct SamplerStats {
         int activeVoices = 0;
@@ -131,6 +134,13 @@ public:
         int releasingVoices = 0;
         int currentSampleRate = 0;
         int totalLoadedSamples = 0;
+
+        // Performance metrics
+        double avgProcessingTimeMs = 0.0;
+        double maxProcessingTimeMs = 0.0;
+        double cpuUsagePercent = 0.0;
+        int dropoutCount = 0;
+        bool isDropoutRisk = false;
     };
     SamplerStats getSamplerStats() const;
 
@@ -206,6 +216,7 @@ private:
     std::unique_ptr<AsyncSampleLoader> asyncLoader_;    // Async sample loader
     std::unique_ptr<MidiProcessor> midiProcessor_;      // MIDI event processor
     std::unique_ptr<MidiLearnManager> midiLearnManager_; // MIDI Learn manager
+    std::unique_ptr<PerformanceMonitor> perfMonitor_;   // Performance monitor
     
     //==============================================================================
     // Parameter Management (delegated to ParameterManager)

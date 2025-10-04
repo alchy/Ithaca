@@ -151,7 +151,13 @@ void InfoHeaderComponent::setupAllLabels()
     if (sustainingVoicesLabel) {
         addAndMakeVisible(sustainingVoicesLabel.get());
     }
-    
+
+    // CPU Usage - MALÝ FONT (11px, barevně kódované)
+    cpuUsageLabel = GuiHelpers::createSmallLabel("CPU: 0% | Dropouts: 0", debugMode_);
+    if (cpuUsageLabel) {
+        addAndMakeVisible(cpuUsageLabel.get());
+    }
+
     GUI_DEBUG("InfoHeaderComponent: All labels created");
 }
 
@@ -239,11 +245,32 @@ void InfoHeaderComponent::updateLiveData()
         // Sample rate (if not set)
         if (sampleRateLabel && stats.currentSampleRate > 0) {
             sampleRateLabel->setText(
-                juce::String(GuiConstants::TextConstants::SAMPLE_RATE_PREFIX) + 
+                juce::String(GuiConstants::TextConstants::SAMPLE_RATE_PREFIX) +
                 juce::String(stats.currentSampleRate) + " Hz",
                 juce::dontSendNotification);
         }
-        
+
+        // CPU Usage with color-coded indication
+        if (cpuUsageLabel) {
+            juce::String cpuText = "CPU: " +
+                juce::String(stats.cpuUsagePercent, 1) + "% | Dropouts: " +
+                juce::String(stats.dropoutCount);
+
+            cpuUsageLabel->setText(cpuText, juce::dontSendNotification);
+
+            // Color-coded CPU status
+            juce::Colour cpuColor;
+            if (stats.dropoutCount > 0 || stats.cpuUsagePercent > 80.0) {
+                cpuColor = juce::Colours::red;        // Critical (RED)
+            } else if (stats.cpuUsagePercent > 50.0) {
+                cpuColor = juce::Colours::orange;     // Warning (ORANGE)
+            } else {
+                cpuColor = juce::Colours::lightgreen; // OK (GREEN)
+            }
+
+            cpuUsageLabel->setColour(juce::Label::textColourId, cpuColor);
+        }
+
     } else {
         // No VoiceManager yet
         if (activeVoicesLabel) {
@@ -287,13 +314,20 @@ void InfoHeaderComponent::layoutBackgroundMode(juce::Rectangle<int> bounds)
     
     // Voice stats row - 50/50 split
     auto voiceStatsRow = bounds.removeFromTop(GuiConstants::INFO_VOICE_STATS_HEIGHT);
-    
+
     if (activeVoicesLabel && sustainingVoicesLabel) {
         int halfWidth = voiceStatsRow.getWidth() / 2;
         activeVoicesLabel->setBounds(voiceStatsRow.removeFromLeft(halfWidth));
         sustainingVoicesLabel->setBounds(voiceStatsRow);
     }
-    
+
+    bounds.removeFromTop(GuiConstants::INFO_ROW_SPACING);
+
+    // CPU usage row (full width)
+    if (cpuUsageLabel) {
+        cpuUsageLabel->setBounds(bounds.removeFromTop(GuiConstants::INFO_VOICE_STATS_HEIGHT));
+    }
+
     GUI_DEBUG("InfoHeaderComponent: Background mode layout applied");
 }
 
@@ -321,13 +355,20 @@ void InfoHeaderComponent::layoutDebugMode(juce::Rectangle<int> bounds)
     // Voice stats - 50/50
     auto voiceRow = bounds.removeFromTop(labelHeight);
     int halfWidth = voiceRow.getWidth() / 2;
-    
+
     if (activeVoicesLabel) {
         activeVoicesLabel->setBounds(voiceRow.removeFromLeft(halfWidth));
     }
     if (sustainingVoicesLabel) {
         sustainingVoicesLabel->setBounds(voiceRow);
     }
-    
+
+    bounds.removeFromTop(spacing);
+
+    // CPU usage (full width)
+    if (cpuUsageLabel) {
+        cpuUsageLabel->setBounds(bounds.removeFromTop(labelHeight));
+    }
+
     GUI_DEBUG("InfoHeaderComponent: Debug mode layout applied");
 }

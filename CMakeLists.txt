@@ -127,6 +127,8 @@ target_sources(IthacaPlayer
         ithaca/audio/AsyncSampleLoader.cpp
         ithaca/audio/InstrumentMetadata.h
         ithaca/audio/InstrumentMetadata.cpp
+        ithaca/audio/PerformanceMonitor.h
+        ithaca/audio/PerformanceMonitor.cpp
 
         # Parameters
         ithaca/parameters/ParameterManager.h

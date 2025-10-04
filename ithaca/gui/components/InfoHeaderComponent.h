@@ -95,6 +95,7 @@ private:
     std::unique_ptr<juce::Label> sampleRateLabel;       // 11px
     std::unique_ptr<juce::Label> activeVoicesLabel;     // 11px
     std::unique_ptr<juce::Label> sustainingVoicesLabel; // 11px
+    std::unique_ptr<juce::Label> cpuUsageLabel;         // 11px (color-coded)
     
     // ========================================================================
     // State

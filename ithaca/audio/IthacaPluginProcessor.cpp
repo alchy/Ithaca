@@ -40,7 +40,11 @@ IthacaPluginProcessor::IthacaPluginProcessor()
     // Create MIDI Learn Manager
     midiLearnManager_ = std::make_unique<MidiLearnManager>();
     logSafe("IthacaPluginProcessor/constructor", "info", "MIDI Learn Manager created");
-    
+
+    // Create Performance Monitor
+    perfMonitor_ = std::make_unique<PerformanceMonitor>();
+    logSafe("IthacaPluginProcessor/constructor", "info", "Performance Monitor created");
+
     // Set default sample directory
     currentSampleDirectory_ = DEFAULT_SAMPLE_DIR;
     
@@ -124,7 +128,12 @@ void IthacaPluginProcessor::prepareToPlay(double sampleRate, int samplesPerBlock
     // Store current audio settings
     currentSampleRate_ = sampleRate;
     currentBlockSize_ = samplesPerBlock;
-    
+
+    // Update performance monitor settings
+    if (perfMonitor_) {
+        perfMonitor_->setAudioSettings(sampleRate, samplesPerBlock);
+    }
+
     // If already initialized, just update settings
     if (samplerInitialized_ && voiceManager_) {
         // Check if sample rate changed
@@ -194,34 +203,43 @@ void IthacaPluginProcessor::processBlock(juce::AudioBuffer<float>& buffer,
                                          juce::MidiBuffer& midiMessages)
 {
     juce::ScopedNoDenormals noDenormals;
-    
+
+    // Start performance measurement
+    if (perfMonitor_) {
+        perfMonitor_->startMeasurement();
+    }
+
     // Increment process block counter
     processBlockCallCount_.fetch_add(1);
-    
+
     // Always clear buffer first
     buffer.clear();
-    
+
     // Check if async loading has completed and transfer VoiceManager
     checkAndTransferVoiceManager();
-    
+
     // If not initialized, return silence
     if (!samplerInitialized_ || !voiceManager_) {
+        // End measurement even if not processing
+        if (perfMonitor_) {
+            perfMonitor_->endMeasurement();
+        }
         return;  // Silent output during loading
     }
-    
+
     // Update VoiceManager parameters (RT-safe through ParameterManager)
     parameterManager_.updateSamplerParametersRTSafe(voiceManager_.get());
-    
+
     // Process MIDI events (delegated to MidiProcessor with MIDI Learn)
     if (midiProcessor_) {
         midiProcessor_->processMidiBuffer(
-            midiMessages, 
-            voiceManager_.get(), 
+            midiMessages,
+            voiceManager_.get(),
             parameters_,
             midiLearnManager_.get()  // Pass MIDI Learn Manager
         );
     }
-    
+
     // Render audio through VoiceManager
     if (voiceManager_) {
         voiceManager_->processBlockUninterleaved(
@@ -229,6 +247,11 @@ void IthacaPluginProcessor::processBlock(juce::AudioBuffer<float>& buffer,
             buffer.getWritePointer(1),
             buffer.getNumSamples()
         );
+    }
+
+    // End performance measurement
+    if (perfMonitor_) {
+        perfMonitor_->endMeasurement();
     }
 }
 
@@ -313,14 +336,24 @@ void IthacaPluginProcessor::setStateInformation(const void* data, int sizeInByte
 IthacaPluginProcessor::SamplerStats IthacaPluginProcessor::getSamplerStats() const
 {
     SamplerStats stats;
-    
+
     if (voiceManager_) {
         stats.activeVoices = voiceManager_->getActiveVoicesCount();
         stats.sustainingVoices = voiceManager_->getSustainingVoicesCount();
         stats.releasingVoices = voiceManager_->getReleasingVoicesCount();
         stats.currentSampleRate = voiceManager_->getCurrentSampleRate();
     }
-    
+
+    // Add performance metrics
+    if (perfMonitor_) {
+        auto perfMetrics = perfMonitor_->getMetrics();
+        stats.avgProcessingTimeMs = perfMetrics.avgProcessingTimeMs;
+        stats.maxProcessingTimeMs = perfMetrics.maxProcessingTimeMs;
+        stats.cpuUsagePercent = perfMetrics.cpuUsagePercent;
+        stats.dropoutCount = perfMetrics.dropoutCount;
+        stats.isDropoutRisk = perfMetrics.isDropoutRisk;
+    }
+
     return stats;
 }
 
