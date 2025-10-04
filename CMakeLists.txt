@@ -206,7 +206,6 @@ target_sources(IthacaPlayer
         ithaca-core/sampler/lfopan.h
 
         # DSP / BBE Processor
-        ithaca-core/sampler/dsp/biquad_filter.cpp
         ithaca-core/sampler/dsp/biquad_filter.h
         ithaca-core/sampler/dsp/harmonic_enhancer.cpp
         ithaca-core/sampler/dsp/harmonic_enhancer.h
@@ -266,14 +265,14 @@ target_compile_definitions(IthacaPlayer
 if(MSVC)
     target_compile_options(IthacaPlayer PRIVATE
         $<$<CONFIG:Debug>:/Od /Zi /RTC1>      # Debug: no optimization, debug info
-        $<$<CONFIG:Release>:/O2 /DNDEBUG>     # Release: optimization, no debug
+        $<$<CONFIG:Release>:/O2 /DNDEBUG /arch:SSE2> # Release: optimization, SSE2
         /W3                                   # Warning level 3
     )
 else()
     target_compile_options(IthacaPlayer PRIVATE
         -Wall -Wextra -pedantic               # All warnings
-        $<$<CONFIG:Debug>:-g -O0>             # Debug: debug info, no optimization  
-        $<$<CONFIG:Release>:-O3 -DNDEBUG>     # Release: maximum optimization
+        $<$<CONFIG:Debug>:-g -O0>             # Debug: debug info, no optimization
+        $<$<CONFIG:Release>:-O3 -DNDEBUG -msse2> # Release: maximum optimization, SSE2
     )
 endif()
 
