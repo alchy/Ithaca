@@ -3,9 +3,9 @@
  * @brief Refaktorovaná implementace využívající SliderFactory
  */
 
-#include "SliderPanelComponent.h"
-#include "MidiLearnManager.h"
-#include "GuiConstants.h"
+#include "ithaca/gui/components/SliderPanelComponent.h"
+#include "ithaca/midi/MidiLearnManager.h"
+#include "ithaca/gui/helpers/GuiConstants.h"
 #include <iostream>
 
 #define BACKGROUND_PICTURE_OFF 0

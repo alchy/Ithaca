@@ -13,9 +13,9 @@
 
 #include <juce_gui_basics/juce_gui_basics.h>
 #include <juce_audio_processors/juce_audio_processors.h>
-#include "MidiLearnSlider.h"
-#include "MidiLearnManager.h"
-#include "GuiHelpers.h"
+#include "ithaca/gui/components/MidiLearnSlider.h"
+#include "ithaca/midi/MidiLearnManager.h"
+#include "ithaca/gui/helpers/GuiHelpers.h"
 #include <memory>
 #include <functional>
 

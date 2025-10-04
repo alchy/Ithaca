@@ -75,7 +75,7 @@ file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/generated)
 
 # Vygenerovat header soubor s BUILD ID z template
 configure_file(
-    ${CMAKE_CURRENT_SOURCE_DIR}/BuildID.h.in
+    ${CMAKE_CURRENT_SOURCE_DIR}/ithaca/config/BuildID.h.in
     ${CMAKE_CURRENT_BINARY_DIR}/generated/BuildID.h
     @ONLY
 )
@@ -113,54 +113,54 @@ juce_generate_juce_header(IthacaPlayer)
 target_sources(IthacaPlayer
 
     PRIVATE
+        # =====================================================================
+        # ITHACA PLUGIN - Structured Source Files
+        # =====================================================================
+
         # Configuration
-        IthacaConfig.h
-        
-        # ODSTRANĚNO: Binary data (už se nepoužívá, background.jpg se načítá dynamicky)
-        # decorators/BinaryData.cpp
-        # decorators/BinaryData.h
-        
-        # JUCE - MIDI Control (Centralized)
-        MidiCCDefinitions.h
+        ithaca/config/IthacaConfig.h
 
-        # JUCE - Plugin Framework (IthacaPluginProcessor)  
-        IthacaPluginProcessor.cpp
-        IthacaPluginProcessor.h
+        # Audio Processing & Sample Loading
+        ithaca/audio/IthacaPluginProcessor.h
+        ithaca/audio/IthacaPluginProcessor.cpp
+        ithaca/audio/AsyncSampleLoader.h
+        ithaca/audio/AsyncSampleLoader.cpp
+        ithaca/audio/InstrumentMetadata.h
+        ithaca/audio/InstrumentMetadata.cpp
 
-        # JUCE - Parameter Management (IthacaPluginProcessor)
-        ParameterManager.h
-        ParameterManager.cpp
+        # Parameters
+        ithaca/parameters/ParameterManager.h
+        ithaca/parameters/ParameterManager.cpp
+        ithaca/parameters/ParameterAttachmentManager.h
+        ithaca/parameters/ParameterAttachmentManager.cpp
+        ithaca/parameters/ParameterDefaults.h
 
-        # JUCE - Plugin Framework (IthacaPluginEditor)
-        IthacaPluginEditor.cpp  
-        IthacaPluginEditor.h
+        # MIDI
+        ithaca/midi/MidiCCDefinitions.h
+        ithaca/midi/MidiProcessor.h
+        ithaca/midi/MidiProcessor.cpp
+        ithaca/midi/MidiLearnManager.h
+        ithaca/midi/MidiLearnManager.cpp
 
-        # JUCE - GUI Helper (IthacaPluginEditor)
-        GuiConstants.h
-        GuiHelpers.h
-        GuiHelpers.cpp
-        ParameterAttachmentManager.h
-        ParameterAttachmentManager.cpp
+        # GUI - Main Editor
+        ithaca/gui/IthacaPluginEditor.h
+        ithaca/gui/IthacaPluginEditor.cpp
 
-        # JUCE - Specialized GUI Components (IthacaPluginEditor)
-        SliderPanelComponent.h
-        SliderPanelComponent.cpp
-        SliderFactory.h
-        SliderFactory.cpp
-        InfoHeaderComponent.h
-        InfoHeaderComponent.cpp
+        # GUI - Components
+        ithaca/gui/components/InfoHeaderComponent.h
+        ithaca/gui/components/InfoHeaderComponent.cpp
+        ithaca/gui/components/SliderPanelComponent.h
+        ithaca/gui/components/SliderPanelComponent.cpp
+        ithaca/gui/components/MidiLearnSlider.h
 
-        # MIDI learn
-        MidiLearnManager.h
-        MidiLearnManager.cpp
-        
-        # Asynchronni loader samplu
-        AsyncSampleLoader.h
-        AsyncSampleLoader.cpp
+        # GUI - Factories
+        ithaca/gui/factories/SliderFactory.h
+        ithaca/gui/factories/SliderFactory.cpp
 
-        # Midi processor
-        MidiProcessor.h
-        MidiProcessor.cpp
+        # GUI - Helpers
+        ithaca/gui/helpers/GuiConstants.h
+        ithaca/gui/helpers/GuiHelpers.h
+        ithaca/gui/helpers/GuiHelpers.cpp
         
         # IthacaCore - Core Logger module
         ithaca-core/sampler/core_logger.cpp
@@ -213,11 +213,12 @@ target_sources(IthacaPlayer
 # Include directories
 # =============================================================================
 
-target_include_directories(IthacaPlayer PRIVATE 
+target_include_directories(IthacaPlayer PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}                             # Root directory - IthacaConfig.h zde
     ${CMAKE_CURRENT_SOURCE_DIR}/ithaca-core                 # IthacaCore modules
     ${CMAKE_CURRENT_SOURCE_DIR}/ithaca-core/sampler         # IthacaCore sampler modules
     ${CMAKE_CURRENT_SOURCE_DIR}/ithaca-core/sampler/tests   # Test framework
+    ${CMAKE_CURRENT_SOURCE_DIR}/json/include                # nlohmann/json library
     ${CMAKE_CURRENT_BINARY_DIR}/generated                   # PŘIDÁNO: Pro BuildID.h
 )
 
@@ -479,13 +480,6 @@ message(STATUS "Git Hash: ${GIT_HASH}")
 message(STATUS "Git Branch: ${GIT_BRANCH}")
 message(STATUS "Final BUILD_ID: ${BUILD_ID}")
 message(STATUS "===========================")
-
-# Vygenerovat header soubor s BUILD ID
-configure_file(
-    ${CMAKE_CURRENT_SOURCE_DIR}/BuildID.h.in
-    ${CMAKE_CURRENT_BINARY_DIR}/generated/BuildID.h
-    @ONLY
-)
 
 # Přidat do include paths
 target_include_directories(IthacaPlayer PRIVATE 

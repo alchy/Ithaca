@@ -28,8 +28,8 @@
 #pragma once
 
 #include <juce_gui_basics/juce_gui_basics.h>
-#include "IthacaPluginProcessor.h"
-#include "GuiHelpers.h"
+#include "ithaca/audio/IthacaPluginProcessor.h"
+#include "ithaca/gui/helpers/GuiHelpers.h"
 
 /**
  * @class InfoHeaderComponent

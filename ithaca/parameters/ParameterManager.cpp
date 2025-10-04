@@ -3,7 +3,7 @@
  * @brief Implementace správy JUCE parametrů pro IthacaCore
  */
 
-#include "ParameterManager.h"
+#include "ithaca/parameters/ParameterManager.h"
 #include "ithaca-core/sampler/voice_manager.h"
 #include "ithaca-core/sampler/core_logger.h"
 #include <algorithm>

@@ -7,11 +7,11 @@
  * ============================================================================
  */
 
-#include "IthacaPluginEditor.h"
-#include "SliderPanelComponent.h"
-#include "InfoHeaderComponent.h"
-#include "GuiHelpers.h"
-#include "GuiConstants.h"
+#include "ithaca/gui/IthacaPluginEditor.h"
+#include "ithaca/gui/components/SliderPanelComponent.h"
+#include "ithaca/gui/components/InfoHeaderComponent.h"
+#include "ithaca/gui/helpers/GuiHelpers.h"
+#include "ithaca/gui/helpers/GuiConstants.h"
 #include <iostream>
 
 #define BACKGROUND_PICTURE_OFF 0

@@ -1,0 +1,50 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "Ithaca Instrument Definition",
+    "description": "Metadata file for Ithaca sampler instruments",
+    "type": "object",
+    "required": ["instrumentName"],
+    "properties": {
+        "instrumentName": {
+            "type": "string",
+            "description": "Display name of the instrument (shown in GUI)",
+            "examples": ["VintageV Electric Piano", "Ithaca Grand Piano"]
+        },
+        "instrumentVersion": {
+            "type": "string",
+            "description": "Version of the instrument (semver recommended)",
+            "pattern": "^\\d+\\.\\d+\\.\\d+$",
+            "examples": ["1.0.0", "2.1.3"]
+        },
+        "author": {
+            "type": "string",
+            "description": "Creator or developer of the instrument",
+            "examples": ["LordAudio", "John Doe"]
+        },
+        "description": {
+            "type": "string",
+            "description": "Short description of the instrument character/sound"
+        },
+        "category": {
+            "type": "string",
+            "description": "Instrument category for organization",
+            "enum": [
+                "Piano",
+                "Electric Piano",
+                "Organ",
+                "Synth",
+                "Strings",
+                "Brass",
+                "Woodwinds",
+                "Percussion",
+                "Other"
+            ]
+        },
+        "sampleCount": {
+            "type": "integer",
+            "description": "Total number of samples in the instrument (optional)",
+            "minimum": 0
+        }
+    },
+    "additionalProperties": false
+}

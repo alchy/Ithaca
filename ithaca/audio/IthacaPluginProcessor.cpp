@@ -3,8 +3,8 @@
  * @brief Implementation with non-blocking sample loading and MIDI Learn
  */
 
-#include "IthacaPluginProcessor.h"
-#include "IthacaPluginEditor.h"
+#include "ithaca/audio/IthacaPluginProcessor.h"
+#include "ithaca/gui/IthacaPluginEditor.h"
 
 //==============================================================================
 // Constructor - Initialize with async loader and MIDI Learn
@@ -322,6 +322,14 @@ IthacaPluginProcessor::SamplerStats IthacaPluginProcessor::getSamplerStats() con
     }
     
     return stats;
+}
+
+juce::String IthacaPluginProcessor::getInstrumentName() const
+{
+    if (asyncLoader_) {
+        return juce::String(asyncLoader_->getInstrumentName());
+    }
+    return juce::String();
 }
 
 void IthacaPluginProcessor::changeSampleDirectory(const juce::String& newPath)

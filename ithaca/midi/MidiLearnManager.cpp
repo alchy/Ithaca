@@ -3,7 +3,7 @@
  * @brief Implementace MIDI Learn manageru
  */
 
-#include "MidiLearnManager.h"
+#include "ithaca/midi/MidiLearnManager.h"
 #include <iostream>
 
 // ============================================================================

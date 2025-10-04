@@ -5,7 +5,7 @@
 
 #pragma once
 
-#include "IthacaConfig.h"  // Must be first
+#include "ithaca/config/IthacaConfig.h"  // Must be first
 #include <juce_audio_processors/juce_audio_processors.h>
 #include <memory>
 #include <atomic>
@@ -16,19 +16,19 @@
 #include "ithaca-core/sampler/core_logger.h"
 
 // Parameter management
-#include "ParameterManager.h"
+#include "ithaca/parameters/ParameterManager.h"
 
 // MIDI CC definitions
-#include "MidiCCDefinitions.h"
+#include "ithaca/midi/MidiCCDefinitions.h"
 
 // Async loading
-#include "AsyncSampleLoader.h"
+#include "ithaca/audio/AsyncSampleLoader.h"
 
 // MIDI processing
-#include "MidiProcessor.h"
+#include "ithaca/midi/MidiProcessor.h"
 
 // MIDI Learn
-#include "MidiLearnManager.h"
+#include "ithaca/midi/MidiLearnManager.h"
 
 //==============================================================================
 /**
@@ -133,7 +133,14 @@ public:
         int totalLoadedSamples = 0;
     };
     SamplerStats getSamplerStats() const;
-    
+
+    /**
+     * @brief Get loaded instrument name from metadata
+     * @return Instrument name (empty string if not loaded)
+     * @note Thread-safe, can be called from GUI thread
+     */
+    juce::String getInstrumentName() const;
+
     /**
      * @brief Change sample directory and trigger reload
      * @param newPath New sample directory path

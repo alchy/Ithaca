@@ -32,7 +32,7 @@
 
 #pragma once
 
-#include "IthacaPluginProcessor.h"
+#include "ithaca/audio/IthacaPluginProcessor.h"
 #include <juce_gui_basics/juce_gui_basics.h>
 
 // Forward declarations

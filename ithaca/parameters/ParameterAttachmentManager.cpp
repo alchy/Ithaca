@@ -3,7 +3,7 @@
  * @brief Implementace správy parameter attachments
  */
 
-#include "ParameterAttachmentManager.h"
+#include "ithaca/parameters/ParameterAttachmentManager.h"
 #include <iostream>
 
 // Makro pro debug výpisy (zachovat původní logiku)

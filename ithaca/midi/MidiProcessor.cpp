@@ -3,10 +3,10 @@
  * @brief Implementace MIDI processingu s learning a sustain pedal
  */
 
-#include "MidiProcessor.h"
-#include "MidiLearnManager.h"
+#include "ithaca/midi/MidiProcessor.h"
+#include "ithaca/midi/MidiLearnManager.h"
 #include "ithaca-core/sampler/voice_manager.h"
-#include "MidiCCDefinitions.h"
+#include "ithaca/midi/MidiCCDefinitions.h"
 
 // ============================================================================
 // Constructor

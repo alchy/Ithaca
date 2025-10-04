@@ -7,10 +7,10 @@
 
 #include <juce_gui_basics/juce_gui_basics.h>
 #include <juce_audio_processors/juce_audio_processors.h>
-#include "GuiHelpers.h"
-#include "MidiLearnManager.h"
-#include "MidiLearnSlider.h"
-#include "SliderFactory.h"
+#include "ithaca/gui/helpers/GuiHelpers.h"
+#include "ithaca/midi/MidiLearnManager.h"
+#include "ithaca/gui/components/MidiLearnSlider.h"
+#include "ithaca/gui/factories/SliderFactory.h"
 #include <vector>
 #include <map>
 

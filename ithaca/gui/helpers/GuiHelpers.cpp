@@ -17,7 +17,7 @@
  * ============================================================================
  */
 
-#include "GuiHelpers.h"
+#include "ithaca/gui/helpers/GuiHelpers.h"
 #include <iostream>
 
 #define BACKGROUND_PICTURE_OFF 0

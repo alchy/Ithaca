@@ -7,13 +7,12 @@
  * ============================================================================
  */
 
-#include "InfoHeaderComponent.h"
-#include "GuiConstants.h"
+#include "ithaca/gui/components/InfoHeaderComponent.h"
+#include "ithaca/gui/helpers/GuiConstants.h"
 #include "BuildID.h"
 #include <iostream>
 
 #define BACKGROUND_PICTURE_OFF 0
-#define CURRENT_INSTRUMENT "VintageV Electric Piano"
 
 #if BACKGROUND_PICTURE_OFF
 #define GUI_DEBUG(msg) std::cout << msg << std::endl
@@ -115,9 +114,14 @@ void InfoHeaderComponent::setupAllLabels()
     GUI_DEBUG("InfoHeaderComponent: Setting up labels");
     
     removeAllChildren();
-    
+
     // Instrument name - VELKÝ FONT (18px, bold)
-    instrumentNameLabel = GuiHelpers::createTitleLabel(CURRENT_INSTRUMENT, debugMode_);
+    // Load from processor (via JSON metadata)
+    auto instrumentName = processorRef_.getInstrumentName();
+    if (instrumentName.isEmpty()) {
+        instrumentName = "Loading...";
+    }
+    instrumentNameLabel = GuiHelpers::createTitleLabel(instrumentName, debugMode_);
     if (instrumentNameLabel) {
         addAndMakeVisible(instrumentNameLabel.get());
     }
@@ -196,13 +200,16 @@ void InfoHeaderComponent::updateLiveData()
     // Update instrument name (always restore after loading)
     if (instrumentNameLabel) {
         // FIXED: Vždy obnovit název nástroje po dokončení loadingu
-        // (resetuje "Loading samples..." zpět na název nástroje)
+        // (resetuje "Loading samples..." zpět na název nástroje z JSON)
         auto currentText = instrumentNameLabel->getText();
         if (currentText == GuiConstants::TextConstants::LOADING_TEXT ||
             currentText == GuiConstants::TextConstants::ERROR_TEXT ||
             currentText.isEmpty()) {
-            instrumentNameLabel->setText(CURRENT_INSTRUMENT, juce::dontSendNotification);
-            GUI_DEBUG("InfoHeaderComponent: Restored instrument name after loading");
+            auto instrumentName = processorRef_.getInstrumentName();
+            if (!instrumentName.isEmpty()) {
+                instrumentNameLabel->setText(instrumentName, juce::dontSendNotification);
+                GUI_DEBUG("InfoHeaderComponent: Restored instrument name after loading");
+            }
         }
     }
     

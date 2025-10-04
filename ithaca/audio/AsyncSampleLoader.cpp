@@ -3,10 +3,12 @@
  * @brief Implementation of asynchronous sample loading
  */
 
-#include "AsyncSampleLoader.h"
+#include "ithaca/audio/AsyncSampleLoader.h"
+#include "ithaca/audio/InstrumentMetadata.h"
 #include "ithaca-core/sampler/voice_manager.h"
 #include "ithaca-core/sampler/envelopes/envelope_static_data.h"
 #include "ithaca-core/sampler/core_logger.h"
+#include <juce_core/juce_core.h>
 
 //==============================================================================
 // Constructor / Destructor
@@ -107,15 +109,21 @@ int AsyncSampleLoader::getTargetSampleRate() const
 std::unique_ptr<VoiceManager> AsyncSampleLoader::takeVoiceManager()
 {
     std::lock_guard<std::mutex> lock(stateMutex_);
-    
+
     // Transfer ownership and reset state
     auto result = std::move(voiceManager_);
-    
+
     if (result) {
         state_.store(LoadingState::Idle);
     }
-    
+
     return result;
+}
+
+std::string AsyncSampleLoader::getInstrumentName() const
+{
+    std::lock_guard<std::mutex> lock(stateMutex_);
+    return instrumentName_;
 }
 
 //==============================================================================
@@ -132,13 +140,29 @@ void AsyncSampleLoader::workerFunction(const std::string& sampleDirectory,
             state_.store(LoadingState::Idle);
             return;
         }
-        
-        logger->log("AsyncSampleLoader", "info", 
+
+        logger->log("AsyncSampleLoader", "info",
                    "=== ASYNC LOADING STARTED ===");
-        logger->log("AsyncSampleLoader", "info", 
+        logger->log("AsyncSampleLoader", "info",
                    "Target sample rate: " + std::to_string(targetSampleRate) + " Hz");
-        logger->log("AsyncSampleLoader", "info", 
+        logger->log("AsyncSampleLoader", "info",
                    "Sample directory: " + sampleDirectory);
+
+        // Step 1a: Load instrument metadata from JSON
+        logger->log("AsyncSampleLoader", "info",
+                   "Loading instrument metadata...");
+
+        juce::File sampleDir(sampleDirectory);
+        auto metadata = InstrumentMetadataLoader::loadFromDirectory(sampleDir);
+
+        {
+            std::lock_guard<std::mutex> lock(stateMutex_);
+            instrumentName_ = metadata.instrumentName.toStdString();
+        }
+
+        logger->log("AsyncSampleLoader", "info",
+                   "Instrument: " + metadata.instrumentName.toStdString() +
+                   " (v" + metadata.instrumentVersion.toStdString() + ")");
         
         // Step 2: Initialize EnvelopeStaticData if needed
         if (!EnvelopeStaticData::isInitialized()) {

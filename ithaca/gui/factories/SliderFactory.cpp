@@ -3,7 +3,7 @@
  * @brief Implementace factory pro vytváření sliderů
  */
 
-#include "SliderFactory.h"
+#include "ithaca/gui/factories/SliderFactory.h"
 #include <iostream>
 
 #define BACKGROUND_PICTURE_OFF 0

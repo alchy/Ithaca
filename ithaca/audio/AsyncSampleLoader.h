@@ -123,12 +123,18 @@ public:
     /**
      * @brief Transfer ownership of loaded VoiceManager
      * @return Unique pointer to VoiceManager (nullptr if not completed)
-     * 
+     *
      * This method should be called once after getState() returns Completed.
      * After calling, the loader returns to Idle state and VoiceManager
      * ownership is transferred to caller.
      */
     std::unique_ptr<VoiceManager> takeVoiceManager();
+
+    /**
+     * @brief Get loaded instrument name from metadata
+     * @return Instrument name (empty string if not loaded or no metadata)
+     */
+    std::string getInstrumentName() const;
 
 private:
     //==========================================================================
@@ -147,8 +153,9 @@ private:
     
     //==========================================================================
     // Result Storage
-    
+
     std::unique_ptr<VoiceManager> voiceManager_;  ///< Loaded VoiceManager
+    std::string instrumentName_;                   ///< Loaded instrument name from JSON
     
     //==========================================================================
     // Worker Function
