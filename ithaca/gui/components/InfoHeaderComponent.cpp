@@ -60,12 +60,11 @@ void InfoHeaderComponent::paint(juce::Graphics& g)
 void InfoHeaderComponent::resized()
 {
     auto bounds = getLocalBounds().reduced(GuiConstants::SECTION_PADDING);
-    
-    if (debugMode_) {
-        layoutDebugMode(bounds);
-    } else {
-        layoutBackgroundMode(bounds);
-    }
+
+    auto layoutMode = debugMode_ ? InfoHeaderLayout::LayoutMode::Debug
+                                  : InfoHeaderLayout::LayoutMode::Background;
+
+    InfoHeaderLayout::applyLayout(bounds, getLabelsForLayout(), layoutMode);
 }
 
 // ============================================================================
@@ -112,51 +111,14 @@ void InfoHeaderComponent::setDebugMode(bool enabled)
 void InfoHeaderComponent::setupAllLabels()
 {
     GUI_DEBUG("InfoHeaderComponent: Setting up labels");
-    
+
     removeAllChildren();
 
-    // Instrument name - VELKÝ FONT (18px, bold)
-    // Load from processor (via JSON metadata)
-    auto instrumentName = processorRef_.getInstrumentName();
-    if (instrumentName.isEmpty()) {
-        instrumentName = "Loading...";
-    }
-    instrumentNameLabel = GuiHelpers::createTitleLabel(instrumentName, debugMode_);
-    if (instrumentNameLabel) {
-        addAndMakeVisible(instrumentNameLabel.get());
-    }
-    
-    // Build ID - STŘEDNÍ FONT (14px)
-    versionLabel = GuiHelpers::createInfoLabel(
-        BuildInfo::getBuildString(),  // "Build: 20250103_143022_DESKTOP-PC"
-        debugMode_);
-    if (versionLabel) {
-        addAndMakeVisible(versionLabel.get());
-    }
-    
-    // Sample rate - MALÝ FONT (11px)
-    sampleRateLabel = GuiHelpers::createSmallLabel("Sample Rate: 48000 Hz", debugMode_);
-    if (sampleRateLabel) {
-        addAndMakeVisible(sampleRateLabel.get());
-    }
-    
-    // Active voices - MALÝ FONT (11px)
-    activeVoicesLabel = GuiHelpers::createSmallLabel("Active: 0", debugMode_);
-    if (activeVoicesLabel) {
-        addAndMakeVisible(activeVoicesLabel.get());
-    }
-    
-    // Sustaining voices - MALÝ FONT (11px)
-    sustainingVoicesLabel = GuiHelpers::createSmallLabel("Sustaining: 0", debugMode_);
-    if (sustainingVoicesLabel) {
-        addAndMakeVisible(sustainingVoicesLabel.get());
-    }
+    // Create all labels using factory
+    labelBundle_ = InfoHeaderLabelFactory::createAllLabels(processorRef_, debugMode_);
 
-    // CPU Usage - MALÝ FONT (11px, barevně kódované)
-    cpuUsageLabel = GuiHelpers::createSmallLabel("CPU: 0% | Dropouts: 0", debugMode_);
-    if (cpuUsageLabel) {
-        addAndMakeVisible(cpuUsageLabel.get());
-    }
+    // Add to component
+    InfoHeaderLabelFactory::addToComponent(*this, labelBundle_);
 
     GUI_DEBUG("InfoHeaderComponent: All labels created");
 }
@@ -175,25 +137,25 @@ void InfoHeaderComponent::updateLiveData()
     
     if (processorRef_.isLoadingInProgress()) {
         // Currently loading
-        if (instrumentNameLabel) {
-            instrumentNameLabel->setText(GuiConstants::TextConstants::LOADING_TEXT, 
+        if (labelBundle_.instrumentNameLabel) {
+            labelBundle_.instrumentNameLabel->setText(GuiConstants::TextConstants::LOADING_TEXT,
                                         juce::dontSendNotification);
         }
-        
-        if (activeVoicesLabel) {
-            activeVoicesLabel->setText("Active: --", juce::dontSendNotification);
+
+        if (labelBundle_.activeVoicesLabel) {
+            labelBundle_.activeVoicesLabel->setText("Active: --", juce::dontSendNotification);
         }
-        if (sustainingVoicesLabel) {
-            sustainingVoicesLabel->setText("Sustaining: --", juce::dontSendNotification);
+        if (labelBundle_.sustainingVoicesLabel) {
+            labelBundle_.sustainingVoicesLabel->setText("Sustaining: --", juce::dontSendNotification);
         }
-        
+
         return;
     }
-    
+
     if (processorRef_.hasLoadingError()) {
         // Loading failed
-        if (instrumentNameLabel) {
-            instrumentNameLabel->setText(GuiConstants::TextConstants::ERROR_TEXT, 
+        if (labelBundle_.instrumentNameLabel) {
+            labelBundle_.instrumentNameLabel->setText(GuiConstants::TextConstants::ERROR_TEXT,
                                         juce::dontSendNotification);
         }
         return;
@@ -204,16 +166,16 @@ void InfoHeaderComponent::updateLiveData()
     // ========================================================================
 
     // Update instrument name (always restore after loading)
-    if (instrumentNameLabel) {
+    if (labelBundle_.instrumentNameLabel) {
         // FIXED: Vždy obnovit název nástroje po dokončení loadingu
         // (resetuje "Loading samples..." zpět na název nástroje z JSON)
-        auto currentText = instrumentNameLabel->getText();
+        auto currentText = labelBundle_.instrumentNameLabel->getText();
         if (currentText == GuiConstants::TextConstants::LOADING_TEXT ||
             currentText == GuiConstants::TextConstants::ERROR_TEXT ||
             currentText.isEmpty()) {
             auto instrumentName = processorRef_.getInstrumentName();
             if (!instrumentName.isEmpty()) {
-                instrumentNameLabel->setText(instrumentName, juce::dontSendNotification);
+                labelBundle_.instrumentNameLabel->setText(instrumentName, juce::dontSendNotification);
                 GUI_DEBUG("InfoHeaderComponent: Restored instrument name after loading");
             }
         }
@@ -227,36 +189,36 @@ void InfoHeaderComponent::updateLiveData()
         auto stats = processorRef_.getSamplerStats();
         
         // Active voices
-        if (activeVoicesLabel) {
-            activeVoicesLabel->setText(
-                juce::String(GuiConstants::TextConstants::ACTIVE_VOICES_PREFIX) + 
+        if (labelBundle_.activeVoicesLabel) {
+            labelBundle_.activeVoicesLabel->setText(
+                juce::String(GuiConstants::TextConstants::ACTIVE_VOICES_PREFIX) +
                 juce::String(stats.activeVoices),
                 juce::dontSendNotification);
         }
-        
+
         // Sustaining voices
-        if (sustainingVoicesLabel) {
-            sustainingVoicesLabel->setText(
-                juce::String(GuiConstants::TextConstants::SUSTAINING_VOICES_PREFIX) + 
+        if (labelBundle_.sustainingVoicesLabel) {
+            labelBundle_.sustainingVoicesLabel->setText(
+                juce::String(GuiConstants::TextConstants::SUSTAINING_VOICES_PREFIX) +
                 juce::String(stats.sustainingVoices),
                 juce::dontSendNotification);
         }
-        
+
         // Sample rate (if not set)
-        if (sampleRateLabel && stats.currentSampleRate > 0) {
-            sampleRateLabel->setText(
+        if (labelBundle_.sampleRateLabel && stats.currentSampleRate > 0) {
+            labelBundle_.sampleRateLabel->setText(
                 juce::String(GuiConstants::TextConstants::SAMPLE_RATE_PREFIX) +
                 juce::String(stats.currentSampleRate) + " Hz",
                 juce::dontSendNotification);
         }
 
         // CPU Usage with color-coded indication
-        if (cpuUsageLabel) {
+        if (labelBundle_.cpuUsageLabel) {
             juce::String cpuText = "CPU: " +
                 juce::String(stats.cpuUsagePercent, 1) + "% | Dropouts: " +
                 juce::String(stats.dropoutCount);
 
-            cpuUsageLabel->setText(cpuText, juce::dontSendNotification);
+            labelBundle_.cpuUsageLabel->setText(cpuText, juce::dontSendNotification);
 
             // Color-coded CPU status
             juce::Colour cpuColor;
@@ -268,107 +230,34 @@ void InfoHeaderComponent::updateLiveData()
                 cpuColor = juce::Colours::lightgreen; // OK (GREEN)
             }
 
-            cpuUsageLabel->setColour(juce::Label::textColourId, cpuColor);
+            labelBundle_.cpuUsageLabel->setColour(juce::Label::textColourId, cpuColor);
         }
 
     } else {
         // No VoiceManager yet
-        if (activeVoicesLabel) {
-            activeVoicesLabel->setText("Active: --", juce::dontSendNotification);
+        if (labelBundle_.activeVoicesLabel) {
+            labelBundle_.activeVoicesLabel->setText("Active: --", juce::dontSendNotification);
         }
-        if (sustainingVoicesLabel) {
-            sustainingVoicesLabel->setText("Sustaining: --", juce::dontSendNotification);
+        if (labelBundle_.sustainingVoicesLabel) {
+            labelBundle_.sustainingVoicesLabel->setText("Sustaining: --", juce::dontSendNotification);
         }
     }
 }
 
 // ============================================================================
-// Private Methods - Layout
+// Private Methods - Helpers
 // ============================================================================
 
-void InfoHeaderComponent::layoutBackgroundMode(juce::Rectangle<int> bounds)
+InfoHeaderLabels InfoHeaderComponent::getLabelsForLayout() const
 {
-    // Hierarchický layout:
-    // Row 1: Instrument name (velký font)
-    // Row 2: Version (střední font)
-    // Row 3: Sample rate (malý font)
-    // Row 4: Active | Sustaining (malý font, 50/50)
-    
-    if (instrumentNameLabel) {
-        instrumentNameLabel->setBounds(
-            bounds.removeFromTop(GuiConstants::INFO_TITLE_HEIGHT));
-        bounds.removeFromTop(GuiConstants::INFO_ROW_SPACING);
-    }
-    
-    if (versionLabel) {
-        versionLabel->setBounds(
-            bounds.removeFromTop(GuiConstants::INFO_VERSION_HEIGHT));
-        bounds.removeFromTop(GuiConstants::INFO_ROW_SPACING);
-    }
-    
-    if (sampleRateLabel) {
-        sampleRateLabel->setBounds(
-            bounds.removeFromTop(GuiConstants::INFO_SAMPLE_RATE_HEIGHT));
-        bounds.removeFromTop(GuiConstants::INFO_ROW_SPACING);
-    }
-    
-    // Voice stats row - 50/50 split
-    auto voiceStatsRow = bounds.removeFromTop(GuiConstants::INFO_VOICE_STATS_HEIGHT);
+    InfoHeaderLabels labels;
 
-    if (activeVoicesLabel && sustainingVoicesLabel) {
-        int halfWidth = voiceStatsRow.getWidth() / 2;
-        activeVoicesLabel->setBounds(voiceStatsRow.removeFromLeft(halfWidth));
-        sustainingVoicesLabel->setBounds(voiceStatsRow);
-    }
+    labels.instrumentNameLabel = labelBundle_.instrumentNameLabel.get();
+    labels.versionLabel = labelBundle_.versionLabel.get();
+    labels.sampleRateLabel = labelBundle_.sampleRateLabel.get();
+    labels.activeVoicesLabel = labelBundle_.activeVoicesLabel.get();
+    labels.sustainingVoicesLabel = labelBundle_.sustainingVoicesLabel.get();
+    labels.cpuUsageLabel = labelBundle_.cpuUsageLabel.get();
 
-    bounds.removeFromTop(GuiConstants::INFO_ROW_SPACING);
-
-    // CPU usage row (full width)
-    if (cpuUsageLabel) {
-        cpuUsageLabel->setBounds(bounds.removeFromTop(GuiConstants::INFO_VOICE_STATS_HEIGHT));
-    }
-
-    GUI_DEBUG("InfoHeaderComponent: Background mode layout applied");
-}
-
-void InfoHeaderComponent::layoutDebugMode(juce::Rectangle<int> bounds)
-{
-    // Debug mode: kompaktní vertikální layout
-    const int labelHeight = 18;
-    const int spacing = 2;
-    
-    if (instrumentNameLabel) {
-        instrumentNameLabel->setBounds(bounds.removeFromTop(labelHeight));
-        bounds.removeFromTop(spacing);
-    }
-    
-    if (versionLabel) {
-        versionLabel->setBounds(bounds.removeFromTop(labelHeight));
-        bounds.removeFromTop(spacing);
-    }
-    
-    if (sampleRateLabel) {
-        sampleRateLabel->setBounds(bounds.removeFromTop(labelHeight));
-        bounds.removeFromTop(spacing);
-    }
-    
-    // Voice stats - 50/50
-    auto voiceRow = bounds.removeFromTop(labelHeight);
-    int halfWidth = voiceRow.getWidth() / 2;
-
-    if (activeVoicesLabel) {
-        activeVoicesLabel->setBounds(voiceRow.removeFromLeft(halfWidth));
-    }
-    if (sustainingVoicesLabel) {
-        sustainingVoicesLabel->setBounds(voiceRow);
-    }
-
-    bounds.removeFromTop(spacing);
-
-    // CPU usage (full width)
-    if (cpuUsageLabel) {
-        cpuUsageLabel->setBounds(bounds.removeFromTop(labelHeight));
-    }
-
-    GUI_DEBUG("InfoHeaderComponent: Debug mode layout applied");
+    return labels;
 }

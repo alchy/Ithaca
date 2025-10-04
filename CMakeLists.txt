@@ -158,6 +158,12 @@ target_sources(IthacaPlayer
         # GUI - Factories
         ithaca/gui/factories/SliderFactory.h
         ithaca/gui/factories/SliderFactory.cpp
+        ithaca/gui/factories/InfoHeaderLabelFactory.h
+        ithaca/gui/factories/InfoHeaderLabelFactory.cpp
+
+        # GUI - Layout
+        ithaca/gui/layout/InfoHeaderLayout.h
+        ithaca/gui/layout/InfoHeaderLayout.cpp
 
         # GUI - Helpers
         ithaca/gui/helpers/GuiConstants.h

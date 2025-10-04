@@ -30,6 +30,8 @@
 #include <juce_gui_basics/juce_gui_basics.h>
 #include "ithaca/audio/IthacaPluginProcessor.h"
 #include "ithaca/gui/helpers/GuiHelpers.h"
+#include "ithaca/gui/factories/InfoHeaderLabelFactory.h"
+#include "ithaca/gui/layout/InfoHeaderLayout.h"
 
 /**
  * @class InfoHeaderComponent
@@ -85,18 +87,13 @@ public:
 private:
     // Reference k processoru
     IthacaPluginProcessor& processorRef_;
-    
+
     // ========================================================================
-    // Labels - hierarchie fontů
+    // Labels - managed by factory
     // ========================================================================
-    
-    std::unique_ptr<juce::Label> instrumentNameLabel;   // 18px bold
-    std::unique_ptr<juce::Label> versionLabel;          // 14px
-    std::unique_ptr<juce::Label> sampleRateLabel;       // 11px
-    std::unique_ptr<juce::Label> activeVoicesLabel;     // 11px
-    std::unique_ptr<juce::Label> sustainingVoicesLabel; // 11px
-    std::unique_ptr<juce::Label> cpuUsageLabel;         // 11px (color-coded)
-    
+
+    InfoHeaderLabelBundle labelBundle_;
+
     // ========================================================================
     // State
     // ========================================================================
@@ -104,16 +101,19 @@ private:
     bool debugMode_ = false;
 
     static constexpr int TIMER_INTERVAL_MS = 300;
-    
+
     // ========================================================================
     // Private methods
     // ========================================================================
-    
+
     void setupAllLabels();
     void updateLiveData();
-    
-    void layoutBackgroundMode(juce::Rectangle<int> bounds);
-    void layoutDebugMode(juce::Rectangle<int> bounds);
+
+    /**
+     * @brief Get InfoHeaderLabels structure for layout
+     * @return Labels structure with pointers to all labels
+     */
+    InfoHeaderLabels getLabelsForLayout() const;
     
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(InfoHeaderComponent)
 };
