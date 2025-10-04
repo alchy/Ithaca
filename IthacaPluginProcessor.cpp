@@ -125,7 +125,11 @@ void IthacaPluginProcessor::prepareToPlay(double sampleRate, int samplesPerBlock
     // Store current audio settings
     currentSampleRate_ = sampleRate;
     currentBlockSize_ = samplesPerBlock;
-    
+
+    // Initialize output limiter (always prepare, regardless of loading state)
+    outputLimiter_.prepare(sampleRate);
+    outputLimiter_.setThreshold(-0.3f);  // -0.3 dBFS threshold
+
     // If already initialized, just update settings
     if (samplerInitialized_ && voiceManager_) {
         // Check if sample rate changed
@@ -238,6 +242,15 @@ void IthacaPluginProcessor::processBlock(juce::AudioBuffer<float>& buffer,
             buffer.getNumSamples()
         );
     }
+
+    // ========================================================================
+    // OUTPUT LIMITER - Final safety stage (prevents saturation)
+    // ========================================================================
+    outputLimiter_.processBlock(
+        buffer.getWritePointer(0),
+        buffer.getWritePointer(1),
+        buffer.getNumSamples()
+    );
 
     // ========================================================================
     // PERFORMANCE MONITORING - END

@@ -30,6 +30,9 @@
 // MIDI Learn
 #include "MidiLearnManager.h"
 
+// DSP - Output Limiter
+#include "ithaca-core/sampler/dsp/simple_limiter.h"
+
 //==============================================================================
 /**
  * @class IthacaPluginProcessor (Complete with MIDI Learn)
@@ -199,6 +202,7 @@ private:
     std::unique_ptr<AsyncSampleLoader> asyncLoader_;    // Async sample loader
     std::unique_ptr<MidiProcessor> midiProcessor_;      // MIDI event processor
     std::unique_ptr<MidiLearnManager> midiLearnManager_; // MIDI Learn manager
+    SimpleLimiter outputLimiter_;                       // Output peak limiter (last stage)
     
     //==============================================================================
     // Parameter Management (delegated to ParameterManager)
