@@ -249,15 +249,6 @@ private:
      * @note Called from processBlock() to detect loading completion
      */
     void checkAndTransferVoiceManager();
-    
-    /**
-     * @brief Safe logging wrapper for non-RT operations
-     * @param component Component name for logging
-     * @param severity Log severity level
-     * @param message Log message content
-     */
-    void logSafe(const std::string& component, const std::string& severity, 
-                const std::string& message) const;
 
     //==============================================================================
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(IthacaPluginProcessor)

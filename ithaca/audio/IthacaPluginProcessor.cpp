@@ -21,74 +21,110 @@ IthacaPluginProcessor::IthacaPluginProcessor()
 {
     // Initialize logger first
     logger_ = std::make_unique<Logger>(".");
-    logSafe("IthacaPluginProcessor/constructor", "info", "=== ITHACA PLUGIN STARTING ===");
-    
+    if (logger_) {
+        logger_->log("IthacaPluginProcessor/constructor", LogSeverity::Info, "=== ITHACA PLUGIN STARTING ===");
+    }
+
     // Initialize parameter pointers through ParameterManager
     if (!parameterManager_.initializeParameterPointers(parameters_)) {
-        logSafe("IthacaPluginProcessor/constructor", "error", 
-               "Failed to initialize parameter pointers");
+        if (logger_) {
+            logger_->log("IthacaPluginProcessor/constructor", LogSeverity::Error,
+                       "Failed to initialize parameter pointers");
+        }
     }
     
     // Create async sample loader
     asyncLoader_ = std::make_unique<AsyncSampleLoader>();
-    logSafe("IthacaPluginProcessor/constructor", "info", "Async sample loader created");
-    
+    if (logger_) {
+        logger_->log("IthacaPluginProcessor/constructor", LogSeverity::Info, "Async sample loader created");
+    }
+
     // Create MIDI processor
     midiProcessor_ = std::make_unique<MidiProcessor>();
-    logSafe("IthacaPluginProcessor/constructor", "info", "MIDI processor created");
-    
+    if (logger_) {
+        logger_->log("IthacaPluginProcessor/constructor", LogSeverity::Info, "MIDI processor created");
+    }
+
     // Create MIDI Learn Manager
     midiLearnManager_ = std::make_unique<MidiLearnManager>();
-    logSafe("IthacaPluginProcessor/constructor", "info", "MIDI Learn Manager created");
+    if (logger_) {
+        logger_->log("IthacaPluginProcessor/constructor", LogSeverity::Info, "MIDI Learn Manager created");
+    }
 
     // Create Performance Monitor
     perfMonitor_ = std::make_unique<PerformanceMonitor>();
-    logSafe("IthacaPluginProcessor/constructor", "info", "Performance Monitor created");
+    if (logger_) {
+        logger_->log("IthacaPluginProcessor/constructor", LogSeverity::Info, "Performance Monitor created");
+    }
 
     // Set default sample directory
     currentSampleDirectory_ = DEFAULT_SAMPLE_DIR;
-    
-    logSafe("IthacaPluginProcessor/constructor", "info", "Plugin initialized");
-    logSafe("IthacaPluginProcessor/constructor", "info", 
+
+    if (logger_) {
+        logger_->log("IthacaPluginProcessor/constructor", LogSeverity::Info, "Plugin initialized");
+    }
+    if (logger_) {
+        logger_->log("IthacaPluginProcessor/constructor", LogSeverity::Info,
            "Default sample directory: " + currentSampleDirectory_.toStdString());
-    logSafe("IthacaPluginProcessor/constructor", "info", 
+    }
+    if (logger_) {
+        logger_->log("IthacaPluginProcessor/constructor", LogSeverity::Info,
            "Async loading enabled - samples will load in background");
-    logSafe("IthacaPluginProcessor/constructor", "info", 
+    }
+    if (logger_) {
+        logger_->log("IthacaPluginProcessor/constructor", LogSeverity::Info,
            "MIDI Learn enabled - right-click sliders to assign CC");
+    }
 }
 
 IthacaPluginProcessor::~IthacaPluginProcessor()
 {
-    logSafe("IthacaPluginProcessor/destructor", "info", "=== ITHACA PLUGIN SHUTTING DOWN ===");
-    
+    if (logger_) {
+        logger_->log("IthacaPluginProcessor/destructor", LogSeverity::Info, "=== ITHACA PLUGIN SHUTTING DOWN ===");
+    }
+
     // Stop any ongoing async loading first
     if (asyncLoader_) {
-        logSafe("IthacaPluginProcessor/destructor", "info", "Stopping async sample loading...");
+        if (logger_) {
+            logger_->log("IthacaPluginProcessor/destructor", LogSeverity::Info, "Stopping async sample loading...");
+        }
         asyncLoader_->stopLoading();
         asyncLoader_.reset();
-        logSafe("IthacaPluginProcessor/destructor", "info", "Async loader cleaned up");
+        if (logger_) {
+            logger_->log("IthacaPluginProcessor/destructor", LogSeverity::Info, "Async loader cleaned up");
+        }
     }
-    
+
     // Cleanup VoiceManager (stops all voices)
     if (voiceManager_) {
-        logSafe("IthacaPluginProcessor/destructor", "info", "Stopping all voices...");
+        if (logger_) {
+            logger_->log("IthacaPluginProcessor/destructor", LogSeverity::Info, "Stopping all voices...");
+        }
         voiceManager_->stopAllVoices();
         voiceManager_->resetAllVoices(*logger_);
         voiceManager_.reset();
-        logSafe("IthacaPluginProcessor/destructor", "info", "VoiceManager cleaned up");
+        if (logger_) {
+            logger_->log("IthacaPluginProcessor/destructor", LogSeverity::Info, "VoiceManager cleaned up");
+        }
     }
-    
+
     // Cleanup MIDI Learn Manager
     if (midiLearnManager_) {
         midiLearnManager_.reset();
-        logSafe("IthacaPluginProcessor/destructor", "info", "MIDI Learn Manager cleaned up");
+        if (logger_) {
+            logger_->log("IthacaPluginProcessor/destructor", LogSeverity::Info, "MIDI Learn Manager cleaned up");
+        }
     }
-    
+
     // Cleanup envelope static data
     EnvelopeStaticData::cleanup();
-    logSafe("IthacaPluginProcessor/destructor", "info", "Envelope data cleaned up");
-    
-    logSafe("IthacaPluginProcessor/destructor", "info", "=== PLUGIN CLEANUP COMPLETED ===");
+    if (logger_) {
+        logger_->log("IthacaPluginProcessor/destructor", LogSeverity::Info, "Envelope data cleaned up");
+    }
+
+    if (logger_) {
+        logger_->log("IthacaPluginProcessor/destructor", LogSeverity::Info, "=== PLUGIN CLEANUP COMPLETED ===");
+    }
 }
 
 //==============================================================================
@@ -119,12 +155,18 @@ void IthacaPluginProcessor::changeProgramName(int index, const juce::String& new
 
 void IthacaPluginProcessor::prepareToPlay(double sampleRate, int samplesPerBlock)
 {
-    logSafe("IthacaPluginProcessor/prepareToPlay", "info", "=== PREPARING AUDIO PROCESSING ===");
-    logSafe("IthacaPluginProcessor/prepareToPlay", "info", 
+    if (logger_) {
+        logger_->log("IthacaPluginProcessor/prepareToPlay", LogSeverity::Info, "=== PREPARING AUDIO PROCESSING ===");
+    }
+    if (logger_) {
+        logger_->log("IthacaPluginProcessor/prepareToPlay", LogSeverity::Info,
            "Sample rate: " + std::to_string(sampleRate) + " Hz");
-    logSafe("IthacaPluginProcessor/prepareToPlay", "info", 
+    }
+    if (logger_) {
+        logger_->log("IthacaPluginProcessor/prepareToPlay", LogSeverity::Info,
            "Buffer size: " + std::to_string(samplesPerBlock) + " samples");
-    
+    }
+
     // Store current audio settings
     currentSampleRate_ = sampleRate;
     currentBlockSize_ = samplesPerBlock;
@@ -138,58 +180,76 @@ void IthacaPluginProcessor::prepareToPlay(double sampleRate, int samplesPerBlock
     if (samplerInitialized_ && voiceManager_) {
         // Check if sample rate changed
         if (voiceManager_->getCurrentSampleRate() != static_cast<int>(sampleRate)) {
-            logSafe("IthacaPluginProcessor/prepareToPlay", "info", 
+            if (logger_) {
+                logger_->log("IthacaPluginProcessor/prepareToPlay", LogSeverity::Info,
                    "Sample rate changed - triggering reload");
+            }
             samplerInitialized_ = false;  // Force reload
         } else {
             // Just update block size
             voiceManager_->prepareToPlay(samplesPerBlock);
-            logSafe("IthacaPluginProcessor/prepareToPlay", "info", 
+            if (logger_) {
+                logger_->log("IthacaPluginProcessor/prepareToPlay", LogSeverity::Info,
                    "Audio settings updated (no reload needed)");
+            }
             return;
         }
     }
-    
+
     // Check if we need to start loading
     if (!samplerInitialized_) {
         // Check if already loading for this sample rate
-        if (asyncLoader_->isInProgress() && 
+        if (asyncLoader_->isInProgress() &&
             asyncLoader_->getTargetSampleRate() == static_cast<int>(sampleRate)) {
-            logSafe("IthacaPluginProcessor/prepareToPlay", "info", 
+            if (logger_) {
+                logger_->log("IthacaPluginProcessor/prepareToPlay", LogSeverity::Info,
                    "Already loading for sample rate " + std::to_string(sampleRate) + " Hz - skipping");
+            }
             return;
         }
-        
+
         // Start async loading
-        logSafe("IthacaPluginProcessor/prepareToPlay", "info", 
+        if (logger_) {
+            logger_->log("IthacaPluginProcessor/prepareToPlay", LogSeverity::Info,
                "Starting async sample loading...");
-        
+        }
+
         asyncLoader_->startLoading(
             currentSampleDirectory_.toStdString(),
             static_cast<int>(sampleRate),
             samplesPerBlock,
             *logger_
         );
-        
-        logSafe("IthacaPluginProcessor/prepareToPlay", "info", 
+
+        if (logger_) {
+            logger_->log("IthacaPluginProcessor/prepareToPlay", LogSeverity::Info,
                "Async loading started - GUI remains responsive");
+        }
     }
-    
-    logSafe("IthacaPluginProcessor/prepareToPlay", "info", 
+
+    if (logger_) {
+        logger_->log("IthacaPluginProcessor/prepareToPlay", LogSeverity::Info,
            "=== PREPARE TO PLAY COMPLETED ===");
+    }
 }
 
 void IthacaPluginProcessor::releaseResources()
 {
-    logSafe("IthacaPluginProcessor/releaseResources", "info", "=== RELEASING AUDIO RESOURCES ===");
-    
+    if (logger_) {
+        logger_->log("IthacaPluginProcessor/releaseResources", LogSeverity::Info, "=== RELEASING AUDIO RESOURCES ===");
+    }
+
     if (voiceManager_) {
         voiceManager_->setRealTimeMode(false);
         voiceManager_->stopAllVoices();
-        logSafe("IthacaPluginProcessor/releaseResources", "info", "All voices stopped");
+        if (logger_) {
+            logger_->log("IthacaPluginProcessor/releaseResources", LogSeverity::Info, "All voices stopped");
+        }
     }
-    
-    logSafe("IthacaPluginProcessor/releaseResources", "info", "Audio resources released");
+
+    if (logger_) {
+        logger_->log("IthacaPluginProcessor/releaseResources", LogSeverity::Info, "Audio resources released");
+    }
 }
 
 bool IthacaPluginProcessor::isBusesLayoutSupported(const BusesLayout& layouts) const
@@ -275,9 +335,11 @@ void IthacaPluginProcessor::getStateInformation(juce::MemoryBlock& destData)
 {
     // Delegate to PluginStateManager
     auto logCallback = [this](const std::string& component,
-                              const std::string& severity,
+                              LogSeverity severity,
                               const std::string& message) {
-        logSafe(component, severity, message);
+        if (logger_) {
+            logger_->log(component, severity, message);
+        }
     };
 
     PluginStateManager::saveState(destData, parameters_, midiLearnManager_.get(), logCallback);
@@ -287,9 +349,11 @@ void IthacaPluginProcessor::setStateInformation(const void* data, int sizeInByte
 {
     // Delegate to PluginStateManager
     auto logCallback = [this](const std::string& component,
-                              const std::string& severity,
+                              LogSeverity severity,
                               const std::string& message) {
-        logSafe(component, severity, message);
+        if (logger_) {
+            logger_->log(component, severity, message);
+        }
     };
 
     PluginStateManager::loadState(data, sizeInBytes, parameters_,
@@ -336,15 +400,17 @@ void IthacaPluginProcessor::changeSampleDirectory(const juce::String& newPath)
     if (newPath == currentSampleDirectory_) {
         return; // No change needed
     }
-    
-    logSafe("IthacaPluginProcessor/changeSampleDirectory", "info", 
+
+    if (logger_) {
+        logger_->log("IthacaPluginProcessor/changeSampleDirectory", LogSeverity::Info,
            "Changing sample directory to: " + newPath.toStdString());
-    
+    }
+
     currentSampleDirectory_ = newPath;
-    
+
     // Mark as uninitialized to trigger reload
     samplerInitialized_ = false;
-    
+
     // If we have valid audio settings, start loading
     if (currentSampleRate_ > 0 && currentBlockSize_ > 0) {
         asyncLoader_->startLoading(
@@ -383,43 +449,39 @@ std::string IthacaPluginProcessor::getLoadingErrorMessage() const
 void IthacaPluginProcessor::checkAndTransferVoiceManager()
 {
     // Check if loading completed
-    if (asyncLoader_ && 
-        asyncLoader_->getState() == AsyncSampleLoader::LoadingState::Completed && 
+    if (asyncLoader_ &&
+        asyncLoader_->getState() == AsyncSampleLoader::LoadingState::Completed &&
         !samplerInitialized_) {
-        
-        logSafe("IthacaPluginProcessor/checkAndTransfer", "info", 
+
+        if (logger_) {
+            logger_->log("IthacaPluginProcessor/checkAndTransfer", LogSeverity::Info,
                "Async loading completed - transferring VoiceManager");
-        
+        }
+
         // Transfer ownership of VoiceManager
         voiceManager_ = asyncLoader_->takeVoiceManager();
-        
+
         if (voiceManager_) {
             samplerInitialized_ = true;
-            
-            logSafe("IthacaPluginProcessor/checkAndTransfer", "info", 
+
+            if (logger_) {
+                logger_->log("IthacaPluginProcessor/checkAndTransfer", LogSeverity::Info,
                    "VoiceManager transferred successfully");
-            
+            }
+
             // Log system statistics
             voiceManager_->logSystemStatistics(*logger_);
-            
-            logSafe("IthacaPluginProcessor/checkAndTransfer", "info", 
+
+            if (logger_) {
+                logger_->log("IthacaPluginProcessor/checkAndTransfer", LogSeverity::Info,
                    "=== SAMPLER NOW READY FOR AUDIO PROCESSING ===");
+            }
         } else {
-            logSafe("IthacaPluginProcessor/checkAndTransfer", "error", 
+            if (logger_) {
+                logger_->log("IthacaPluginProcessor/checkAndTransfer", LogSeverity::Error,
                    "Failed to transfer VoiceManager (nullptr)");
+            }
         }
-    }
-}
-
-//==============================================================================
-// Private Methods - Logging
-
-void IthacaPluginProcessor::logSafe(const std::string& component, 
-                                    const std::string& severity, 
-                                    const std::string& message) const
-{
-    if (logger_) {
-        logger_->log(component, severity, message);
     }
 }
 

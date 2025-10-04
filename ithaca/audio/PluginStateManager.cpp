@@ -22,7 +22,7 @@ void PluginStateManager::saveState(juce::MemoryBlock& destData,
 
     // Log success
     if (logCallback) {
-        logCallback("PluginStateManager", "info",
+        logCallback("PluginStateManager", LogSeverity::Info,
                    "Plugin state saved (including MIDI Learn mappings)");
     }
 }
@@ -42,7 +42,7 @@ bool PluginStateManager::loadState(const void* data,
 
     if (!xmlState) {
         if (logCallback) {
-            logCallback("PluginStateManager", "error",
+            logCallback("PluginStateManager", LogSeverity::Error,
                        "Failed to parse state data");
         }
         return false;
@@ -100,7 +100,7 @@ bool PluginStateManager::restoreFromXml(juce::XmlElement* xmlState,
         if (parameterXml) {
             parameters.replaceState(juce::ValueTree::fromXml(*parameterXml));
             if (logCallback) {
-                logCallback("PluginStateManager", "info", "Parameters restored");
+                logCallback("PluginStateManager", LogSeverity::Info, "Parameters restored");
             }
         }
 
@@ -109,7 +109,7 @@ bool PluginStateManager::restoreFromXml(juce::XmlElement* xmlState,
         if (midiLearnXml && midiLearnManager) {
             midiLearnManager->loadFromXml(midiLearnXml);
             if (logCallback) {
-                logCallback("PluginStateManager", "info", "MIDI Learn mappings restored");
+                logCallback("PluginStateManager", LogSeverity::Info, "MIDI Learn mappings restored");
             }
         }
 
@@ -119,7 +119,7 @@ bool PluginStateManager::restoreFromXml(juce::XmlElement* xmlState,
         // Legacy format (parameters only, no MIDI Learn)
         parameters.replaceState(juce::ValueTree::fromXml(*xmlState));
         if (logCallback) {
-            logCallback("PluginStateManager", "info",
+            logCallback("PluginStateManager", LogSeverity::Info,
                        "Legacy state restored (no MIDI Learn data)");
         }
         return true;
@@ -127,7 +127,7 @@ bool PluginStateManager::restoreFromXml(juce::XmlElement* xmlState,
 
     // Unknown format
     if (logCallback) {
-        logCallback("PluginStateManager", "error", "Unknown state format");
+        logCallback("PluginStateManager", LogSeverity::Error, "Unknown state format");
     }
     return false;
 }

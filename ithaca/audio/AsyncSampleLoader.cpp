@@ -141,15 +141,15 @@ void AsyncSampleLoader::workerFunction(const std::string& sampleDirectory,
             return;
         }
 
-        logger->log("AsyncSampleLoader", "info",
+        logger->log("AsyncSampleLoader", LogSeverity::Info,
                    "=== ASYNC LOADING STARTED ===");
-        logger->log("AsyncSampleLoader", "info",
+        logger->log("AsyncSampleLoader", LogSeverity::Info,
                    "Target sample rate: " + std::to_string(targetSampleRate) + " Hz");
-        logger->log("AsyncSampleLoader", "info",
+        logger->log("AsyncSampleLoader", LogSeverity::Info,
                    "Sample directory: " + sampleDirectory);
 
         // Step 1a: Load instrument metadata from JSON
-        logger->log("AsyncSampleLoader", "info",
+        logger->log("AsyncSampleLoader", LogSeverity::Info,
                    "Loading instrument metadata...");
 
         juce::File sampleDir(sampleDirectory);
@@ -160,92 +160,92 @@ void AsyncSampleLoader::workerFunction(const std::string& sampleDirectory,
             instrumentName_ = metadata.instrumentName.toStdString();
         }
 
-        logger->log("AsyncSampleLoader", "info",
+        logger->log("AsyncSampleLoader", LogSeverity::Info,
                    "Instrument: " + metadata.instrumentName.toStdString() +
                    " (v" + metadata.instrumentVersion.toStdString() + ")");
         
         // Step 2: Initialize EnvelopeStaticData if needed
         if (!EnvelopeStaticData::isInitialized()) {
-            logger->log("AsyncSampleLoader", "info", 
+            logger->log("AsyncSampleLoader", LogSeverity::Info, 
                        "Initializing envelope static data...");
             
             if (!EnvelopeStaticData::initialize(*logger)) {
                 throw std::runtime_error("Envelope static data initialization failed");
             }
             
-            logger->log("AsyncSampleLoader", "info", 
+            logger->log("AsyncSampleLoader", LogSeverity::Info, 
                        "Envelope static data initialized successfully");
         }
         
         // Step 3: Check for interruption
         if (shouldStop_.load()) {
-            logger->log("AsyncSampleLoader", "info", 
+            logger->log("AsyncSampleLoader", LogSeverity::Info, 
                        "Loading interrupted after envelope init");
             state_.store(LoadingState::Idle);
             return;
         }
         
         // Step 4: Create VoiceManager
-        logger->log("AsyncSampleLoader", "info", 
+        logger->log("AsyncSampleLoader", LogSeverity::Info, 
                    "Creating VoiceManager...");
         
         auto vm = std::make_unique<VoiceManager>(sampleDirectory, *logger);
         
-        logger->log("AsyncSampleLoader", "info", 
+        logger->log("AsyncSampleLoader", LogSeverity::Info, 
                    "VoiceManager created successfully");
         
         // Step 5: Check for interruption
         if (shouldStop_.load()) {
-            logger->log("AsyncSampleLoader", "info", 
+            logger->log("AsyncSampleLoader", LogSeverity::Info, 
                        "Loading interrupted after VoiceManager creation");
             state_.store(LoadingState::Idle);
             return;
         }
         
         // Step 6: Initialize system (scan directory)
-        logger->log("AsyncSampleLoader", "info", 
+        logger->log("AsyncSampleLoader", LogSeverity::Info, 
                    "Initializing sampler system (scanning directory)...");
         
         vm->initializeSystem(*logger);
         
-        logger->log("AsyncSampleLoader", "info", 
+        logger->log("AsyncSampleLoader", LogSeverity::Info, 
                    "System initialization completed");
         
         // Step 7: Check for interruption
         if (shouldStop_.load()) {
-            logger->log("AsyncSampleLoader", "info", 
+            logger->log("AsyncSampleLoader", LogSeverity::Info, 
                        "Loading interrupted after system init");
             state_.store(LoadingState::Idle);
             return;
         }
         
         // Step 8: Load samples for target sample rate
-        logger->log("AsyncSampleLoader", "info", 
+        logger->log("AsyncSampleLoader", LogSeverity::Info, 
                    "Loading samples for " + std::to_string(targetSampleRate) + " Hz...");
-        logger->log("AsyncSampleLoader", "info", 
+        logger->log("AsyncSampleLoader", LogSeverity::Info, 
                    "This may take a few seconds...");
         
         vm->loadForSampleRate(targetSampleRate, *logger);
         
-        logger->log("AsyncSampleLoader", "info", 
+        logger->log("AsyncSampleLoader", LogSeverity::Info, 
                    "Samples loaded successfully");
         
         // Step 9: Check for interruption
         if (shouldStop_.load()) {
-            logger->log("AsyncSampleLoader", "info", 
+            logger->log("AsyncSampleLoader", LogSeverity::Info, 
                        "Loading interrupted after sample loading");
             state_.store(LoadingState::Idle);
             return;
         }
         
         // Step 10: Prepare for audio processing
-        logger->log("AsyncSampleLoader", "info", 
+        logger->log("AsyncSampleLoader", LogSeverity::Info, 
                    "Preparing VoiceManager for audio processing...");
         
         vm->prepareToPlay(blockSize);
         vm->setRealTimeMode(true);
         
-        logger->log("AsyncSampleLoader", "info", 
+        logger->log("AsyncSampleLoader", LogSeverity::Info, 
                    "VoiceManager prepared for real-time mode");
         
         // Step 11: Store result and mark as completed
@@ -255,7 +255,7 @@ void AsyncSampleLoader::workerFunction(const std::string& sampleDirectory,
             state_.store(LoadingState::Completed);
         }
         
-        logger->log("AsyncSampleLoader", "info", 
+        logger->log("AsyncSampleLoader", LogSeverity::Info, 
                    "=== ASYNC LOADING COMPLETED SUCCESSFULLY ===");
         
     } catch (const std::exception& e) {
@@ -265,9 +265,9 @@ void AsyncSampleLoader::workerFunction(const std::string& sampleDirectory,
         state_.store(LoadingState::Error);
         
         if (logger) {
-            logger->log("AsyncSampleLoader", "error", 
+            logger->log("AsyncSampleLoader", LogSeverity::Error, 
                        "=== ASYNC LOADING FAILED ===");
-            logger->log("AsyncSampleLoader", "error", 
+            logger->log("AsyncSampleLoader", LogSeverity::Error, 
                        "Error: " + errorMessage_);
         }
     } catch (...) {
@@ -277,9 +277,9 @@ void AsyncSampleLoader::workerFunction(const std::string& sampleDirectory,
         state_.store(LoadingState::Error);
         
         if (logger) {
-            logger->log("AsyncSampleLoader", "error", 
+            logger->log("AsyncSampleLoader", LogSeverity::Error, 
                        "=== ASYNC LOADING FAILED ===");
-            logger->log("AsyncSampleLoader", "error", 
+            logger->log("AsyncSampleLoader", LogSeverity::Error, 
                        "Unknown exception caught");
         }
     }

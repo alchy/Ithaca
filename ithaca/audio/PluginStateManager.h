@@ -12,6 +12,7 @@
 
 #include <juce_audio_processors/juce_audio_processors.h>
 #include <functional>
+#include "ithaca-core/sampler/core_logger.h"
 
 // Forward declarations
 class MidiLearnManager;
@@ -32,10 +33,10 @@ public:
     /**
      * @brief Logging callback type
      * @param component Component name for logging
-     * @param severity Log severity (info, warning, error)
+     * @param severity Log severity (LogSeverity enum)
      * @param message Log message
      */
-    using LogCallback = std::function<void(const std::string&, const std::string&, const std::string&)>;
+    using LogCallback = std::function<void(const std::string&, LogSeverity, const std::string&)>;
 
     /**
      * @brief Save plugin state to binary data
