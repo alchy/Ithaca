@@ -286,7 +286,7 @@ namespace Constants {
             constexpr const char* INFO = "info";
             constexpr const char* WARNING = "warning";
             constexpr const char* ERROR = "error";
-            constexpr const char* DEBUG = "debug";
+            constexpr const char* DEBUG_LEVEL = "debug";
         }
     }
 
