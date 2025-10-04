@@ -27,6 +27,9 @@
 // Performance monitoring
 #include "ithaca/audio/PerformanceMonitor.h"
 
+// State management
+#include "ithaca/audio/PluginStateManager.h"
+
 // MIDI processing
 #include "ithaca/midi/MidiProcessor.h"
 

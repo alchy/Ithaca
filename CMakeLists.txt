@@ -129,6 +129,8 @@ target_sources(IthacaPlayer
         ithaca/audio/InstrumentMetadata.cpp
         ithaca/audio/PerformanceMonitor.h
         ithaca/audio/PerformanceMonitor.cpp
+        ithaca/audio/PluginStateManager.h
+        ithaca/audio/PluginStateManager.cpp
 
         # Parameters
         ithaca/parameters/ParameterManager.h

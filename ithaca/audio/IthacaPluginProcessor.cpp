@@ -273,61 +273,27 @@ bool IthacaPluginProcessor::hasEditor() const
 
 void IthacaPluginProcessor::getStateInformation(juce::MemoryBlock& destData)
 {
-    // Create root XML element
-    auto rootXml = std::make_unique<juce::XmlElement>("IthacaPluginState");
-    
-    // 1. Save parameter state
-    auto parameterState = parameters_.copyState();
-    auto parameterXml = parameterState.createXml();
-    if (parameterXml) {
-        rootXml->addChildElement(parameterXml.release());
-    }
-    
-    // 2. Save MIDI Learn mappings
-    if (midiLearnManager_) {
-        auto midiLearnXml = midiLearnManager_->saveToXml();
-        if (midiLearnXml) {
-            rootXml->addChildElement(midiLearnXml.release());
-        }
-    }
-    
-    // Convert to binary
-    copyXmlToBinary(*rootXml, destData);
-    
-    logSafe("IthacaPluginProcessor/getStateInformation", "info", 
-           "Plugin state saved (including MIDI Learn mappings)");
+    // Delegate to PluginStateManager
+    auto logCallback = [this](const std::string& component,
+                              const std::string& severity,
+                              const std::string& message) {
+        logSafe(component, severity, message);
+    };
+
+    PluginStateManager::saveState(destData, parameters_, midiLearnManager_.get(), logCallback);
 }
 
 void IthacaPluginProcessor::setStateInformation(const void* data, int sizeInBytes)
 {
-    std::unique_ptr<juce::XmlElement> xmlState(getXmlFromBinary(data, sizeInBytes));
-    
-    if (xmlState.get() != nullptr) {
-        // Check for root element (new format with MIDI Learn)
-        if (xmlState->hasTagName("IthacaPluginState")) {
-            // 1. Restore parameter state
-            auto* parameterXml = xmlState->getChildByName(parameters_.state.getType());
-            if (parameterXml != nullptr) {
-                parameters_.replaceState(juce::ValueTree::fromXml(*parameterXml));
-                logSafe("IthacaPluginProcessor/setStateInformation", "info", 
-                       "Parameters restored");
-            }
-            
-            // 2. Restore MIDI Learn mappings
-            auto* midiLearnXml = xmlState->getChildByName("MidiLearnMappings");
-            if (midiLearnXml != nullptr && midiLearnManager_) {
-                midiLearnManager_->loadFromXml(midiLearnXml);
-                logSafe("IthacaPluginProcessor/setStateInformation", "info", 
-                       "MIDI Learn mappings restored");
-            }
-        }
-        // Legacy format compatibility (old saves without MIDI Learn)
-        else if (xmlState->hasTagName(parameters_.state.getType())) {
-            parameters_.replaceState(juce::ValueTree::fromXml(*xmlState));
-            logSafe("IthacaPluginProcessor/setStateInformation", "info", 
-                   "Legacy state restored (no MIDI Learn data)");
-        }
-    }
+    // Delegate to PluginStateManager
+    auto logCallback = [this](const std::string& component,
+                              const std::string& severity,
+                              const std::string& message) {
+        logSafe(component, severity, message);
+    };
+
+    PluginStateManager::loadState(data, sizeInBytes, parameters_,
+                                  midiLearnManager_.get(), logCallback);
 }
 
 //==============================================================================
