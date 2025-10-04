@@ -8,7 +8,10 @@
       "Bash(git submodule add:*)",
       "Bash(Select-String -Pattern \"error|warning|InfoHeaderComponent|InstrumentMetadata\" -Context 0,2)",
       "Bash(Select-String -Pattern \"error|warning|Built target\" -Context 0,2)",
-      "Bash(findstr:*)"
+      "Bash(findstr:*)",
+      "Bash(git checkout:*)",
+      "Bash(git reset:*)",
+      "Bash(git push:*)"
     ],
     "deny": [],
     "ask": []
