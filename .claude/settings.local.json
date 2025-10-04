@@ -1,17 +1,8 @@
 {
   "permissions": {
     "allow": [
-      "Bash(cmake:*)",
-      "Bash(git mv:*)",
-      "Bash(tree:*)",
-      "Bash(find:*)",
-      "Bash(git submodule add:*)",
-      "Bash(Select-String -Pattern \"error|warning|InfoHeaderComponent|InstrumentMetadata\" -Context 0,2)",
-      "Bash(Select-String -Pattern \"error|warning|Built target\" -Context 0,2)",
-      "Bash(findstr:*)",
-      "Bash(git checkout:*)",
-      "Bash(git reset:*)",
-      "Bash(git push:*)"
+      "Bash(git commit:*)",
+      "Bash(\"C:\\Program Files (x86)\\Microsoft Visual Studio\\2022\\BuildTools\\Common7\\IDE\\CommonExtensions\\Microsoft\\CMake\\CMake\\bin\\cmake.exe\" --build c:/Users/Jindra/Documents/Repos/Ithaca/build --config Debug -j 4)"
     ],
     "deny": [],
     "ask": []

@@ -14,16 +14,37 @@ void PluginStateManager::saveState(juce::MemoryBlock& destData,
                                    MidiLearnManager* midiLearnManager,
                                    LogCallback logCallback)
 {
+    if (logCallback) {
+        logCallback("PluginStateManager", LogSeverity::Info,
+                   "========================================");
+        logCallback("PluginStateManager", LogSeverity::Info,
+                   "=== PLUGIN STATE SAVE STARTED ===");
+        logCallback("PluginStateManager", LogSeverity::Info,
+                   "========================================");
+    }
+
     // Create root XML with all state data
     auto rootXml = createStateXml(parameters, midiLearnManager);
+
+    if (logCallback) {
+        logCallback("PluginStateManager", LogSeverity::Info,
+                   "Created XML structure with root tag: " + rootXml->getTagName().toStdString());
+        logCallback("PluginStateManager", LogSeverity::Info,
+                   "XML child count: " + std::to_string(rootXml->getNumChildElements()));
+    }
 
     // Convert to binary
     juce::AudioProcessor::copyXmlToBinary(*rootXml, destData);
 
-    // Log success
     if (logCallback) {
         logCallback("PluginStateManager", LogSeverity::Info,
-                   "Plugin state saved (including MIDI Learn mappings)");
+                   "Binary data size: " + std::to_string(destData.getSize()) + " bytes");
+        logCallback("PluginStateManager", LogSeverity::Info,
+                   "========================================");
+        logCallback("PluginStateManager", LogSeverity::Info,
+                   "=== PLUGIN STATE SAVE COMPLETE ===");
+        logCallback("PluginStateManager", LogSeverity::Info,
+                   "========================================");
     }
 }
 
@@ -36,6 +57,17 @@ bool PluginStateManager::loadState(const void* data,
                                    MidiLearnManager* midiLearnManager,
                                    LogCallback logCallback)
 {
+    if (logCallback) {
+        logCallback("PluginStateManager", LogSeverity::Info,
+                   "========================================");
+        logCallback("PluginStateManager", LogSeverity::Info,
+                   "=== PLUGIN STATE LOAD STARTED ===");
+        logCallback("PluginStateManager", LogSeverity::Info,
+                   "========================================");
+        logCallback("PluginStateManager", LogSeverity::Info,
+                   "Binary data size: " + std::to_string(sizeInBytes) + " bytes");
+    }
+
     // Parse binary data to XML
     std::unique_ptr<juce::XmlElement> xmlState(
         juce::AudioProcessor::getXmlFromBinary(data, sizeInBytes));
@@ -43,13 +75,42 @@ bool PluginStateManager::loadState(const void* data,
     if (!xmlState) {
         if (logCallback) {
             logCallback("PluginStateManager", LogSeverity::Error,
-                       "Failed to parse state data");
+                       "Failed to parse binary data to XML");
+            logCallback("PluginStateManager", LogSeverity::Info,
+                       "========================================");
+            logCallback("PluginStateManager", LogSeverity::Info,
+                       "=== PLUGIN STATE LOAD FAILED ===");
+            logCallback("PluginStateManager", LogSeverity::Info,
+                       "========================================");
         }
         return false;
     }
 
+    if (logCallback) {
+        logCallback("PluginStateManager", LogSeverity::Info,
+                   "Successfully parsed XML, root tag: " + xmlState->getTagName().toStdString());
+        logCallback("PluginStateManager", LogSeverity::Info,
+                   "XML child count: " + std::to_string(xmlState->getNumChildElements()));
+    }
+
     // Restore from XML
-    return restoreFromXml(xmlState.get(), parameters, midiLearnManager, logCallback);
+    bool success = restoreFromXml(xmlState.get(), parameters, midiLearnManager, logCallback);
+
+    if (logCallback) {
+        logCallback("PluginStateManager", LogSeverity::Info,
+                   "========================================");
+        if (success) {
+            logCallback("PluginStateManager", LogSeverity::Info,
+                       "=== PLUGIN STATE LOAD COMPLETE ===");
+        } else {
+            logCallback("PluginStateManager", LogSeverity::Error,
+                       "=== PLUGIN STATE LOAD FAILED ===");
+        }
+        logCallback("PluginStateManager", LogSeverity::Info,
+                   "========================================");
+    }
+
+    return success;
 }
 
 //==============================================================================
@@ -74,6 +135,9 @@ std::unique_ptr<juce::XmlElement> PluginStateManager::createStateXml(
         auto midiLearnXml = midiLearnManager->saveToXml();
         if (midiLearnXml) {
             rootXml->addChildElement(midiLearnXml.release());
+        } else {
+            // This should never happen, but log it if it does
+            juce::Logger::writeToLog("[PluginStateManager] Warning: MidiLearnManager returned null XML");
         }
     }
 
@@ -89,45 +153,84 @@ bool PluginStateManager::restoreFromXml(juce::XmlElement* xmlState,
                                         LogCallback logCallback)
 {
     if (!xmlState) {
+        if (logCallback) {
+            logCallback("PluginStateManager", LogSeverity::Error, "restoreFromXml: xmlState is null");
+        }
         return false;
     }
 
     // Check format: new (with MIDI Learn) or legacy (parameters only)
     if (isNewFormat(xmlState)) {
-        // New format with MIDI Learn
+        if (logCallback) {
+            logCallback("PluginStateManager", LogSeverity::Info,
+                       "Detected new format (IthacaPluginState with MIDI Learn support)");
+        }
+
         // 1. Restore parameter state
         auto* parameterXml = xmlState->getChildByName(parameters.state.getType());
         if (parameterXml) {
+            if (logCallback) {
+                logCallback("PluginStateManager", LogSeverity::Info,
+                           "Found parameter child element: " + parameters.state.getType().toString().toStdString());
+            }
             parameters.replaceState(juce::ValueTree::fromXml(*parameterXml));
             if (logCallback) {
-                logCallback("PluginStateManager", LogSeverity::Info, "Parameters restored");
+                logCallback("PluginStateManager", LogSeverity::Info, "Parameters restored successfully");
+            }
+        } else {
+            if (logCallback) {
+                logCallback("PluginStateManager", LogSeverity::Warning,
+                           "Parameter child element not found (expected tag: " +
+                           parameters.state.getType().toString().toStdString() + ")");
             }
         }
 
         // 2. Restore MIDI Learn mappings
         auto* midiLearnXml = xmlState->getChildByName(MIDI_LEARN_TAG);
-        if (midiLearnXml && midiLearnManager) {
-            midiLearnManager->loadFromXml(midiLearnXml);
+        if (midiLearnXml) {
             if (logCallback) {
-                logCallback("PluginStateManager", LogSeverity::Info, "MIDI Learn mappings restored");
+                logCallback("PluginStateManager", LogSeverity::Info,
+                           "Found MIDI Learn child element with " +
+                           std::to_string(midiLearnXml->getNumChildElements()) + " mappings");
+            }
+            if (midiLearnManager) {
+                midiLearnManager->loadFromXml(midiLearnXml);
+                if (logCallback) {
+                    logCallback("PluginStateManager", LogSeverity::Info, "MIDI Learn mappings restored successfully");
+                }
+            } else {
+                if (logCallback) {
+                    logCallback("PluginStateManager", LogSeverity::Warning,
+                               "MIDI Learn data found but MidiLearnManager is null");
+                }
+            }
+        } else {
+            if (logCallback) {
+                logCallback("PluginStateManager", LogSeverity::Info,
+                           "No MIDI Learn child element found (this is normal for presets without MIDI Learn)");
             }
         }
 
         return true;
     }
     else if (isLegacyFormat(xmlState, parameters)) {
+        if (logCallback) {
+            logCallback("PluginStateManager", LogSeverity::Info,
+                       "Detected legacy format (parameters only, no MIDI Learn)");
+        }
         // Legacy format (parameters only, no MIDI Learn)
         parameters.replaceState(juce::ValueTree::fromXml(*xmlState));
         if (logCallback) {
             logCallback("PluginStateManager", LogSeverity::Info,
-                       "Legacy state restored (no MIDI Learn data)");
+                       "Legacy state restored successfully");
         }
         return true;
     }
 
     // Unknown format
     if (logCallback) {
-        logCallback("PluginStateManager", LogSeverity::Error, "Unknown state format");
+        logCallback("PluginStateManager", LogSeverity::Error,
+                   "Unknown state format - tag name: " + xmlState->getTagName().toStdString());
     }
     return false;
 }
