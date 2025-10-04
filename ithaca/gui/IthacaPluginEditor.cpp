@@ -11,7 +11,7 @@
 #include "ithaca/gui/components/SliderPanelComponent.h"
 #include "ithaca/gui/components/InfoHeaderComponent.h"
 #include "ithaca/gui/helpers/GuiHelpers.h"
-#include "ithaca/gui/helpers/GuiConstants.h"
+#include "ithaca/config/AppConstants.h"
 #include <iostream>
 
 #define BACKGROUND_PICTURE_OFF 0
@@ -36,8 +36,8 @@ IthacaPluginEditor::IthacaPluginEditor(IthacaPluginProcessor& p)
     GUI_DEBUG("IthacaGUI: Constructor - Hierarchical Layout with MIDI Learn");
     
     // Set window size
-    setSize(GuiConstants::DEFAULT_WINDOW_WIDTH, 
-            GuiConstants::DEFAULT_WINDOW_HEIGHT);
+    setSize(Constants::Gui::Window::DEFAULT_WIDTH,
+            Constants::Gui::Window::DEFAULT_HEIGHT);
     
     // Setup components in order
     setupBackground();           // Background image (if not debug mode)
@@ -96,11 +96,11 @@ void IthacaPluginEditor::resized()
     
     // Vypočítat výšky sekcí podle ratio
     int windowHeight = bounds.getHeight();
-    int infoHeight = static_cast<int>(windowHeight * 
-                                     GuiConstants::INFO_SECTION_HEIGHT_RATIO);
-    
-    GUI_DEBUG("IthacaGUI: Info header height: " << infoHeight 
-              << "px (~" << (GuiConstants::INFO_SECTION_HEIGHT_RATIO * 100) << "%)");
+    int infoHeight = static_cast<int>(windowHeight *
+                                     Constants::Gui::Layout::INFO_SECTION_HEIGHT_RATIO);
+
+    GUI_DEBUG("IthacaGUI: Info header height: " << infoHeight
+              << "px (~" << (Constants::Gui::Layout::INFO_SECTION_HEIGHT_RATIO * 100) << "%)");
     
     // ZMĚNĚNO: Content area BEZ paddingu - použije celou plochu okna
     auto contentArea = bounds;  // Původně: bounds.reduced(8)
@@ -112,7 +112,7 @@ void IthacaPluginEditor::resized()
     }
     
     // Mezera mezi sekcemi - NYNÍ 0, takže žádná mezera
-    contentArea.removeFromTop(GuiConstants::SECTION_GAP);  // = 0
+    contentArea.removeFromTop(Constants::Gui::Layout::SECTION_GAP);  // = 0
     
     // Slider panel dole (~70%, zbytek prostoru)
     if (sliderPanel) {
@@ -129,7 +129,7 @@ void IthacaPluginEditor::resized()
     
     if (infoHeader) {
         infoHeader->setBounds(contentArea.removeFromTop(120));
-        contentArea.removeFromTop(GuiConstants::SECTION_GAP);  // = 0
+        contentArea.removeFromTop(Constants::Gui::Layout::SECTION_GAP);  // = 0
         GUI_DEBUG("IthacaGUI: Debug - Info header: 120px");
     }
     
@@ -300,9 +300,9 @@ bool IthacaPluginEditor::isDebugModeEnabled() const
 void IthacaPluginEditor::createFallbackBackground()
 {
     // Vytvořit jednobarevné fallback pozadí když se nepodaří načíst obrázek
-    juce::Image fallbackImage(juce::Image::RGB, 
-                             GuiConstants::DEFAULT_WINDOW_WIDTH,
-                             GuiConstants::DEFAULT_WINDOW_HEIGHT, 
+    juce::Image fallbackImage(juce::Image::RGB,
+                             Constants::Gui::Window::DEFAULT_WIDTH,
+                             Constants::Gui::Window::DEFAULT_HEIGHT,
                              true);
     
     juce::Graphics g(fallbackImage);

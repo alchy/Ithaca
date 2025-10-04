@@ -8,7 +8,7 @@
  */
 
 #include "ithaca/gui/components/InfoHeaderComponent.h"
-#include "ithaca/gui/helpers/GuiConstants.h"
+#include "ithaca/config/AppConstants.h"
 #include "BuildID.h"
 #include <iostream>
 
@@ -50,16 +50,16 @@ void InfoHeaderComponent::paint(juce::Graphics& g)
     
     if (!debugMode_) {
         // Zaoblené overlay pozadí (80% alpha, 6px radius)
-        GuiHelpers::drawRoundedOverlay(g, bounds, 
-                                      GuiConstants::INFO_OVERLAY_ALPHA,
-                                      GuiConstants::PANEL_CORNER_RADIUS);
+        GuiHelpers::drawRoundedOverlay(g, bounds,
+                                      Constants::Gui::Overlay::INFO_ALPHA,
+                                      Constants::Gui::Overlay::CORNER_RADIUS);
     }
     // Debug mode: průhledné pozadí
 }
 
 void InfoHeaderComponent::resized()
 {
-    auto bounds = getLocalBounds().reduced(GuiConstants::SECTION_PADDING);
+    auto bounds = getLocalBounds().reduced(Constants::Gui::Layout::SECTION_PADDING);
 
     auto layoutMode = debugMode_ ? InfoHeaderLayout::LayoutMode::Debug
                                   : InfoHeaderLayout::LayoutMode::Background;
@@ -138,7 +138,7 @@ void InfoHeaderComponent::updateLiveData()
     if (processorRef_.isLoadingInProgress()) {
         // Currently loading
         if (labelBundle_.instrumentNameLabel) {
-            labelBundle_.instrumentNameLabel->setText(GuiConstants::TextConstants::LOADING_TEXT,
+            labelBundle_.instrumentNameLabel->setText(Constants::Gui::Text::LOADING_TEXT,
                                         juce::dontSendNotification);
         }
 
@@ -155,7 +155,7 @@ void InfoHeaderComponent::updateLiveData()
     if (processorRef_.hasLoadingError()) {
         // Loading failed
         if (labelBundle_.instrumentNameLabel) {
-            labelBundle_.instrumentNameLabel->setText(GuiConstants::TextConstants::ERROR_TEXT,
+            labelBundle_.instrumentNameLabel->setText(Constants::Gui::Text::ERROR_TEXT,
                                         juce::dontSendNotification);
         }
         return;
@@ -170,8 +170,8 @@ void InfoHeaderComponent::updateLiveData()
         // FIXED: Vždy obnovit název nástroje po dokončení loadingu
         // (resetuje "Loading samples..." zpět na název nástroje z JSON)
         auto currentText = labelBundle_.instrumentNameLabel->getText();
-        if (currentText == GuiConstants::TextConstants::LOADING_TEXT ||
-            currentText == GuiConstants::TextConstants::ERROR_TEXT ||
+        if (currentText == Constants::Gui::Text::LOADING_TEXT ||
+            currentText == Constants::Gui::Text::ERROR_TEXT ||
             currentText.isEmpty()) {
             auto instrumentName = processorRef_.getInstrumentName();
             if (!instrumentName.isEmpty()) {
@@ -191,7 +191,7 @@ void InfoHeaderComponent::updateLiveData()
         // Active voices
         if (labelBundle_.activeVoicesLabel) {
             labelBundle_.activeVoicesLabel->setText(
-                juce::String(GuiConstants::TextConstants::ACTIVE_VOICES_PREFIX) +
+                juce::String(Constants::Gui::Text::ACTIVE_VOICES_PREFIX) +
                 juce::String(stats.activeVoices),
                 juce::dontSendNotification);
         }
@@ -199,7 +199,7 @@ void InfoHeaderComponent::updateLiveData()
         // Sustaining voices
         if (labelBundle_.sustainingVoicesLabel) {
             labelBundle_.sustainingVoicesLabel->setText(
-                juce::String(GuiConstants::TextConstants::SUSTAINING_VOICES_PREFIX) +
+                juce::String(Constants::Gui::Text::SUSTAINING_VOICES_PREFIX) +
                 juce::String(stats.sustainingVoices),
                 juce::dontSendNotification);
         }
@@ -207,7 +207,7 @@ void InfoHeaderComponent::updateLiveData()
         // Sample rate (if not set)
         if (labelBundle_.sampleRateLabel && stats.currentSampleRate > 0) {
             labelBundle_.sampleRateLabel->setText(
-                juce::String(GuiConstants::TextConstants::SAMPLE_RATE_PREFIX) +
+                juce::String(Constants::Gui::Text::SAMPLE_RATE_PREFIX) +
                 juce::String(stats.currentSampleRate) + " Hz",
                 juce::dontSendNotification);
         }

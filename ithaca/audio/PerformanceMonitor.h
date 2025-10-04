@@ -8,6 +8,7 @@
 
 #pragma once
 
+#include "ithaca/config/AppConstants.h"
 #include <atomic>
 #include <chrono>
 #include <array>
@@ -83,7 +84,7 @@ private:
     std::chrono::high_resolution_clock::time_point measurementStart_;
 
     // Statistics (sliding window)
-    static constexpr int WINDOW_SIZE = 100;  ///< Number of samples for averaging
+    static constexpr int WINDOW_SIZE = Constants::Performance::MONITORING_WINDOW_SIZE;
     std::array<double, WINDOW_SIZE> processingTimes_;
     std::atomic<int> windowIndex_;
     std::atomic<int> windowFilled_;
@@ -98,9 +99,9 @@ private:
     // Mutex for window array access (non-RT read only)
     mutable std::mutex metricsMutex_;
 
-    // Thresholds
-    static constexpr double WARNING_THRESHOLD = 0.80;  ///< 80% CPU = warning
-    static constexpr double DROPOUT_THRESHOLD = 1.00;  ///< 100% CPU = dropout
+    // Thresholds (from AppConstants)
+    static constexpr double WARNING_THRESHOLD = Constants::Performance::Thresholds::CPU_WARNING;
+    static constexpr double DROPOUT_THRESHOLD = Constants::Performance::Thresholds::CPU_DROPOUT;
 
     /**
      * @brief Calculate available time per audio block

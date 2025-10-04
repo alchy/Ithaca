@@ -5,7 +5,7 @@
 
 #include "ithaca/gui/components/SliderPanelComponent.h"
 #include "ithaca/midi/MidiLearnManager.h"
-#include "ithaca/gui/helpers/GuiConstants.h"
+#include "ithaca/config/AppConstants.h"
 #include <iostream>
 
 #define BACKGROUND_PICTURE_OFF 0
@@ -49,9 +49,9 @@ void SliderPanelComponent::paint(juce::Graphics& g)
     auto bounds = getLocalBounds();
     
     if (!debugMode_) {
-        GuiHelpers::drawRoundedOverlay(g, bounds, 
-                                      GuiConstants::SLIDER_OVERLAY_ALPHA,
-                                      GuiConstants::PANEL_CORNER_RADIUS);
+        GuiHelpers::drawRoundedOverlay(g, bounds,
+                                      Constants::Gui::Overlay::SLIDER_ALPHA,
+                                      Constants::Gui::Overlay::CORNER_RADIUS);
         paintSeparators(g);
     }
 }
@@ -59,8 +59,8 @@ void SliderPanelComponent::paint(juce::Graphics& g)
 void SliderPanelComponent::resized()
 {
     separatorPositions_.clear();
-    
-    auto bounds = getLocalBounds().reduced(GuiConstants::SECTION_PADDING);
+
+    auto bounds = getLocalBounds().reduced(Constants::Gui::Layout::SECTION_PADDING);
     
     if (debugMode_) {
         layoutDebugMode(bounds);
@@ -133,20 +133,20 @@ void SliderPanelComponent::createAllSliders()
     // Definice všech sliderů v pořadí podle layoutu
     std::vector<SliderConfig> configs = {
         // Row 1: Master Gain, Stereo Field
-        SliderConfig("masterGain", "Master Gain", GuiConstants::TextConstants::MASTER_GAIN_LABEL, 100.0),
-        SliderConfig("stereoField", "Stereo Field", GuiConstants::TextConstants::STEREO_FIELD_LABEL, 0.0),
+        SliderConfig("masterGain", "Master Gain", Constants::Gui::Text::MASTER_GAIN_LABEL, 100.0),
+        SliderConfig("stereoField", "Stereo Field", Constants::Gui::Text::STEREO_FIELD_LABEL, 0.0),
 
         // Row 2: LFO Depth, LFO Speed
-        SliderConfig("lfoPanDepth", "LFO Depth", GuiConstants::TextConstants::LFO_DEPTH_LABEL, 0.0),
-        SliderConfig("lfoPanSpeed", "LFO Speed", GuiConstants::TextConstants::LFO_SPEED_LABEL, 0.0),
+        SliderConfig("lfoPanDepth", "LFO Depth", Constants::Gui::Text::LFO_DEPTH_LABEL, 0.0),
+        SliderConfig("lfoPanSpeed", "LFO Speed", Constants::Gui::Text::LFO_SPEED_LABEL, 0.0),
 
         // Row 3: Attack, Release
-        SliderConfig("attack", "Attack", GuiConstants::TextConstants::ATTACK_LABEL, 0.0),
-        SliderConfig("release", "Release", GuiConstants::TextConstants::RELEASE_LABEL, 4.0),
+        SliderConfig("attack", "Attack", Constants::Gui::Text::ATTACK_LABEL, 0.0),
+        SliderConfig("release", "Release", Constants::Gui::Text::RELEASE_LABEL, 4.0),
 
         // Row 4: Sustain Level, Master Pan
-        SliderConfig("sustainLevel", "Sustain Level", GuiConstants::TextConstants::SUSTAIN_LABEL, 127.0),
-        SliderConfig("masterPan", "Master Pan", GuiConstants::TextConstants::MASTER_PAN_LABEL, 64.0)
+        SliderConfig("sustainLevel", "Sustain Level", Constants::Gui::Text::SUSTAIN_LABEL, 127.0),
+        SliderConfig("masterPan", "Master Pan", Constants::Gui::Text::MASTER_PAN_LABEL, 64.0)
     };
 
     // Vytvoření všech sliderů pomocí factory
@@ -209,10 +209,10 @@ void SliderPanelComponent::layoutSliderRow(juce::Rectangle<int>& bounds,
                                            juce::Label* leftLabel, juce::Slider* leftSlider,
                                            juce::Label* rightLabel, juce::Slider* rightSlider)
 {
-    auto rowArea = bounds.removeFromTop(GuiConstants::SLIDER_ROW_HEIGHT);
-    
+    auto rowArea = bounds.removeFromTop(Constants::Gui::Slider::ROW_HEIGHT);
+
     int halfWidth = rowArea.getWidth() / 2;
-    int columnSpacing = GuiConstants::COLUMN_SPACING;
+    int columnSpacing = Constants::Gui::Layout::COLUMN_SPACING;
     
     auto leftColumn = rowArea.removeFromLeft(halfWidth - columnSpacing / 2);
     rowArea.removeFromLeft(columnSpacing);
@@ -220,8 +220,8 @@ void SliderPanelComponent::layoutSliderRow(juce::Rectangle<int>& bounds,
     
     GuiHelpers::positionHorizontalSliderWithLabel(leftColumn, leftLabel, leftSlider);
     GuiHelpers::positionHorizontalSliderWithLabel(rightColumn, rightLabel, rightSlider);
-    
-    bounds.removeFromTop(GuiConstants::SECTION_SPACING);
+
+    bounds.removeFromTop(Constants::Gui::Layout::SECTION_SPACING);
 }
 
 void SliderPanelComponent::drawSeparator(juce::Rectangle<int>& bounds)
@@ -235,8 +235,8 @@ void SliderPanelComponent::paintSeparators(juce::Graphics& g)
     if (debugMode_) return;
     
     auto bounds = getLocalBounds();
-    int leftMargin = GuiConstants::SECTION_PADDING + 4;
-    int rightMargin = bounds.getWidth() - GuiConstants::SECTION_PADDING - 4;
+    int leftMargin = Constants::Gui::Layout::SECTION_PADDING + 4;
+    int rightMargin = bounds.getWidth() - Constants::Gui::Layout::SECTION_PADDING - 4;
     
     for (int y : separatorPositions_) {
         GuiHelpers::drawSeparatorLine(g, leftMargin, y, rightMargin, y);

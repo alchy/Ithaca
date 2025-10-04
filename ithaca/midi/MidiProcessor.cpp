@@ -6,7 +6,7 @@
 #include "ithaca/midi/MidiProcessor.h"
 #include "ithaca/midi/MidiLearnManager.h"
 #include "ithaca-core/sampler/voice_manager.h"
-#include "ithaca/midi/MidiCCDefinitions.h"
+#include "ithaca/midi/MidiHelpers.h"
 
 // ============================================================================
 // Constructor
@@ -49,7 +49,7 @@ void MidiProcessor::processMidiBuffer(const juce::MidiBuffer& midiMessages,
             // ================================================================
             // PRIORITA 1: Sustain Pedal (CC64) - NOVĚ PŘIDÁNO
             // ================================================================
-            if (MidiCC::isDamperPedal(ccNumber)) {
+            if (MidiHelpers::isDamperPedal(ccNumber)) {
                 processSustainPedal(ccValue, voiceManager);
                 continue; // Skip další processing pro CC64
             }
@@ -95,7 +95,7 @@ void MidiProcessor::processSustainPedal(uint8_t ccValue, VoiceManager* voiceMana
     
     // Convert MIDI value to pedal state
     // Standard MIDI: ≤63 = OFF, ≥64 = ON
-    bool pedalDown = MidiCC::ccValueToPedalState(ccValue);
+    bool pedalDown = MidiHelpers::ccValueToPedalState(ccValue);
     
     // Delegate to VoiceManager (RT-safe)
     voiceManager->setSustainPedalMIDI(pedalDown);
@@ -121,11 +121,11 @@ void MidiProcessor::processMidiControlChange(uint8_t ccNumber,
     
     // Convert MIDI CC value (0-127) → normalized (0.0-1.0)
     float normalizedValue;
-    
-    if (ccNumber == MidiCC::MASTER_PAN) {
-        normalizedValue = MidiCC::ccPanToNormalized(ccValue);
+
+    if (ccNumber == Constants::Midi::CC::MASTER_PAN) {
+        normalizedValue = MidiHelpers::ccPanToNormalized(ccValue);
     } else {
-        normalizedValue = MidiCC::ccValueToNormalized(ccValue);
+        normalizedValue = MidiHelpers::ccValueToNormalized(ccValue);
     }
     
     // Update parameter
@@ -148,8 +148,8 @@ juce::RangedAudioParameter* MidiProcessor::getParameterForCC(
         }
     }
     
-    // 2. FALLBACK: Zkus default mappings z MidiCCDefinitions
-    const char* parameterID = MidiCC::getParameterIDForCC(ccNumber);
+    // 2. FALLBACK: Zkus default mappings z MidiHelpers
+    const char* parameterID = MidiHelpers::getParameterIDForCC(ccNumber);
     if (parameterID) {
         return parameters.getParameter(parameterID);
     }

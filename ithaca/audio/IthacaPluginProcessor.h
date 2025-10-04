@@ -18,9 +18,6 @@
 // Parameter management
 #include "ithaca/parameters/ParameterManager.h"
 
-// MIDI CC definitions
-#include "ithaca/midi/MidiCCDefinitions.h"
-
 // Async loading
 #include "ithaca/audio/AsyncSampleLoader.h"
 

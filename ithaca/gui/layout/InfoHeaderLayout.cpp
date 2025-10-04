@@ -4,7 +4,7 @@
  */
 
 #include "ithaca/gui/layout/InfoHeaderLayout.h"
-#include "ithaca/gui/helpers/GuiConstants.h"
+#include "ithaca/config/AppConstants.h"
 
 //==============================================================================
 // Public Interface
@@ -35,24 +35,24 @@ void InfoHeaderLayout::applyBackgroundMode(juce::Rectangle<int> bounds,
 
     if (labels.instrumentNameLabel) {
         labels.instrumentNameLabel->setBounds(
-            bounds.removeFromTop(GuiConstants::INFO_TITLE_HEIGHT));
-        bounds.removeFromTop(GuiConstants::INFO_ROW_SPACING);
+            bounds.removeFromTop(Constants::Gui::InfoSection::TITLE_HEIGHT));
+        bounds.removeFromTop(Constants::Gui::InfoSection::ROW_SPACING);
     }
 
     if (labels.versionLabel) {
         labels.versionLabel->setBounds(
-            bounds.removeFromTop(GuiConstants::INFO_VERSION_HEIGHT));
-        bounds.removeFromTop(GuiConstants::INFO_ROW_SPACING);
+            bounds.removeFromTop(Constants::Gui::InfoSection::VERSION_HEIGHT));
+        bounds.removeFromTop(Constants::Gui::InfoSection::ROW_SPACING);
     }
 
     if (labels.sampleRateLabel) {
         labels.sampleRateLabel->setBounds(
-            bounds.removeFromTop(GuiConstants::INFO_SAMPLE_RATE_HEIGHT));
-        bounds.removeFromTop(GuiConstants::INFO_ROW_SPACING);
+            bounds.removeFromTop(Constants::Gui::InfoSection::SAMPLE_RATE_HEIGHT));
+        bounds.removeFromTop(Constants::Gui::InfoSection::ROW_SPACING);
     }
 
     // Voice stats row - 50/50 split
-    auto voiceStatsRow = bounds.removeFromTop(GuiConstants::INFO_VOICE_STATS_HEIGHT);
+    auto voiceStatsRow = bounds.removeFromTop(Constants::Gui::InfoSection::VOICE_STATS_HEIGHT);
 
     if (labels.activeVoicesLabel && labels.sustainingVoicesLabel) {
         int halfWidth = voiceStatsRow.getWidth() / 2;
@@ -60,12 +60,12 @@ void InfoHeaderLayout::applyBackgroundMode(juce::Rectangle<int> bounds,
         labels.sustainingVoicesLabel->setBounds(voiceStatsRow);
     }
 
-    bounds.removeFromTop(GuiConstants::INFO_ROW_SPACING);
+    bounds.removeFromTop(Constants::Gui::InfoSection::ROW_SPACING);
 
     // CPU usage row (full width)
     if (labels.cpuUsageLabel) {
         labels.cpuUsageLabel->setBounds(
-            bounds.removeFromTop(GuiConstants::INFO_VOICE_STATS_HEIGHT));
+            bounds.removeFromTop(Constants::Gui::InfoSection::VOICE_STATS_HEIGHT));
     }
 }
 

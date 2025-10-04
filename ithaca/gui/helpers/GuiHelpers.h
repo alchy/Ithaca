@@ -27,7 +27,7 @@
 #pragma once
 
 #include <juce_gui_basics/juce_gui_basics.h>
-#include "ithaca/gui/helpers/GuiConstants.h"
+#include "ithaca/config/AppConstants.h"
 
 class GuiHelpers {
 public:

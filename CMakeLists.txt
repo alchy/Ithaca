@@ -119,6 +119,7 @@ target_sources(IthacaPlayer
 
         # Configuration
         ithaca/config/IthacaConfig.h
+        ithaca/config/AppConstants.h
 
         # Audio Processing & Sample Loading
         ithaca/audio/IthacaPluginProcessor.h
@@ -137,10 +138,9 @@ target_sources(IthacaPlayer
         ithaca/parameters/ParameterManager.cpp
         ithaca/parameters/ParameterAttachmentManager.h
         ithaca/parameters/ParameterAttachmentManager.cpp
-        ithaca/parameters/ParameterDefaults.h
 
         # MIDI
-        ithaca/midi/MidiCCDefinitions.h
+        ithaca/midi/MidiHelpers.h
         ithaca/midi/MidiProcessor.h
         ithaca/midi/MidiProcessor.cpp
         ithaca/midi/MidiLearnManager.h
@@ -168,7 +168,6 @@ target_sources(IthacaPlayer
         ithaca/gui/layout/InfoHeaderLayout.cpp
 
         # GUI - Helpers
-        ithaca/gui/helpers/GuiConstants.h
         ithaca/gui/helpers/GuiHelpers.h
         ithaca/gui/helpers/GuiHelpers.cpp
         

@@ -53,24 +53,24 @@ std::unique_ptr<juce::Slider> GuiHelpers::createCompactSlider(
 void GuiHelpers::styleSlider(juce::Slider& slider, bool debugMode)
 {
     if (debugMode) {
-        slider.setColour(juce::Slider::trackColourId, 
-                        juce::Colour(GuiConstants::DEBUG_SLIDER_TRACK));
-        slider.setColour(juce::Slider::thumbColourId, 
-                        juce::Colour(GuiConstants::DEBUG_SLIDER_THUMB));
-        slider.setColour(juce::Slider::textBoxTextColourId, 
-                        juce::Colour(GuiConstants::DEBUG_TEXT_COLOR));
-        slider.setColour(juce::Slider::textBoxBackgroundColourId, 
+        slider.setColour(juce::Slider::trackColourId,
+                        juce::Colour(Constants::Gui::Colors::DEBUG_SLIDER_TRACK));
+        slider.setColour(juce::Slider::thumbColourId,
+                        juce::Colour(Constants::Gui::Colors::DEBUG_SLIDER_THUMB));
+        slider.setColour(juce::Slider::textBoxTextColourId,
+                        juce::Colour(Constants::Gui::Colors::DEBUG_TEXT));
+        slider.setColour(juce::Slider::textBoxBackgroundColourId,
                         juce::Colour(0xffffffff));
     } else {
-        slider.setColour(juce::Slider::trackColourId, 
-                        juce::Colour(GuiConstants::SLIDER_TRACK_COLOR));
-        slider.setColour(juce::Slider::thumbColourId, 
-                        juce::Colour(GuiConstants::SLIDER_THUMB_COLOR));
-        slider.setColour(juce::Slider::textBoxTextColourId, 
-                        juce::Colour(GuiConstants::SLIDER_TEXT_COLOR));
-        slider.setColour(juce::Slider::textBoxBackgroundColourId, 
+        slider.setColour(juce::Slider::trackColourId,
+                        juce::Colour(Constants::Gui::Colors::SLIDER_TRACK));
+        slider.setColour(juce::Slider::thumbColourId,
+                        juce::Colour(Constants::Gui::Colors::SLIDER_THUMB));
+        slider.setColour(juce::Slider::textBoxTextColourId,
+                        juce::Colour(Constants::Gui::Colors::SLIDER_TEXT));
+        slider.setColour(juce::Slider::textBoxBackgroundColourId,
                         juce::Colours::black.withAlpha(0.7f));
-        slider.setColour(juce::Slider::textBoxOutlineColourId, 
+        slider.setColour(juce::Slider::textBoxOutlineColourId,
                         juce::Colours::white.withAlpha(0.3f));
     }
 }
@@ -87,12 +87,12 @@ std::unique_ptr<juce::Label> GuiHelpers::createTitleLabel(
     label->setJustificationType(juce::Justification::centredLeft);
     
     // Velký font pro title (18px, bold)
-    label->setFont(juce::FontOptions(GuiConstants::TITLE_FONT_SIZE, 
+    label->setFont(juce::FontOptions(Constants::Gui::Fonts::TITLE_SIZE,
                                      juce::Font::bold));
-    
+
     if (debugMode) {
-        label->setColour(juce::Label::textColourId, 
-                        juce::Colour(GuiConstants::DEBUG_TEXT_COLOR));
+        label->setColour(juce::Label::textColourId,
+                        juce::Colour(Constants::Gui::Colors::DEBUG_TEXT));
         label->setColour(juce::Label::backgroundColourId, 
                         juce::Colours::transparentWhite);
     } else {
@@ -112,12 +112,12 @@ std::unique_ptr<juce::Label> GuiHelpers::createSliderLabel(
     label->setJustificationType(juce::Justification::centredLeft);
     
     // Střední font pro slider labels (14px, bold)
-    label->setFont(juce::FontOptions(GuiConstants::INFO_LABEL_FONT_SIZE, 
+    label->setFont(juce::FontOptions(Constants::Gui::Fonts::INFO_SIZE,
                                      juce::Font::bold));
-    
+
     if (debugMode) {
-        label->setColour(juce::Label::textColourId, 
-                        juce::Colour(GuiConstants::DEBUG_TEXT_COLOR));
+        label->setColour(juce::Label::textColourId,
+                        juce::Colour(Constants::Gui::Colors::DEBUG_TEXT));
         label->setColour(juce::Label::backgroundColourId, 
                         juce::Colours::transparentWhite);
     } else {
@@ -137,11 +137,11 @@ std::unique_ptr<juce::Label> GuiHelpers::createInfoLabel(
     label->setJustificationType(juce::Justification::centredLeft);
     
     // Střední font pro info labels (14px)
-    label->setFont(juce::FontOptions(GuiConstants::INFO_LABEL_FONT_SIZE));
-    
+    label->setFont(juce::FontOptions(Constants::Gui::Fonts::INFO_SIZE));
+
     if (debugMode) {
-        label->setColour(juce::Label::textColourId, 
-                        juce::Colour(GuiConstants::DEBUG_TEXT_COLOR));
+        label->setColour(juce::Label::textColourId,
+                        juce::Colour(Constants::Gui::Colors::DEBUG_TEXT));
         label->setColour(juce::Label::backgroundColourId, 
                         juce::Colour(0xffffffff));
         label->setColour(juce::Label::outlineColourId, 
@@ -163,11 +163,11 @@ std::unique_ptr<juce::Label> GuiHelpers::createSmallLabel(
     label->setJustificationType(juce::Justification::centredLeft);
     
     // Malý font pro detail info (11px)
-    label->setFont(juce::FontOptions(GuiConstants::SMALL_LABEL_FONT_SIZE));
-    
+    label->setFont(juce::FontOptions(Constants::Gui::Fonts::SMALL_SIZE));
+
     if (debugMode) {
-        label->setColour(juce::Label::textColourId, 
-                        juce::Colour(GuiConstants::DEBUG_TEXT_COLOR));
+        label->setColour(juce::Label::textColourId,
+                        juce::Colour(Constants::Gui::Colors::DEBUG_TEXT));
         label->setColour(juce::Label::backgroundColourId, 
                         juce::Colour(0xffffffff));
         label->setColour(juce::Label::outlineColourId, 
@@ -191,12 +191,12 @@ void GuiHelpers::positionHorizontalSliderWithLabel(
     juce::Slider* slider)
 {
     if (label) {
-        label->setBounds(area.removeFromTop(GuiConstants::SLIDER_LABEL_HEIGHT));
-        area.removeFromTop(GuiConstants::SLIDER_LABEL_SPACING);
+        label->setBounds(area.removeFromTop(Constants::Gui::Slider::LABEL_HEIGHT));
+        area.removeFromTop(Constants::Gui::Slider::LABEL_SPACING);
     }
-    
+
     if (slider) {
-        slider->setBounds(area.removeFromTop(GuiConstants::SLIDER_HEIGHT_HORIZONTAL));
+        slider->setBounds(area.removeFromTop(Constants::Gui::Slider::HEIGHT_HORIZONTAL));
     }
 }
 
@@ -206,8 +206,8 @@ juce::Rectangle<int> GuiHelpers::layoutTwoColumnSliders(
     juce::Rectangle<int>& rightColumn)
 {
     int halfWidth = totalArea.getWidth() / 2;
-    int spacing = GuiConstants::COLUMN_SPACING;
-    
+    int spacing = Constants::Gui::Layout::COLUMN_SPACING;
+
     leftColumn = totalArea.removeFromLeft(halfWidth - spacing / 2);
     totalArea.removeFromLeft(spacing);
     rightColumn = totalArea;
@@ -241,10 +241,10 @@ void GuiHelpers::drawSeparatorLine(juce::Graphics& g,
                                    juce::Colour baseColor)
 {
     // Průhledná čára v barvě textu
-    g.setColour(baseColor.withAlpha(GuiConstants::SEPARATOR_ALPHA));
-    g.drawLine(static_cast<float>(x1), static_cast<float>(y1), 
-               static_cast<float>(x2), static_cast<float>(y2), 
-               static_cast<float>(GuiConstants::SEPARATOR_THICKNESS));
+    g.setColour(baseColor.withAlpha(Constants::Gui::Overlay::SEPARATOR_ALPHA));
+    g.drawLine(static_cast<float>(x1), static_cast<float>(y1),
+               static_cast<float>(x2), static_cast<float>(y2),
+               static_cast<float>(Constants::Gui::Overlay::SEPARATOR_THICKNESS));
     
     GUI_DEBUG("GuiHelpers: Drew separator line from (" << x1 << "," << y1 
               << ") to (" << x2 << "," << y2 << ")");
@@ -258,18 +258,18 @@ void GuiHelpers::applyControlAreaOverlay(juce::Graphics& g,
                                         juce::Rectangle<int> area)
 {
     // Legacy - nyní používá drawRoundedOverlay
-    drawRoundedOverlay(g, area, GuiConstants::SLIDER_OVERLAY_ALPHA, 
-                      GuiConstants::PANEL_CORNER_RADIUS);
+    drawRoundedOverlay(g, area, Constants::Gui::Overlay::SLIDER_ALPHA,
+                      Constants::Gui::Overlay::CORNER_RADIUS);
 }
 
 void GuiHelpers::applyDebugBackground(juce::Graphics& g, 
                                       juce::Rectangle<int> area)
 {
     // ZACHOVÁNO: Přesně původní debug background
-    g.fillAll(juce::Colour(GuiConstants::DEBUG_BG_COLOR));
-    
+    g.fillAll(juce::Colour(Constants::Gui::Colors::DEBUG_BG));
+
     g.setColour(juce::Colour(0xff333333));
-    g.setFont(juce::FontOptions(GuiConstants::TITLE_FONT_SIZE));
+    g.setFont(juce::FontOptions(Constants::Gui::Fonts::TITLE_SIZE));
     g.drawText("IthacaCore Sampler - Controls", 10, 10, 
                area.getWidth() - 20, 30, 
                juce::Justification::centred);
