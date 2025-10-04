@@ -12,6 +12,7 @@
 #include <nlohmann/json.hpp>
 #include <string>
 #include <optional>
+#include "ithaca-core/sampler/core_logger.h"
 
 /**
  * @struct InstrumentMetadata
@@ -63,9 +64,10 @@ public:
     /**
      * @brief Načte metadata z adresáře se samply
      * @param sampleDirectory Adresář s instrumentem
+     * @param logger Optional logger pro zaznamenávání
      * @return InstrumentMetadata (fallback pokud JSON neexistuje)
      */
-    static InstrumentMetadata loadFromDirectory(const juce::File& sampleDirectory);
+    static InstrumentMetadata loadFromDirectory(const juce::File& sampleDirectory, Logger* logger = nullptr);
 
     /**
      * @brief Zkontroluje zda existuje instrument-definition.json

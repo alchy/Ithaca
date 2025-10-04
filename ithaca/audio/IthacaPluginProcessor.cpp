@@ -46,7 +46,7 @@ IthacaPluginProcessor::IthacaPluginProcessor()
     }
 
     // Create MIDI Learn Manager
-    midiLearnManager_ = std::make_unique<MidiLearnManager>();
+    midiLearnManager_ = std::make_unique<MidiLearnManager>(logger_.get());
     if (logger_) {
         logger_->log("IthacaPluginProcessor/constructor", LogSeverity::Info, "MIDI Learn Manager created");
     }

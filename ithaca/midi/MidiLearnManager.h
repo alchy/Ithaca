@@ -1,7 +1,7 @@
 /**
  * @file MidiLearnManager.h
  * @brief MIDI Learn funkčnost - mapování CC na parametry
- * 
+ *
  * Umožňuje uživatelům:
  * - Pravý klik na slider → "Learn MIDI CC"
  * - Poslat MIDI CC zprávu z controlleru
@@ -14,6 +14,7 @@
 #include <juce_audio_processors/juce_audio_processors.h>
 #include <map>
 #include <functional>
+#include "ithaca-core/sampler/core_logger.h"
 
 /**
  * @class MidiLearnManager
@@ -42,8 +43,8 @@ public:
     // ========================================================================
     // Constructor
     // ========================================================================
-    
-    MidiLearnManager();
+
+    explicit MidiLearnManager(Logger* logger = nullptr);
     
     // ========================================================================
     // Learning Interface
@@ -161,13 +162,14 @@ private:
     // ========================================================================
     // State
     // ========================================================================
-    
+
+    Logger* logger_ = nullptr;                          // Logger instance (optional)
     bool isLearning_ = false;                           // Learning mode aktivní?
     juce::String learningParameterID_;                  // Který parametr se učí
     juce::String learningDisplayName_;                  // Název pro GUI
-    
+
     std::map<uint8_t, Mapping> mappings_;              // CC number → Mapping
-    
+
     LearningStateCallback learningStateCallback_;       // Callback pro GUI
     
     // ========================================================================

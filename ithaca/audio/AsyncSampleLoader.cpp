@@ -153,7 +153,7 @@ void AsyncSampleLoader::workerFunction(const std::string& sampleDirectory,
                    "Loading instrument metadata...");
 
         juce::File sampleDir(sampleDirectory);
-        auto metadata = InstrumentMetadataLoader::loadFromDirectory(sampleDir);
+        auto metadata = InstrumentMetadataLoader::loadFromDirectory(sampleDir, logger);
 
         {
             std::lock_guard<std::mutex> lock(stateMutex_);

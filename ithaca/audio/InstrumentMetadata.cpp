@@ -4,7 +4,6 @@
  */
 
 #include "ithaca/audio/InstrumentMetadata.h"
-#include <iostream>
 #include <fstream>
 
 using json = nlohmann::json;
@@ -16,8 +15,6 @@ using json = nlohmann::json;
 std::optional<InstrumentMetadata> InstrumentMetadata::loadFromFile(const juce::File& jsonFilePath)
 {
     if (!jsonFilePath.existsAsFile()) {
-        std::cerr << "InstrumentMetadata: File not found: "
-                  << jsonFilePath.getFullPathName().toStdString() << std::endl;
         return std::nullopt;
     }
 
@@ -26,8 +23,7 @@ std::optional<InstrumentMetadata> InstrumentMetadata::loadFromFile(const juce::F
         auto content = jsonFilePath.loadFileAsString();
         return loadFromString(content);
     }
-    catch (const std::exception& e) {
-        std::cerr << "InstrumentMetadata: Error loading file: " << e.what() << std::endl;
+    catch (const std::exception&) {
         return std::nullopt;
     }
 }
@@ -44,7 +40,6 @@ std::optional<InstrumentMetadata> InstrumentMetadata::loadFromString(const juce:
         if (j.contains("instrumentName") && j["instrumentName"].is_string()) {
             metadata.instrumentName = juce::String(j["instrumentName"].get<std::string>());
         } else {
-            std::cerr << "InstrumentMetadata: Missing required field 'instrumentName'" << std::endl;
             return std::nullopt;
         }
 
@@ -69,17 +64,12 @@ std::optional<InstrumentMetadata> InstrumentMetadata::loadFromString(const juce:
             metadata.sampleCount = j["sampleCount"].get<int>();
         }
 
-        std::cout << "InstrumentMetadata: Loaded '"
-                  << metadata.instrumentName.toStdString() << "'" << std::endl;
-
         return metadata;
     }
-    catch (const json::parse_error& e) {
-        std::cerr << "InstrumentMetadata: JSON parse error: " << e.what() << std::endl;
+    catch (const json::parse_error&) {
         return std::nullopt;
     }
-    catch (const std::exception& e) {
-        std::cerr << "InstrumentMetadata: Error: " << e.what() << std::endl;
+    catch (const std::exception&) {
         return std::nullopt;
     }
 }
@@ -110,20 +100,15 @@ bool InstrumentMetadata::saveToFile(const juce::File& jsonFilePath) const
         // Zapsat do souboru s odsazením
         std::ofstream file(jsonFilePath.getFullPathName().toStdString());
         if (!file.is_open()) {
-            std::cerr << "InstrumentMetadata: Cannot open file for writing: "
-                      << jsonFilePath.getFullPathName().toStdString() << std::endl;
             return false;
         }
 
         file << j.dump(4); // 4 spaces indent
         file.close();
 
-        std::cout << "InstrumentMetadata: Saved to "
-                  << jsonFilePath.getFullPathName().toStdString() << std::endl;
         return true;
     }
-    catch (const std::exception& e) {
-        std::cerr << "InstrumentMetadata: Error saving file: " << e.what() << std::endl;
+    catch (const std::exception&) {
         return false;
     }
 }
@@ -132,11 +117,9 @@ bool InstrumentMetadata::saveToFile(const juce::File& jsonFilePath) const
 // InstrumentMetadataLoader - Static methods
 // ============================================================================
 
-InstrumentMetadata InstrumentMetadataLoader::loadFromDirectory(const juce::File& sampleDirectory)
+InstrumentMetadata InstrumentMetadataLoader::loadFromDirectory(const juce::File& sampleDirectory, Logger* logger)
 {
     if (!sampleDirectory.isDirectory()) {
-        std::cerr << "InstrumentMetadataLoader: Not a directory: "
-                  << sampleDirectory.getFullPathName().toStdString() << std::endl;
         return InstrumentMetadata::createDefault();
     }
 
@@ -147,11 +130,19 @@ InstrumentMetadata InstrumentMetadataLoader::loadFromDirectory(const juce::File&
     auto metadataOpt = InstrumentMetadata::loadFromFile(jsonFile);
 
     if (metadataOpt.has_value()) {
+        if (logger) {
+            logger->log("InstrumentMetadata/loadFromDirectory", LogSeverity::Info,
+                       "Loaded '" + metadataOpt->instrumentName.toStdString() +
+                       "' from " + jsonFile.getFullPathName().toStdString());
+        }
         return metadataOpt.value();
     }
 
     // Fallback - použít název adresáře jako název nástroje
-    std::cout << "InstrumentMetadataLoader: Using directory name as fallback" << std::endl;
+    if (logger) {
+        logger->log("InstrumentMetadata/loadFromDirectory", LogSeverity::Info,
+                   "Using directory name as fallback: " + sampleDirectory.getFileName().toStdString());
+    }
     return InstrumentMetadata::createDefault(sampleDirectory.getFileName());
 }
 
