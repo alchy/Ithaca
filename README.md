@@ -9,6 +9,21 @@ https://anotherproducer.com/online-tools-for-musicians/midi-cc-list/
 - Volume (MSB)            MIDI CC 7:    Controls the volume of the channel. 
 - Modulation Wheel (MSB)  MIDI CC 1:    Generally this CC controls a vibrato effect (pitch, loudness, brighness). What is modulated is based on the patch.
 
+## poznamka ke git
+
+```
+git config --global push.autoSetupRemote true
+```
+
+```
+git checkout -b refactor5
+```
+
+```
+git push
+git remote -v
+```
+
 ## Požadavky
 - Visual Studio Code s rozšířeními CMake Tools a C/C++ od Microsoftu.
 - Visual Studio 2022 Build Tools nebo Community Edition (C++ komponenty).
