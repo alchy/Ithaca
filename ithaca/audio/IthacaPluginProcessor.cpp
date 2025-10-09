@@ -4,6 +4,7 @@
  */
 
 #include "ithaca/audio/IthacaPluginProcessor.h"
+#include "ithaca/audio/SampleBankPathManager.h"
 #include "ithaca/gui/IthacaPluginEditor.h"
 
 //==============================================================================
@@ -57,15 +58,26 @@ IthacaPluginProcessor::IthacaPluginProcessor()
         logger_->log("IthacaPluginProcessor/constructor", LogSeverity::Info, "Performance Monitor created");
     }
 
-    // Set default sample directory
-    currentSampleDirectory_ = DEFAULT_SAMPLE_DIR;
+    // Load sample directory from JSON config (roaming profile)
+    auto samplePathOpt = SampleBankPathManager::getSampleBankPath();
+
+    if (samplePathOpt.has_value()) {
+        currentSampleDirectory_ = juce::String(samplePathOpt.value().string());
+        if (logger_) {
+            logger_->log("IthacaPluginProcessor/constructor", LogSeverity::Info,
+               "Sample directory loaded from config: " + currentSampleDirectory_.toStdString());
+        }
+    } else {
+        // No config found - log error, will fail to load samples
+        currentSampleDirectory_ = "";
+        if (logger_) {
+            logger_->log("IthacaPluginProcessor/constructor", LogSeverity::Error,
+               "No sample bank config found! Please ensure samplebank_config.json exists in roaming profile.");
+        }
+    }
 
     if (logger_) {
         logger_->log("IthacaPluginProcessor/constructor", LogSeverity::Info, "Plugin initialized");
-    }
-    if (logger_) {
-        logger_->log("IthacaPluginProcessor/constructor", LogSeverity::Info,
-           "Default sample directory: " + currentSampleDirectory_.toStdString());
     }
     if (logger_) {
         logger_->log("IthacaPluginProcessor/constructor", LogSeverity::Info,
@@ -407,6 +419,20 @@ void IthacaPluginProcessor::changeSampleDirectory(const juce::String& newPath)
     }
 
     currentSampleDirectory_ = newPath;
+
+    // Save the new path to persistent storage
+    std::filesystem::path pathToSave(newPath.toStdString());
+    if (SampleBankPathManager::saveSampleBankPath(pathToSave)) {
+        if (logger_) {
+            logger_->log("IthacaPluginProcessor/changeSampleDirectory", LogSeverity::Info,
+               "Sample bank path saved successfully");
+        }
+    } else {
+        if (logger_) {
+            logger_->log("IthacaPluginProcessor/changeSampleDirectory", LogSeverity::Warning,
+               "Failed to save sample bank path to persistent storage");
+        }
+    }
 
     // Mark as uninitialized to trigger reload
     samplerInitialized_ = false;

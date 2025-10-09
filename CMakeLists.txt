@@ -13,6 +13,21 @@ if(NOT CMAKE_BUILD_TYPE)
 endif()
 
 # =============================================================================
+# SAMPLE BANK PATH CONFIGURATION
+# =============================================================================
+
+# Default sample bank path (can be overridden via -DSAMPLE_BANK_PATH=...)
+if(WIN32)
+    set(SAMPLE_BANK_PATH "C:/SoundBanks/IthacaPlayer/instrument" CACHE STRING "Default sample bank installation path")
+elseif(APPLE)
+    set(SAMPLE_BANK_PATH "$ENV{HOME}/Library/Application Support/IthacaPlayer/instrument" CACHE STRING "Default sample bank installation path")
+else()
+    set(SAMPLE_BANK_PATH "$ENV{HOME}/.local/share/IthacaPlayer/instrument" CACHE STRING "Default sample bank installation path")
+endif()
+
+message(STATUS "Sample Bank Path: ${SAMPLE_BANK_PATH}")
+
+# =============================================================================
 # BUILD ID GENERATION - Automatická generace unikátního BUILD ID
 # =============================================================================
 
@@ -81,6 +96,29 @@ configure_file(
 )
 
 # =============================================================================
+# SAMPLE BANK CONFIG JSON GENERATION
+# =============================================================================
+
+# Generate JSON config file from template
+configure_file(
+    ${CMAKE_CURRENT_SOURCE_DIR}/samplebank_config.json.in
+    ${CMAKE_CURRENT_BINARY_DIR}/generated/samplebank_config.json
+    @ONLY
+)
+
+# Copy generated JSON to project root (as reference)
+configure_file(
+    ${CMAKE_CURRENT_BINARY_DIR}/generated/samplebank_config.json
+    ${CMAKE_CURRENT_SOURCE_DIR}/samplebank_config.json
+    COPYONLY
+)
+
+message(STATUS "=== SAMPLE BANK CONFIG ===")
+message(STATUS "JSON config generated: ${CMAKE_CURRENT_BINARY_DIR}/generated/samplebank_config.json")
+message(STATUS "JSON reference copied to: ${CMAKE_CURRENT_SOURCE_DIR}/samplebank_config.json")
+message(STATUS "==========================")
+
+# =============================================================================
 # JUCE a knihovny
 # =============================================================================
 
@@ -132,6 +170,8 @@ target_sources(IthacaPlayer
         ithaca/audio/PerformanceMonitor.cpp
         ithaca/audio/PluginStateManager.h
         ithaca/audio/PluginStateManager.cpp
+        ithaca/audio/SampleBankPathManager.h
+        ithaca/audio/SampleBankPathManager.cpp
 
         # Parameters
         ithaca/parameters/ParameterManager.h
@@ -337,6 +377,19 @@ add_custom_command(TARGET IthacaPlayer POST_BUILD
         ${CMAKE_CURRENT_SOURCE_DIR}/decorators/background.jpg
         ${CMAKE_CURRENT_BINARY_DIR}/IthacaPlayer_artefacts/Release/Standalone/decorators/background.jpg
     COMMENT "Copying background.jpg to Standalone Release location"
+)
+
+# =============================================================================
+# Install sample bank config to user's roaming profile
+# =============================================================================
+
+# POST_BUILD: Install JSON config to user's roaming directory
+add_custom_command(TARGET IthacaPlayer POST_BUILD
+    COMMAND ${CMAKE_COMMAND}
+        -DSOURCE_JSON=${CMAKE_CURRENT_BINARY_DIR}/generated/samplebank_config.json
+        -P ${CMAKE_CURRENT_SOURCE_DIR}/cmake/InstallSampleBankConfig.cmake
+    COMMENT "Installing sample bank config to user's roaming profile"
+    VERBATIM
 )
 
 # =============================================================================

@@ -1,0 +1,7 @@
+{
+  "sampleBankPath": "@SAMPLE_BANK_PATH@",
+  "version": "1.0",
+  "generatedBy": "CMake",
+  "buildTimestamp": "@BUILD_TIMESTAMP@",
+  "platform": "@CMAKE_SYSTEM_NAME@"
+}
