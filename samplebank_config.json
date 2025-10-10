@@ -2,6 +2,10 @@
   "sampleBankPath": "C:/SoundBanks/IthacaPlayer/instrument",
   "version": "1.0",
   "generatedBy": "CMake",
+<<<<<<< HEAD
   "buildTimestamp": "251010093913",
+=======
+  "buildTimestamp": "251010100806",
+>>>>>>> main-stable-1.0
   "platform": "Windows"
 }
