@@ -16,7 +16,8 @@
 AsyncSampleLoader::AsyncSampleLoader()
     : shouldStop_(false),
       state_(LoadingState::Idle),
-      targetSampleRate_(0)
+      targetSampleRate_(0),
+      velocityLayerCount_(0)
 {
 }
 
@@ -126,6 +127,12 @@ std::string AsyncSampleLoader::getInstrumentName() const
     return instrumentName_;
 }
 
+int AsyncSampleLoader::getVelocityLayerCount() const
+{
+    std::lock_guard<std::mutex> lock(stateMutex_);
+    return velocityLayerCount_;
+}
+
 //==============================================================================
 // Worker Function
 
@@ -158,6 +165,7 @@ void AsyncSampleLoader::workerFunction(const std::string& sampleDirectory,
         {
             std::lock_guard<std::mutex> lock(stateMutex_);
             instrumentName_ = metadata.instrumentName.toStdString();
+            velocityLayerCount_ = metadata.velocityMaps;
         }
 
         // Log all metadata fields (Q1B: only populated fields)

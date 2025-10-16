@@ -407,6 +407,24 @@ juce::String IthacaPluginProcessor::getInstrumentName() const
     return juce::String();
 }
 
+juce::String IthacaPluginProcessor::getInstrumentNameWithInfo() const
+{
+    if (!asyncLoader_) {
+        return juce::String();
+    }
+
+    auto instrumentName = juce::String(asyncLoader_->getInstrumentName());
+    int velocityLayers = asyncLoader_->getVelocityLayerCount();
+
+    // If no velocity layers loaded yet, return just the name
+    if (velocityLayers == 0) {
+        return instrumentName;
+    }
+
+    // Format: "Instrument Name (N vel. layers)"
+    return instrumentName + " (" + juce::String(velocityLayers) + " vel. layers)";
+}
+
 void IthacaPluginProcessor::changeSampleDirectory(const juce::String& newPath)
 {
     if (newPath == currentSampleDirectory_) {

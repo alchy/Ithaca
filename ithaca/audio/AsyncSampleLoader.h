@@ -136,6 +136,12 @@ public:
      */
     std::string getInstrumentName() const;
 
+    /**
+     * @brief Get velocity layer count from loaded metadata
+     * @return Velocity layer count (1-8, or 0 if not loaded)
+     */
+    int getVelocityLayerCount() const;
+
 private:
     //==========================================================================
     // Thread Management
@@ -156,6 +162,7 @@ private:
 
     std::unique_ptr<VoiceManager> voiceManager_;  ///< Loaded VoiceManager
     std::string instrumentName_;                   ///< Loaded instrument name from JSON
+    int velocityLayerCount_;                       ///< Loaded velocity layer count from JSON (1-8)
     
     //==========================================================================
     // Worker Function

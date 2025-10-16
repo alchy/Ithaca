@@ -165,7 +165,7 @@ void InfoHeaderComponent::updateLiveData()
     // Loading completed - show normal info
     // ========================================================================
 
-    // Update instrument name (always restore after loading)
+    // Update instrument name with velocity layer info (always restore after loading)
     if (labelBundle_.instrumentNameLabel) {
         // FIXED: Vždy obnovit název nástroje po dokončení loadingu
         // (resetuje "Loading samples..." zpět na název nástroje z JSON)
@@ -173,10 +173,10 @@ void InfoHeaderComponent::updateLiveData()
         if (currentText == Constants::Gui::Text::LOADING_TEXT ||
             currentText == Constants::Gui::Text::ERROR_TEXT ||
             currentText.isEmpty()) {
-            auto instrumentName = processorRef_.getInstrumentName();
-            if (!instrumentName.isEmpty()) {
-                labelBundle_.instrumentNameLabel->setText(instrumentName, juce::dontSendNotification);
-                GUI_DEBUG("InfoHeaderComponent: Restored instrument name after loading");
+            auto instrumentNameWithInfo = processorRef_.getInstrumentNameWithInfo();
+            if (!instrumentNameWithInfo.isEmpty()) {
+                labelBundle_.instrumentNameLabel->setText(instrumentNameWithInfo, juce::dontSendNotification);
+                GUI_DEBUG("InfoHeaderComponent: Restored instrument name with velocity layer info after loading");
             }
         }
     }
