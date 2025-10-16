@@ -43,6 +43,28 @@ std::optional<InstrumentMetadata> InstrumentMetadata::loadFromString(const juce:
             return std::nullopt;
         }
 
+        // Načíst velocityMaps (volitelné, default 8)
+        if (j.contains("velocityMaps") && j["velocityMaps"].is_string()) {
+            std::string velocityStr = j["velocityMaps"].get<std::string>();
+            try {
+                int velocityCount = std::stoi(velocityStr);
+
+                // Validace rozsahu 1-8 (striktní - Q3B)
+                if (velocityCount < 1 || velocityCount > 8) {
+                    // Invalid hodnota = chyba
+                    return std::nullopt;
+                }
+
+                metadata.velocityMaps = velocityCount;
+            } catch (const std::exception&) {
+                // Chyba parsování = invalid
+                return std::nullopt;
+            }
+        } else {
+            // Pole chybí = použij default 8 (Q2A)
+            metadata.velocityMaps = 8;
+        }
+
         // Načíst volitelná pole
         if (j.contains("instrumentVersion") && j["instrumentVersion"].is_string()) {
             metadata.instrumentVersion = juce::String(j["instrumentVersion"].get<std::string>());
@@ -78,6 +100,7 @@ InstrumentMetadata InstrumentMetadata::createDefault(const juce::String& fallbac
 {
     InstrumentMetadata metadata;
     metadata.instrumentName = fallbackName;
+    metadata.velocityMaps = 8;  // Default
     metadata.instrumentVersion = "1.0.0";
     metadata.author = "Unknown";
     metadata.description = "No description available";
@@ -91,6 +114,7 @@ bool InstrumentMetadata::saveToFile(const juce::File& jsonFilePath) const
     try {
         json j;
         j["instrumentName"] = instrumentName.toStdString();
+        j["velocityMaps"] = std::to_string(velocityMaps);  // Uložit jako string
         j["instrumentVersion"] = instrumentVersion.toStdString();
         j["author"] = author.toStdString();
         j["description"] = description.toStdString();

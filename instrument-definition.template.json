@@ -10,6 +10,12 @@
             "description": "Display name of the instrument (shown in GUI)",
             "examples": ["VintageV Electric Piano", "Ithaca Grand Piano"]
         },
+        "velocityMaps": {
+            "type": "string",
+            "description": "Number of velocity layers (1-8). Default: 8 if not specified.",
+            "pattern": "^[1-8]$",
+            "examples": ["8", "4", "2", "1"]
+        },
         "instrumentVersion": {
             "type": "string",
             "description": "Version of the instrument (semver recommended)",
