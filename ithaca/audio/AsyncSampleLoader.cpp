@@ -16,7 +16,8 @@
 AsyncSampleLoader::AsyncSampleLoader()
     : shouldStop_(false),
       state_(LoadingState::Idle),
-      targetSampleRate_(0)
+      targetSampleRate_(0),
+      velocityLayerCount_(0)
 {
 }
 
@@ -126,6 +127,12 @@ std::string AsyncSampleLoader::getInstrumentName() const
     return instrumentName_;
 }
 
+int AsyncSampleLoader::getVelocityLayerCount() const
+{
+    std::lock_guard<std::mutex> lock(stateMutex_);
+    return velocityLayerCount_;
+}
+
 //==============================================================================
 // Worker Function
 
@@ -158,11 +165,43 @@ void AsyncSampleLoader::workerFunction(const std::string& sampleDirectory,
         {
             std::lock_guard<std::mutex> lock(stateMutex_);
             instrumentName_ = metadata.instrumentName.toStdString();
+            velocityLayerCount_ = metadata.velocityMaps;
         }
 
-        logger->log("AsyncSampleLoader", LogSeverity::Info,
-                   "Instrument: " + metadata.instrumentName.toStdString() +
-                   " (v" + metadata.instrumentVersion.toStdString() + ")");
+        // Log all metadata fields (Q1B: only populated fields)
+        logger->log("AsyncSampleLoader/Metadata", LogSeverity::Info,
+                   "=== INSTRUMENT METADATA ===");
+        logger->log("AsyncSampleLoader/Metadata", LogSeverity::Info,
+                   "Instrument Name: " + metadata.instrumentName.toStdString());
+
+        // Q2A: Indicate if velocityMaps is default (není v JSON)
+        // Poznámka: Parser už nastavil default 8, nemůžeme rozlišit mezi "8" v JSON a chybějícím polem
+        // Ale to je OK, protože v obou případech chceme použít 8
+        logger->log("AsyncSampleLoader/Metadata", LogSeverity::Info,
+                   "Velocity Maps: " + std::to_string(metadata.velocityMaps));
+
+        if (!metadata.instrumentVersion.isEmpty()) {
+            logger->log("AsyncSampleLoader/Metadata", LogSeverity::Info,
+                       "Version: " + metadata.instrumentVersion.toStdString());
+        }
+        if (!metadata.author.isEmpty()) {
+            logger->log("AsyncSampleLoader/Metadata", LogSeverity::Info,
+                       "Author: " + metadata.author.toStdString());
+        }
+        if (!metadata.description.isEmpty()) {
+            logger->log("AsyncSampleLoader/Metadata", LogSeverity::Info,
+                       "Description: " + metadata.description.toStdString());
+        }
+        if (!metadata.category.isEmpty()) {
+            logger->log("AsyncSampleLoader/Metadata", LogSeverity::Info,
+                       "Category: " + metadata.category.toStdString());
+        }
+        if (metadata.sampleCount > 0) {
+            logger->log("AsyncSampleLoader/Metadata", LogSeverity::Info,
+                       "Sample Count: " + std::to_string(metadata.sampleCount));
+        }
+        logger->log("AsyncSampleLoader/Metadata", LogSeverity::Info,
+                   "===========================");
         
         // Step 2: Initialize EnvelopeStaticData if needed
         if (!EnvelopeStaticData::isInitialized()) {
@@ -185,13 +224,14 @@ void AsyncSampleLoader::workerFunction(const std::string& sampleDirectory,
             return;
         }
         
-        // Step 4: Create VoiceManager
-        logger->log("AsyncSampleLoader", LogSeverity::Info, 
-                   "Creating VoiceManager...");
-        
-        auto vm = std::make_unique<VoiceManager>(sampleDirectory, *logger);
-        
-        logger->log("AsyncSampleLoader", LogSeverity::Info, 
+        // Step 4: Create VoiceManager with velocity layer count
+        int velocityLayers = metadata.velocityMaps;
+        logger->log("AsyncSampleLoader", LogSeverity::Info,
+                   "Creating VoiceManager with " + std::to_string(velocityLayers) + " velocity layers...");
+
+        auto vm = std::make_unique<VoiceManager>(sampleDirectory, *logger, velocityLayers);
+
+        logger->log("AsyncSampleLoader", LogSeverity::Info,
                    "VoiceManager created successfully");
         
         // Step 5: Check for interruption

@@ -20,6 +20,7 @@
  */
 struct InstrumentMetadata {
     juce::String instrumentName;        // Název nástroje (např. "VintageV Electric Piano")
+    int velocityMaps = 8;               // Počet velocity layers (1-8), default 8
     juce::String instrumentVersion;     // Verze nástroje (např. "1.0.0")
     juce::String author;                // Autor/tvůrce nástroje
     juce::String description;           // Popis nástroje

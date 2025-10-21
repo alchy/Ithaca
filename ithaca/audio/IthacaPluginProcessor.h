@@ -152,6 +152,14 @@ public:
     juce::String getInstrumentName() const;
 
     /**
+     * @brief Get formatted instrument name with velocity layer info
+     * @return Formatted string: "Instrument Name (N vel. layers)"
+     *         or just "Instrument Name" if velocity count is 0
+     * @note Thread-safe, can be called from GUI thread
+     */
+    juce::String getInstrumentNameWithInfo() const;
+
+    /**
      * @brief Change sample directory and trigger reload
      * @param newPath New sample directory path
      * @note This will trigger async reload if sample rate is valid
