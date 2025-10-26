@@ -134,15 +134,19 @@ add_subdirectory(libsndfile)
 
 # KLÍČOVÁ ZMĚNA: juce_add_plugin místo add_executable
 juce_add_plugin(IthacaPlayer
-    COMPANY_NAME "LordAudio"                   
-    IS_SYNTH TRUE                               
-    NEEDS_MIDI_INPUT TRUE                       
-    NEEDS_MIDI_OUTPUT FALSE                     
-    IS_MIDI_EFFECT FALSE                        
-    PLUGIN_MANUFACTURER_CODE Lau0               
-    PLUGIN_CODE Itca                            
-    FORMATS AU VST3 Standalone                  
-    PRODUCT_NAME "IthacaPlayer")                
+    COMPANY_NAME "LordAudio"
+    IS_SYNTH TRUE
+    NEEDS_MIDI_INPUT TRUE
+    NEEDS_MIDI_OUTPUT FALSE
+    IS_MIDI_EFFECT FALSE
+    PLUGIN_MANUFACTURER_CODE Lau0
+    PLUGIN_CODE Itca
+    FORMATS AU VST3 Standalone
+    PRODUCT_NAME "IthacaPlayer"
+
+    # Custom icon (white square with "I" letter placeholder)
+    ICON_BIG "${CMAKE_CURRENT_SOURCE_DIR}/decorators/icon.ico"
+    ICON_SMALL "${CMAKE_CURRENT_SOURCE_DIR}/decorators/icon.icns")                
 
 # Generate JUCE header 
 juce_generate_juce_header(IthacaPlayer)
