@@ -255,6 +255,12 @@ target_sources(IthacaPlayer
         ithaca-core/dsp/dsp_effect.h
         ithaca-core/dsp/dsp_chain.h
         ithaca-core/dsp/dsp_chain.cpp
+        ithaca-core/dsp/bbe/bbe_processor.h
+        ithaca-core/dsp/bbe/bbe_processor.cpp
+        ithaca-core/dsp/bbe/biquad_filter.h
+        ithaca-core/dsp/bbe/biquad_filter.cpp
+        ithaca-core/dsp/bbe/harmonic_enhancer.h
+        ithaca-core/dsp/bbe/harmonic_enhancer.cpp
         ithaca-core/dsp/limiter/limiter.h
         ithaca-core/dsp/limiter/limiter.cpp
 
