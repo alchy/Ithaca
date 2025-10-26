@@ -146,7 +146,14 @@ void SliderPanelComponent::createAllSliders()
 
         // Row 4: Sustain Level, Master Pan
         SliderConfig("sustainLevel", "Sustain Level", Constants::Gui::Text::SUSTAIN_LABEL, 127.0),
-        SliderConfig("masterPan", "Master Pan", Constants::Gui::Text::MASTER_PAN_LABEL, 64.0)
+        SliderConfig("masterPan", "Master Pan", Constants::Gui::Text::MASTER_PAN_LABEL, 64.0),
+
+        // Row 5: BBE Definition, BBE Bass Boost
+        SliderConfig("bbeDefinition", "BBE Definition", Constants::Gui::Text::BBE_DEFINITION_LABEL, 32.0),
+        SliderConfig("bbeBassBoost", "BBE Bass Boost", Constants::Gui::Text::BBE_BASS_BOOST_LABEL, 8.0),
+
+        // Row 6: BBE Enable
+        SliderConfig("bbeEnable", "BBE Enable", Constants::Gui::Text::BBE_ENABLE_LABEL, 0.0)
     };
 
     // Vytvoření všech sliderů pomocí factory

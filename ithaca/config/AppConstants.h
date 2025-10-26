@@ -103,6 +103,9 @@ namespace Constants {
             constexpr const char* LFO_SPEED_LABEL = "LFO Speed";
             constexpr const char* LFO_DEPTH_LABEL = "LFO Depth";
             constexpr const char* STEREO_FIELD_LABEL = "Stereo Field";
+            constexpr const char* BBE_ENABLE_LABEL = "BBE Enable";
+            constexpr const char* BBE_DEFINITION_LABEL = "BBE Clarity";
+            constexpr const char* BBE_BASS_BOOST_LABEL = "BBE Bass";
 
             // Info section prefixes
             constexpr const char* ACTIVE_VOICES_PREFIX = "Active: ";
@@ -178,6 +181,9 @@ namespace Constants {
             constexpr uint8_t LFO_PAN_SPEED = 74;
             constexpr uint8_t LFO_PAN_DEPTH = 75;
             constexpr uint8_t STEREO_FIELD = 76;
+            constexpr uint8_t BBE_ENABLE = 77;
+            constexpr uint8_t BBE_DEFINITION = 78;
+            constexpr uint8_t BBE_BASS_BOOST = 79;
 
             // System Messages
             constexpr uint8_t ALL_SOUND_OFF = 120;
@@ -219,6 +225,9 @@ namespace Constants {
             constexpr const char* LFO_PAN_SPEED = "lfoPanSpeed";
             constexpr const char* LFO_PAN_DEPTH = "lfoPanDepth";
             constexpr const char* STEREO_FIELD = "stereoField";
+            constexpr const char* BBE_ENABLE = "bbeEnable";
+            constexpr const char* BBE_DEFINITION = "bbeDefinition";
+            constexpr const char* BBE_BASS_BOOST = "bbeBassBoost";
         }
 
         namespace Names {
@@ -230,6 +239,9 @@ namespace Constants {
             constexpr const char* LFO_PAN_SPEED = "LFO Pan Speed";
             constexpr const char* LFO_PAN_DEPTH = "LFO Pan Depth";
             constexpr const char* STEREO_FIELD = "Stereo Field";
+            constexpr const char* BBE_ENABLE = "BBE Enable";
+            constexpr const char* BBE_DEFINITION = "BBE Definition";
+            constexpr const char* BBE_BASS_BOOST = "BBE Bass Boost";
         }
 
         namespace Defaults {
@@ -241,6 +253,9 @@ namespace Constants {
             constexpr float LFO_PAN_SPEED = 32.0f;
             constexpr float LFO_PAN_DEPTH = 127.0f;
             constexpr float STEREO_FIELD = 0.0f;
+            constexpr float BBE_ENABLE = 0.0f;      // OFF (0 = disabled)
+            constexpr float BBE_DEFINITION = 32.0f; // 25% clarity
+            constexpr float BBE_BASS_BOOST = 8.0f;  // ~6% boost (~0.75 dB)
         }
 
         namespace Ranges {
