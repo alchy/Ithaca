@@ -116,12 +116,6 @@ public:
     uint8_t getCurrentStereoField() const;
 
     /**
-     * @brief Získej aktuální hodnotu BBE enable
-     * @return MIDI hodnota 0-127
-     */
-    uint8_t getCurrentBBEEnable() const;
-
-    /**
      * @brief Získej aktuální hodnotu BBE definition
      * @return MIDI hodnota 0-127
      */
@@ -153,7 +147,6 @@ private:
     std::atomic<float>* lfoPanSpeedParam_ = nullptr;
     std::atomic<float>* lfoPanDepthParam_ = nullptr;
     std::atomic<float>* stereoFieldParam_ = nullptr;
-    std::atomic<float>* bbeEnableParam_ = nullptr;
     std::atomic<float>* bbeDefinitionParam_ = nullptr;
     std::atomic<float>* bbeBassBoostParam_ = nullptr;
     
@@ -168,7 +161,6 @@ private:
     uint8_t lastLfoPanSpeed_ = 0;
     uint8_t lastLfoPanDepth_ = 0;
     uint8_t lastStereoField_ = 0;
-    uint8_t lastBBEEnable_ = 0;
     uint8_t lastBBEDefinition_ = 32;
     uint8_t lastBBEBassBoost_ = 8;
     

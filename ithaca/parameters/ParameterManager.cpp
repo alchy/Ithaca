@@ -38,13 +38,11 @@ juce::AudioProcessorValueTreeState::ParameterLayout ParameterManager::createPara
     // Stereo Field (0-127, default 0 = disabled)
     parameters.push_back(createMidiParameter("stereoField", "Stereo Field", 0.0f));
 
-    // BBE Maximizer - Enable (0 = off, 1-127 = on, default 0)
-    parameters.push_back(createMidiParameter("bbeEnable", "BBE Enable", 0.0f));
-
-    // BBE Maximizer - Definition/Clarity (0-127, default 32 = 25%)
+    // BBE Maximizer - Always enabled, only control parameters
+    // BBE Definition/Clarity (0-127, default 32 = 25%)
     parameters.push_back(createMidiParameter("bbeDefinition", "BBE Definition", 32.0f));
 
-    // BBE Maximizer - Bass Boost (0-127, default 8 = ~6%)
+    // BBE Bass Boost (0-127, default 8 = ~6%)
     parameters.push_back(createMidiParameter("bbeBassBoost", "BBE Bass Boost", 8.0f));
 
     return { parameters.begin(), parameters.end() };
@@ -63,7 +61,6 @@ bool ParameterManager::initializeParameterPointers(juce::AudioProcessorValueTree
     lfoPanSpeedParam_ = parameters.getRawParameterValue("lfoPanSpeed");
     lfoPanDepthParam_ = parameters.getRawParameterValue("lfoPanDepth");
     stereoFieldParam_ = parameters.getRawParameterValue("stereoField");
-    bbeEnableParam_ = parameters.getRawParameterValue("bbeEnable");
     bbeDefinitionParam_ = parameters.getRawParameterValue("bbeDefinition");
     bbeBassBoostParam_ = parameters.getRawParameterValue("bbeBassBoost");
 
@@ -172,15 +169,7 @@ void ParameterManager::updateSamplerParametersRTSafe(VoiceManager* voiceManager)
         }
     }
 
-    // BBE Enable - pouze při změně (RT-safe)
-    if (bbeEnableParam_) {
-        uint8_t currentBBEEnable = getCurrentBBEEnable();
-        if (currentBBEEnable != lastBBEEnable_) {
-            lastBBEEnable_ = currentBBEEnable;
-            voiceManager->setBBEEnabledMIDI(currentBBEEnable); // RT-safe
-        }
-    }
-
+    // BBE Maximizer - always enabled, only update parameters
     // BBE Definition - pouze při změně (RT-safe)
     if (bbeDefinitionParam_) {
         uint8_t currentBBEDefinition = getCurrentBBEDefinition();
@@ -242,11 +231,6 @@ uint8_t ParameterManager::getCurrentStereoField() const
     return stereoFieldParam_ ? convertToMidiValue(stereoFieldParam_->load()) : 0;
 }
 
-uint8_t ParameterManager::getCurrentBBEEnable() const
-{
-    return bbeEnableParam_ ? convertToMidiValue(bbeEnableParam_->load()) : 0;
-}
-
 uint8_t ParameterManager::getCurrentBBEDefinition() const
 {
     return bbeDefinitionParam_ ? convertToMidiValue(bbeDefinitionParam_->load()) : 32;
@@ -269,7 +253,6 @@ bool ParameterManager::areParametersValid() const
            lfoPanSpeedParam_ != nullptr &&
            lfoPanDepthParam_ != nullptr &&
            stereoFieldParam_ != nullptr &&
-           bbeEnableParam_ != nullptr &&
            bbeDefinitionParam_ != nullptr &&
            bbeBassBoostParam_ != nullptr;
 }

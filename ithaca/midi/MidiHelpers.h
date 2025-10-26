@@ -65,8 +65,6 @@ namespace MidiHelpers {
                 return Constants::Parameters::IDs::LFO_PAN_DEPTH;
             case Constants::Midi::CC::STEREO_FIELD:
                 return Constants::Parameters::IDs::STEREO_FIELD;
-            case Constants::Midi::CC::BBE_ENABLE:
-                return Constants::Parameters::IDs::BBE_ENABLE;
             case Constants::Midi::CC::BBE_DEFINITION:
                 return Constants::Parameters::IDs::BBE_DEFINITION;
             case Constants::Midi::CC::BBE_BASS_BOOST:
