@@ -103,8 +103,8 @@ namespace Constants {
             constexpr const char* LFO_SPEED_LABEL = "LFO Speed";
             constexpr const char* LFO_DEPTH_LABEL = "LFO Depth";
             constexpr const char* STEREO_FIELD_LABEL = "Stereo Field";
-            constexpr const char* BBE_DEFINITION_LABEL = "BBE Clarity";
-            constexpr const char* BBE_BASS_BOOST_LABEL = "BBE Bass";
+            constexpr const char* BBE_DEFINITION_LABEL = "Clarity";
+            constexpr const char* BBE_BASS_BOOST_LABEL = "Bass Boost";
 
             // Info section prefixes
             constexpr const char* ACTIVE_VOICES_PREFIX = "Active: ";
