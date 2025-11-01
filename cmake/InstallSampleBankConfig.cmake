@@ -1,28 +1,46 @@
 # CMake script to install samplebank_config.json to user's roaming profile
 # This script is executed as a POST_BUILD step
+#
+# MULTIPLE INSTRUMENT INSTANCES support:
+# Each instrument instance gets its own config directory
+# Example: IthacaPlayer-VintageV → %APPDATA%/LordAudio/IthacaPlayer-VintageV/
+#
+# This allows multiple instrument instances to coexist with separate configs
 
 cmake_minimum_required(VERSION 3.22)
 
 set(COMPANY_NAME "LordAudio")
-set(PLUGIN_NAME "IthacaPlayer")
+
+# PLUGIN_NAME is passed from CMakeLists.txt via -DPLUGIN_NAME=...
+# It includes the instrument suffix (e.g., "IthacaPlayer-VintageV")
+if(NOT DEFINED PLUGIN_NAME)
+    message(FATAL_ERROR "PLUGIN_NAME must be defined via -DPLUGIN_NAME=<name>")
+endif()
+
 set(CONFIG_FILENAME "samplebank_config.json")
+
+message(STATUS "=== Installing Sample Bank Config ===")
+message(STATUS "Plugin Name: ${PLUGIN_NAME}")
+message(STATUS "Config File: ${CONFIG_FILENAME}")
 
 # Determine platform-specific roaming directory
 if(WIN32)
-    # Windows: %APPDATA%\LordAudio\IthacaPlayer
+    # Windows: %APPDATA%\LordAudio\IthacaPlayer-VintageV
     file(TO_CMAKE_PATH "$ENV{APPDATA}" ROAMING_DIR)
     set(PLUGIN_DATA_DIR "${ROAMING_DIR}/${COMPANY_NAME}/${PLUGIN_NAME}")
 
 elseif(APPLE)
-    # macOS: ~/Library/Application Support/LordAudio/IthacaPlayer
+    # macOS: ~/Library/Application Support/LordAudio/IthacaPlayer-VintageV
     file(TO_CMAKE_PATH "$ENV{HOME}/Library/Application Support" ROAMING_DIR)
     set(PLUGIN_DATA_DIR "${ROAMING_DIR}/${COMPANY_NAME}/${PLUGIN_NAME}")
 
 else()
-    # Linux: ~/.local/share/LordAudio/IthacaPlayer
+    # Linux: ~/.local/share/LordAudio/IthacaPlayer-VintageV
     file(TO_CMAKE_PATH "$ENV{HOME}/.local/share" ROAMING_DIR)
     set(PLUGIN_DATA_DIR "${ROAMING_DIR}/${COMPANY_NAME}/${PLUGIN_NAME}")
 endif()
+
+message(STATUS "Target Directory: ${PLUGIN_DATA_DIR}")
 
 # Create directory if it doesn't exist
 file(MAKE_DIRECTORY "${PLUGIN_DATA_DIR}")

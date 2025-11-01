@@ -13,16 +13,55 @@ if(NOT CMAKE_BUILD_TYPE)
 endif()
 
 # =============================================================================
+# INSTRUMENT INSTANCE CONFIGURATION
+# =============================================================================
+#
+# Multiple Plugin Instances approach:
+# Each instrument has its own plugin binary with unique name and config path.
+# Example: IthacaPlayer-VintageV, IthacaPlayer-Rhodes, etc.
+#
+# Benefits:
+# - DAW sees each instrument as separate plugin
+# - Multiple instruments can be used simultaneously in one session
+# - Separate presets and configs per instrument
+# - No GUI changes needed
+#
+# Configuration:
+# - INSTRUMENT_NAME: Unique suffix for this build (e.g. "VintageV")
+# - Each instrument gets its own config directory
+# - Sample bank path is instrument-specific
+# =============================================================================
+
+# Define instrument name (can be overridden via -DINSTRUMENT_NAME=...)
+set(INSTRUMENT_NAME "VintageV" CACHE STRING "Instrument name suffix for this plugin instance")
+
+# Plugin target name with instrument suffix
+set(PLUGIN_TARGET_NAME "IthacaPlayer-${INSTRUMENT_NAME}")
+
+# Product name displayed in DAW
+set(PLUGIN_PRODUCT_NAME "IthacaPlayer ${INSTRUMENT_NAME}")
+
+message(STATUS "=== INSTRUMENT INSTANCE CONFIGURATION ===")
+message(STATUS "Instrument Name: ${INSTRUMENT_NAME}")
+message(STATUS "Plugin Target: ${PLUGIN_TARGET_NAME}")
+message(STATUS "Product Name: ${PLUGIN_PRODUCT_NAME}")
+message(STATUS "=========================================")
+
+# =============================================================================
 # SAMPLE BANK PATH CONFIGURATION
 # =============================================================================
 
-# Default sample bank path (can be overridden via -DSAMPLE_BANK_PATH=...)
+# Default sample bank path - now instrument-specific
+# Structure: C:/SoundBanks/IthacaPlayer/Samplebank-<InstrumentName>/
+# Each samplebank directory contains:
+#   - instrument-definition.json
+#   - WAV files (21_1.wav, 21_2.wav, ..., 108_8.wav)
 if(WIN32)
-    set(SAMPLE_BANK_PATH "C:/SoundBanks/IthacaPlayer/instrument" CACHE STRING "Default sample bank installation path")
+    set(SAMPLE_BANK_PATH "C:/SoundBanks/IthacaPlayer/Samplebank-${INSTRUMENT_NAME}" CACHE STRING "Default sample bank installation path")
 elseif(APPLE)
-    set(SAMPLE_BANK_PATH "$ENV{HOME}/Library/Application Support/IthacaPlayer/instrument" CACHE STRING "Default sample bank installation path")
+    set(SAMPLE_BANK_PATH "$ENV{HOME}/Library/Application Support/IthacaPlayer/Samplebank-${INSTRUMENT_NAME}" CACHE STRING "Default sample bank installation path")
 else()
-    set(SAMPLE_BANK_PATH "$ENV{HOME}/.local/share/IthacaPlayer/instrument" CACHE STRING "Default sample bank installation path")
+    set(SAMPLE_BANK_PATH "$ENV{HOME}/.local/share/IthacaPlayer/Samplebank-${INSTRUMENT_NAME}" CACHE STRING "Default sample bank installation path")
 endif()
 
 message(STATUS "Sample Bank Path: ${SAMPLE_BANK_PATH}")
@@ -129,11 +168,26 @@ add_subdirectory(JUCE)
 add_subdirectory(libsndfile)
 
 # =============================================================================
-# JUCE Plugin definice
+# JUCE Plugin definice - MULTIPLE INSTRUMENT INSTANCES
+# =============================================================================
+#
+# Plugin je definován s instrument-specific názvem.
+# Target name: IthacaPlayer-<InstrumentName> (e.g. IthacaPlayer-VintageV)
+# Product name: IthacaPlayer <InstrumentName> (zobrazí se v DAW)
+#
+# Každý instrument má:
+# - Vlastní plugin binary (IthacaPlayer-VintageV.vst3)
+# - Vlastní config adresář (%APPDATA%/LordAudio/IthacaPlayer-VintageV/)
+# - Vlastní sample bank (C:/SoundBanks/IthacaPlayer/Samplebank-VintageV/)
+#
+# Plugin Code se musí lišit pro každý instrument (4-char code):
+# - VintageV: Itca
+# - Rhodes:   Itcb (změnit při buildu jiného instrumentu)
+# - Wurli:    Itcc (změnit při buildu jiného instrumentu)
 # =============================================================================
 
-# KLÍČOVÁ ZMĚNA: juce_add_plugin místo add_executable
-juce_add_plugin(IthacaPlayer
+# KLÍČOVÁ ZMĚNA: juce_add_plugin s instrument-specific target name
+juce_add_plugin(${PLUGIN_TARGET_NAME}
     COMPANY_NAME "LordAudio"
     IS_SYNTH TRUE
     NEEDS_MIDI_INPUT TRUE
@@ -142,17 +196,17 @@ juce_add_plugin(IthacaPlayer
     PLUGIN_MANUFACTURER_CODE Lau0
     PLUGIN_CODE Itca
     FORMATS AU VST3 Standalone
-    PRODUCT_NAME "IthacaPlayer")
+    PRODUCT_NAME "${PLUGIN_PRODUCT_NAME}")
 
     # Custom icon (white square with "I" letter placeholder)
     # ICON_BIG "${CMAKE_CURRENT_SOURCE_DIR}/decorators/icon.ico"
     # ICON_SMALL "${CMAKE_CURRENT_SOURCE_DIR}/decorators/icon.icns")                
 
-# Generate JUCE header 
-juce_generate_juce_header(IthacaPlayer)
+# Generate JUCE header
+juce_generate_juce_header(${PLUGIN_TARGET_NAME})
 
 # SPRÁVNĚ: target_sources místo add_executable
-target_sources(IthacaPlayer
+target_sources(${PLUGIN_TARGET_NAME}
 
     PRIVATE
         # =====================================================================
@@ -279,7 +333,7 @@ target_sources(IthacaPlayer
 # Include directories
 # =============================================================================
 
-target_include_directories(IthacaPlayer PRIVATE
+target_include_directories(${PLUGIN_TARGET_NAME} PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}                             # Root directory - IthacaConfig.h zde
     ${CMAKE_CURRENT_SOURCE_DIR}/ithaca-core                 # IthacaCore modules
     ${CMAKE_CURRENT_SOURCE_DIR}/ithaca-core/sampler         # IthacaCore sampler modules
@@ -293,21 +347,26 @@ target_include_directories(IthacaPlayer PRIVATE
 # =============================================================================
 
 # JUCE compile definitions
-target_compile_definitions(IthacaPlayer
+target_compile_definitions(${PLUGIN_TARGET_NAME}
     PUBLIC
         # Standard JUCE settings for audio plugin
         JUCE_WEB_BROWSER=0
         JUCE_USE_CURL=0
         JUCE_VST3_CAN_REPLACE_VST2=0
-        
+
         # IthacaCore specific settings
         ENABLE_TESTS=1              # Enable test framework integration
         ITHACA_JUCE_INTEGRATION=1   # Enable JUCE-specific features
-        
+
+        # MULTIPLE INSTRUMENT INSTANCES support
+        # Define plugin target name for config directory lookup
+        # Example: "IthacaPlayer-VintageV"
+        ITHACA_PLUGIN_TARGET_NAME="${PLUGIN_TARGET_NAME}"
+
         # Resource paths for development
         ITHACA_SOURCE_DIR="${CMAKE_CURRENT_SOURCE_DIR}"
         ITHACA_BINARY_DIR="${CMAKE_CURRENT_BINARY_DIR}"
-        
+
     PRIVATE
         # Platform-specific definitions
         $<$<PLATFORM_ID:Windows>:WIN32_LEAN_AND_MEAN>
@@ -320,13 +379,13 @@ target_compile_definitions(IthacaPlayer
 
 # Compiler-specific optimizations
 if(MSVC)
-    target_compile_options(IthacaPlayer PRIVATE
+    target_compile_options(${PLUGIN_TARGET_NAME} PRIVATE
         $<$<CONFIG:Debug>:/Od /Zi /RTC1>      # Debug: no optimization, debug info
         $<$<CONFIG:Release>:/O2 /DNDEBUG>     # Release: optimization, no debug
         /W3                                   # Warning level 3
     )
 else()
-    target_compile_options(IthacaPlayer PRIVATE
+    target_compile_options(${PLUGIN_TARGET_NAME} PRIVATE
         -Wall -Wextra -pedantic               # All warnings
         $<$<CONFIG:Debug>:-g -O0>             # Debug: debug info, no optimization  
         $<$<CONFIG:Release>:-O3 -DNDEBUG>     # Release: maximum optimization
@@ -338,7 +397,7 @@ endif()
 # =============================================================================
 
 # KRITICKÉ: Link libraries - JUCE first, then IthacaCore dependencies
-target_link_libraries(IthacaPlayer
+target_link_libraries(${PLUGIN_TARGET_NAME}
     PRIVATE
         # JUCE modules - MUSÍ BÝT PRVNÍ
         juce::juce_audio_utils
@@ -362,7 +421,7 @@ target_link_libraries(IthacaPlayer
 file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/decorators)
 
 # Copy background.jpg to multiple locations for different build scenarios
-add_custom_command(TARGET IthacaPlayer POST_BUILD
+add_custom_command(TARGET ${PLUGIN_TARGET_NAME} POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_if_different
         ${CMAKE_CURRENT_SOURCE_DIR}/decorators/background.jpg
         ${CMAKE_CURRENT_BINARY_DIR}/decorators/background.jpg
@@ -370,22 +429,22 @@ add_custom_command(TARGET IthacaPlayer POST_BUILD
 )
 
 # Also copy to Standalone executable location (Debug)
-add_custom_command(TARGET IthacaPlayer POST_BUILD
+add_custom_command(TARGET ${PLUGIN_TARGET_NAME} POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E make_directory
-        ${CMAKE_CURRENT_BINARY_DIR}/IthacaPlayer_artefacts/Debug/Standalone/decorators
+        ${CMAKE_CURRENT_BINARY_DIR}/${PLUGIN_TARGET_NAME}_artefacts/Debug/Standalone/decorators
     COMMAND ${CMAKE_COMMAND} -E copy_if_different
         ${CMAKE_CURRENT_SOURCE_DIR}/decorators/background.jpg
-        ${CMAKE_CURRENT_BINARY_DIR}/IthacaPlayer_artefacts/Debug/Standalone/decorators/background.jpg
+        ${CMAKE_CURRENT_BINARY_DIR}/${PLUGIN_TARGET_NAME}_artefacts/Debug/Standalone/decorators/background.jpg
     COMMENT "Copying background.jpg to Standalone Debug location"
 )
 
 # Copy to Standalone executable location (Release)
-add_custom_command(TARGET IthacaPlayer POST_BUILD
+add_custom_command(TARGET ${PLUGIN_TARGET_NAME} POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E make_directory
-        ${CMAKE_CURRENT_BINARY_DIR}/IthacaPlayer_artefacts/Release/Standalone/decorators
+        ${CMAKE_CURRENT_BINARY_DIR}/${PLUGIN_TARGET_NAME}_artefacts/Release/Standalone/decorators
     COMMAND ${CMAKE_COMMAND} -E copy_if_different
         ${CMAKE_CURRENT_SOURCE_DIR}/decorators/background.jpg
-        ${CMAKE_CURRENT_BINARY_DIR}/IthacaPlayer_artefacts/Release/Standalone/decorators/background.jpg
+        ${CMAKE_CURRENT_BINARY_DIR}/${PLUGIN_TARGET_NAME}_artefacts/Release/Standalone/decorators/background.jpg
     COMMENT "Copying background.jpg to Standalone Release location"
 )
 
@@ -394,11 +453,12 @@ add_custom_command(TARGET IthacaPlayer POST_BUILD
 # =============================================================================
 
 # POST_BUILD: Install JSON config to user's roaming directory
-add_custom_command(TARGET IthacaPlayer POST_BUILD
+add_custom_command(TARGET ${PLUGIN_TARGET_NAME} POST_BUILD
     COMMAND ${CMAKE_COMMAND}
         -DSOURCE_JSON=${CMAKE_CURRENT_BINARY_DIR}/generated/samplebank_config.json
+        -DPLUGIN_NAME=${PLUGIN_TARGET_NAME}
         -P ${CMAKE_CURRENT_SOURCE_DIR}/cmake/InstallSampleBankConfig.cmake
-    COMMENT "Installing sample bank config to user's roaming profile"
+    COMMENT "Installing sample bank config for ${PLUGIN_TARGET_NAME} to user's roaming profile"
     VERBATIM
 )
 
@@ -408,7 +468,7 @@ add_custom_command(TARGET IthacaPlayer POST_BUILD
 
 if(WIN32)
     # Windows-specific installation
-    install(TARGETS IthacaPlayer
+    install(TARGETS ${PLUGIN_TARGET_NAME}
         RUNTIME DESTINATION bin
         CONFIGURATIONS Release
     )
@@ -491,7 +551,7 @@ endif()
 # =============================================================================
 
 # Post-build information s BUILD ID
-add_custom_command(TARGET IthacaPlayer POST_BUILD
+add_custom_command(TARGET ${PLUGIN_TARGET_NAME} POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E echo "=== IthacaCore + JUCE Plugin Build Completed ==="
     COMMAND ${CMAKE_COMMAND} -E echo "Plugin: $<TARGET_FILE:IthacaPlayer>"
     COMMAND ${CMAKE_COMMAND} -E echo "Build ID: ${BUILD_ID}"
@@ -561,7 +621,7 @@ message(STATUS "Final BUILD_ID: ${BUILD_ID}")
 message(STATUS "===========================")
 
 # Přidat do include paths
-target_include_directories(IthacaPlayer PRIVATE 
+target_include_directories(${PLUGIN_TARGET_NAME} PRIVATE 
     ${CMAKE_CURRENT_SOURCE_DIR}
     ${CMAKE_CURRENT_SOURCE_DIR}/ithaca-core
     ${CMAKE_CURRENT_SOURCE_DIR}/ithaca-core/sampler

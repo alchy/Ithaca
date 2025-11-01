@@ -1,53 +1,154 @@
 # Sample Bank Paths Configuration Guide
 
-**Document Version:** 1.0
+**Document Version:** 2.0
 **Last Updated:** 2025-11-01
 **Purpose:** Guide pro vytvoření automatického installeru pro Ithaca VST/Standalone a sample banky
+
+**⚠️ IMPORTANT:** Ithaca používá **Multiple Plugin Instances** přístup - každý nástroj je samostatný plugin binary.
 
 ---
 
 ## 📋 Obsah
 
 1. [Přehled systému](#přehled-systému)
-2. [Struktura souborů](#struktura-souborů)
-3. [Konfigurace podle platforem](#konfigurace-podle-platforem)
-4. [Build proces](#build-proces)
-5. [Instalace - Zadání pro installer](#instalace---zadání-pro-installer)
-6. [Řešení problémů](#řešení-problémů)
+2. [Multiple Plugin Instances Architecture](#multiple-plugin-instances-architecture)
+3. [Struktura souborů](#struktura-souborů)
+4. [Konfigurace podle platforem](#konfigurace-podle-platforem)
+5. [Build proces](#build-proces)
+6. [Instalace - Zadání pro installer](#instalace---zadání-pro-installer)
+7. [Řešení problémů](#řešení-problémů)
 
 ---
 
 ## Přehled systému
 
-Ithaca používá **dvouúrovňový konfigurační systém** pro lokalizaci sample bank:
+Ithaca používá **Multiple Plugin Instances** přístup:
+- Každý nástroj (VintageV, Rhodes, Wurlitzer) je **samostatný plugin binary**
+- Každý plugin má vlastní config adresář a sample bank
+- DAW vidí každý nástroj jako samostatný plugin
+- Více nástrojů může běžet současně v jedné DAW session
+
+### Architektura
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│                    RUNTIME CONFIGURATION                     │
+│              MULTIPLE PLUGIN INSTANCES                       │
 ├─────────────────────────────────────────────────────────────┤
-│ Plugin při startu čte:                                       │
-│   %APPDATA%/LordAudio/IthacaPlayer/samplebank_config.json   │
 │                                                              │
-│ Soubor obsahuje:                                             │
-│   - sampleBankPath: cesta k instrument adresáři             │
-│   - version, buildTimestamp, platform (metadata)             │
-└─────────────────────────────────────────────────────────────┘
-                           ↓
-┌─────────────────────────────────────────────────────────────┐
-│                    SAMPLE BANK DIRECTORY                     │
-├─────────────────────────────────────────────────────────────┤
-│ Adresář obsahuje:                                            │
-│   - instrument-definition.json (metadata nástroje)           │
-│   - *.wav soubory (samply pro každou notu a velocity layer) │
+│  Plugin Binary 1: IthacaPlayer-VintageV.vst3                │
+│      ↓                                                       │
+│  Config: %APPDATA%/LordAudio/IthacaPlayer-VintageV/         │
+│      └─ samplebank_config.json                              │
+│          → Sample Bank: C:/SoundBanks/.../Samplebank-VintageV│
+│                                                              │
+│  Plugin Binary 2: IthacaPlayer-Rhodes.vst3                  │
+│      ↓                                                       │
+│  Config: %APPDATA%/LordAudio/IthacaPlayer-Rhodes/           │
+│      └─ samplebank_config.json                              │
+│          → Sample Bank: C:/SoundBanks/.../Samplebank-Rhodes │
+│                                                              │
 └─────────────────────────────────────────────────────────────┘
 ```
 
 ### Klíčové principy
 
-- **Oddělení konfigurace a dat**: Config v roaming profile, samply kdekoli
+- **Multiple Plugin Instances**: Každý nástroj = samostatný plugin binary
+- **Oddělené konfigurace**: Každý plugin má vlastní config adresář
+- **Samostatné sample banky**: Struktura `Samplebank-<InstrumentName>/`
 - **Platform-agnostic paths**: Cesty používají forward slashes `/` (JSON standard)
-- **User-modifiable**: Uživatel může ručně upravit cestu v config souboru
-- **Build-time default**: CMake nastaví výchozí cestu při buildu
+- **Build-time configuration**: Instrument name je nastaven při CMake konfiguraci
+
+---
+
+## Multiple Plugin Instances Architecture
+
+### Přístup
+
+Každý nástroj je buildnut jako **samostatný plugin binary** s unikátním názvem:
+- `IthacaPlayer-VintageV.vst3`
+- `IthacaPlayer-Rhodes.vst3`
+- `IthacaPlayer-Wurlitzer.vst3`
+
+### Build Process
+
+**Build jednotlivých nástrojů:**
+
+```bash
+# Build VintageV
+cmake -B build-vintagev -S . -DINSTRUMENT_NAME=VintageV
+cmake --build build-vintagev --config Release
+
+# Build Rhodes
+cmake -B build-rhodes -S . -DINSTRUMENT_NAME=Rhodes
+cmake --build build-rhodes --config Release
+
+# Build Wurlitzer
+cmake -B build-wurli -S . -DINSTRUMENT_NAME=Wurlitzer
+cmake --build build-wurli --config Release
+```
+
+**Output:**
+```
+build-vintagev/IthacaPlayer-VintageV_artefacts/Release/
+├── VST3/IthacaPlayer-VintageV.vst3
+└── Standalone/IthacaPlayer-VintageV.exe
+
+build-rhodes/IthacaPlayer-Rhodes_artefacts/Release/
+├── VST3/IthacaPlayer-Rhodes.vst3
+└── Standalone/IthacaPlayer-Rhodes.exe
+```
+
+### Config Structure
+
+Každý instrument instance má vlastní config adresář:
+
+```
+Windows:
+C:\Users\<user>\AppData\Roaming\LordAudio\
+├── IthacaPlayer-VintageV\
+│   └── samplebank_config.json → C:/SoundBanks/.../Samplebank-VintageV/
+├── IthacaPlayer-Rhodes\
+│   └── samplebank_config.json → C:/SoundBanks/.../Samplebank-Rhodes/
+└── IthacaPlayer-Wurlitzer\
+    └── samplebank_config.json → C:/SoundBanks/.../Samplebank-Wurlitzer/
+```
+
+### Sample Bank Structure
+
+```
+C:\SoundBanks\IthacaPlayer\
+├── Samplebank-VintageV\
+│   ├── instrument-definition.json
+│   ├── 21_1.wav
+│   └── ... (704 WAV files)
+├── Samplebank-Rhodes\
+│   ├── instrument-definition.json
+│   ├── 21_1.wav
+│   └── ... (704 WAV files)
+└── Samplebank-Wurlitzer\
+    ├── instrument-definition.json
+    ├── 21_1.wav
+    └── ... (704 WAV files)
+```
+
+### Benefits
+
+✅ **DAW Integration**: Každý nástroj se zobrazí samostatně v DAW plugin listu
+✅ **Concurrent Use**: Více nástrojů může běžet současně v jedné session
+✅ **Separate Presets**: Každý nástroj má vlastní presety
+✅ **Simple Distribution**: Installer může nabídnout výběr nástrojů k instalaci
+✅ **No Code Changes in ithaca-core**: Core engine dostává cestu v konstruktoru
+
+### Implementation Details
+
+**CMakeLists.txt variables:**
+- `INSTRUMENT_NAME`: Název nástroje (např. `"VintageV"`)
+- `PLUGIN_TARGET_NAME`: `IthacaPlayer-${INSTRUMENT_NAME}`
+- `PLUGIN_PRODUCT_NAME`: `"IthacaPlayer ${INSTRUMENT_NAME}"` (zobrazí se v DAW)
+- `SAMPLE_BANK_PATH`: `C:/SoundBanks/IthacaPlayer/Samplebank-${INSTRUMENT_NAME}`
+
+**Runtime detection:**
+Plugin používá preprocessor define `ITHACA_PLUGIN_TARGET_NAME` pro určení vlastního config adresáře.
 
 ---
 
@@ -55,16 +156,18 @@ Ithaca používá **dvouúrovňový konfigurační systém** pro lokalizaci samp
 
 ### 1. Runtime Config (`samplebank_config.json`)
 
-**Formát:**
+**Formát (example pro VintageV):**
 ```json
 {
-  "sampleBankPath": "C:/SoundBanks/IthacaPlayer/instrument",
+  "sampleBankPath": "C:/SoundBanks/IthacaPlayer/Samplebank-VintageV",
   "version": "1.0",
   "generatedBy": "CMake",
   "buildTimestamp": "251101192141",
   "platform": "Windows"
 }
 ```
+
+**⚠️ ZMĚNA:** Path nyní odkazuje na `Samplebank-<InstrumentName>` místo `instrument`
 
 **Pole:**
 

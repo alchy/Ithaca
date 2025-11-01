@@ -31,9 +31,24 @@ namespace SampleBankPathManager
 {
     namespace
     {
-        // Company and plugin names from CMakeLists.txt
+        // Company and plugin names
         constexpr const char* COMPANY_NAME = "LordAudio";
-        constexpr const char* PLUGIN_NAME = "IthacaPlayer";
+
+        // MULTIPLE INSTRUMENT INSTANCES support:
+        // Plugin name is determined from JUCE's JucePlugin_Name macro
+        // which is set from PRODUCT_NAME in CMakeLists.txt
+        // Example: "IthacaPlayer VintageV" → config dir: "IthacaPlayer-VintageV"
+        //
+        // For backward compatibility with configs, we need to use the target name
+        // which includes the dash (e.g., "IthacaPlayer-VintageV")
+        // This is passed via preprocessor define ITHACA_PLUGIN_TARGET_NAME
+        #ifdef ITHACA_PLUGIN_TARGET_NAME
+            constexpr const char* PLUGIN_NAME = ITHACA_PLUGIN_TARGET_NAME;
+        #else
+            // Fallback for old builds
+            constexpr const char* PLUGIN_NAME = "IthacaPlayer";
+        #endif
+
         constexpr const char* CONFIG_FILENAME = "samplebank_config.json";
         constexpr const char* JSON_KEY_PATH = "sampleBankPath";
         constexpr const char* JSON_KEY_VERSION = "version";
