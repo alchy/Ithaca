@@ -35,6 +35,43 @@ endif()
 # Define instrument name (can be overridden via -DINSTRUMENT_NAME=...)
 set(INSTRUMENT_NAME "VintageV" CACHE STRING "Instrument name suffix for this plugin instance")
 
+# =============================================================================
+# PLUGIN CODE CONFIGURATION
+# =============================================================================
+#
+# VST3/AU requirement: PLUGIN_CODE must be EXACTLY 4 characters
+# Each plugin from same manufacturer (Lau0) must have unique code
+#
+# Naming convention: PLUGIN_CODE also serves as sample bank directory name
+# Example: VntV → C:/SoundBanks/IthacaPlayer/VntV/
+#
+# Format: 4-character alphanumeric code (case-sensitive)
+# =============================================================================
+
+# Plugin Code mapping - explicitly defined for each instrument
+if(INSTRUMENT_NAME STREQUAL "VintageV")
+    set(PLUGIN_CODE "VntV")
+    set(PLUGIN_DESCRIPTION "VintageV Electric Piano")
+
+elseif(INSTRUMENT_NAME STREQUAL "Rhodes")
+    set(PLUGIN_CODE "Rhds")
+    set(PLUGIN_DESCRIPTION "Rhodes Mark II Electric Piano")
+
+elseif(INSTRUMENT_NAME STREQUAL "Wurlitzer")
+    set(PLUGIN_CODE "Wrlz")
+    set(PLUGIN_DESCRIPTION "Wurlitzer 200A Electric Piano")
+
+elseif(INSTRUMENT_NAME STREQUAL "Piano")
+    set(PLUGIN_CODE "Pian")
+    set(PLUGIN_DESCRIPTION "Acoustic Piano")
+
+else()
+    # Fallback for unknown instruments - use legacy code
+    set(PLUGIN_CODE "Itca")
+    set(PLUGIN_DESCRIPTION "Ithaca Player (unknown instrument: ${INSTRUMENT_NAME})")
+    message(WARNING "Unknown INSTRUMENT_NAME '${INSTRUMENT_NAME}', using fallback PLUGIN_CODE: ${PLUGIN_CODE}")
+endif()
+
 # Plugin target name with instrument suffix
 set(PLUGIN_TARGET_NAME "IthacaPlayer-${INSTRUMENT_NAME}")
 
@@ -43,25 +80,33 @@ set(PLUGIN_PRODUCT_NAME "IthacaPlayer ${INSTRUMENT_NAME}")
 
 message(STATUS "=== INSTRUMENT INSTANCE CONFIGURATION ===")
 message(STATUS "Instrument Name: ${INSTRUMENT_NAME}")
-message(STATUS "Plugin Target: ${PLUGIN_TARGET_NAME}")
-message(STATUS "Product Name: ${PLUGIN_PRODUCT_NAME}")
+message(STATUS "Plugin Code:     ${PLUGIN_CODE}")
+message(STATUS "Plugin Target:   ${PLUGIN_TARGET_NAME}")
+message(STATUS "Product Name:    ${PLUGIN_PRODUCT_NAME}")
+message(STATUS "Description:     ${PLUGIN_DESCRIPTION}")
 message(STATUS "=========================================")
 
 # =============================================================================
 # SAMPLE BANK PATH CONFIGURATION
 # =============================================================================
 
-# Default sample bank path - now instrument-specific
-# Structure: C:/SoundBanks/IthacaPlayer/Samplebank-<InstrumentName>/
-# Each samplebank directory contains:
+# Default sample bank path - uses PLUGIN_CODE for consistency
+# Structure: C:/SoundBanks/IthacaPlayer/<PLUGIN_CODE>/
+#
+# Example paths:
+#   VintageV  → C:/SoundBanks/IthacaPlayer/VntV/
+#   Rhodes    → C:/SoundBanks/IthacaPlayer/Rhds/
+#   Wurlitzer → C:/SoundBanks/IthacaPlayer/Wrlz/
+#
+# Each directory contains:
 #   - instrument-definition.json
 #   - WAV files (21_1.wav, 21_2.wav, ..., 108_8.wav)
 if(WIN32)
-    set(SAMPLE_BANK_PATH "C:/SoundBanks/IthacaPlayer/Samplebank-${INSTRUMENT_NAME}" CACHE STRING "Default sample bank installation path")
+    set(SAMPLE_BANK_PATH "C:/SoundBanks/IthacaPlayer/${PLUGIN_CODE}" CACHE STRING "Default sample bank installation path")
 elseif(APPLE)
-    set(SAMPLE_BANK_PATH "$ENV{HOME}/Library/Application Support/IthacaPlayer/Samplebank-${INSTRUMENT_NAME}" CACHE STRING "Default sample bank installation path")
+    set(SAMPLE_BANK_PATH "$ENV{HOME}/Library/Application Support/IthacaPlayer/${PLUGIN_CODE}" CACHE STRING "Default sample bank installation path")
 else()
-    set(SAMPLE_BANK_PATH "$ENV{HOME}/.local/share/IthacaPlayer/Samplebank-${INSTRUMENT_NAME}" CACHE STRING "Default sample bank installation path")
+    set(SAMPLE_BANK_PATH "$ENV{HOME}/.local/share/IthacaPlayer/${PLUGIN_CODE}" CACHE STRING "Default sample bank installation path")
 endif()
 
 message(STATUS "Sample Bank Path: ${SAMPLE_BANK_PATH}")
@@ -174,19 +219,22 @@ add_subdirectory(libsndfile)
 # Plugin je definován s instrument-specific názvem.
 # Target name: IthacaPlayer-<InstrumentName> (e.g. IthacaPlayer-VintageV)
 # Product name: IthacaPlayer <InstrumentName> (zobrazí se v DAW)
+# Plugin Code: 4-char code (e.g. VntV, Rhds, Wrlz)
 #
 # Každý instrument má:
-# - Vlastní plugin binary (IthacaPlayer-VintageV.vst3)
-# - Vlastní config adresář (%APPDATA%/LordAudio/IthacaPlayer-VintageV/)
-# - Vlastní sample bank (C:/SoundBanks/IthacaPlayer/Samplebank-VintageV/)
+# - Vlastní plugin binary: IthacaPlayer-VintageV.vst3
+# - Vlastní config adresář: %APPDATA%/LordAudio/IthacaPlayer-VintageV/
+# - Vlastní sample bank: C:/SoundBanks/IthacaPlayer/VntV/
 #
-# Plugin Code se musí lišit pro každý instrument (4-char code):
-# - VintageV: Itca
-# - Rhodes:   Itcb (změnit při buildu jiného instrumentu)
-# - Wurli:    Itcc (změnit při buildu jiného instrumentu)
+# Plugin Code registry (LordAudio/Lau0):
+#   VntV - VintageV Electric Piano
+#   Rhds - Rhodes Mark II Electric Piano
+#   Wrlz - Wurlitzer 200A Electric Piano
+#   Pian - Acoustic Piano
+#   Itca - Legacy/fallback code
 # =============================================================================
 
-# KLÍČOVÁ ZMĚNA: juce_add_plugin s instrument-specific target name
+# KLÍČOVÁ ZMĚNA: juce_add_plugin s instrument-specific target name and code
 juce_add_plugin(${PLUGIN_TARGET_NAME}
     COMPANY_NAME "LordAudio"
     IS_SYNTH TRUE
@@ -194,7 +242,7 @@ juce_add_plugin(${PLUGIN_TARGET_NAME}
     NEEDS_MIDI_OUTPUT FALSE
     IS_MIDI_EFFECT FALSE
     PLUGIN_MANUFACTURER_CODE Lau0
-    PLUGIN_CODE Itca
+    PLUGIN_CODE ${PLUGIN_CODE}
     FORMATS AU VST3 Standalone
     PRODUCT_NAME "${PLUGIN_PRODUCT_NAME}")
 

@@ -115,21 +115,30 @@ C:\Users\<user>\AppData\Roaming\LordAudio\
 
 ### Sample Bank Structure
 
+**Naming Convention:** Sample bank directories use **PLUGIN_CODE** (4-char identifiers)
+
 ```
 C:\SoundBanks\IthacaPlayer\
-├── Samplebank-VintageV\
+├── VntV\                    ← VintageV (PLUGIN_CODE: VntV)
 │   ├── instrument-definition.json
 │   ├── 21_1.wav
 │   └── ... (704 WAV files)
-├── Samplebank-Rhodes\
+├── Rhds\                    ← Rhodes (PLUGIN_CODE: Rhds)
 │   ├── instrument-definition.json
 │   ├── 21_1.wav
 │   └── ... (704 WAV files)
-└── Samplebank-Wurlitzer\
+└── Wrlz\                    ← Wurlitzer (PLUGIN_CODE: Wrlz)
     ├── instrument-definition.json
     ├── 21_1.wav
     └── ... (704 WAV files)
 ```
+
+**Plugin Code Registry (LordAudio/Lau0):**
+- `VntV` - VintageV Electric Piano
+- `Rhds` - Rhodes Mark II Electric Piano
+- `Wrlz` - Wurlitzer 200A Electric Piano
+- `Pian` - Acoustic Piano
+- `Itca` - Legacy/fallback code
 
 ### Benefits
 
@@ -143,9 +152,22 @@ C:\SoundBanks\IthacaPlayer\
 
 **CMakeLists.txt variables:**
 - `INSTRUMENT_NAME`: Název nástroje (např. `"VintageV"`)
+- `PLUGIN_CODE`: 4-char identifikátor (např. `"VntV"`)
 - `PLUGIN_TARGET_NAME`: `IthacaPlayer-${INSTRUMENT_NAME}`
 - `PLUGIN_PRODUCT_NAME`: `"IthacaPlayer ${INSTRUMENT_NAME}"` (zobrazí se v DAW)
-- `SAMPLE_BANK_PATH`: `C:/SoundBanks/IthacaPlayer/Samplebank-${INSTRUMENT_NAME}`
+- `SAMPLE_BANK_PATH`: `C:/SoundBanks/IthacaPlayer/${PLUGIN_CODE}`
+
+**Plugin Code Mapping:**
+```cmake
+if(INSTRUMENT_NAME STREQUAL "VintageV")
+    set(PLUGIN_CODE "VntV")
+elseif(INSTRUMENT_NAME STREQUAL "Rhodes")
+    set(PLUGIN_CODE "Rhds")
+elseif(INSTRUMENT_NAME STREQUAL "Wurlitzer")
+    set(PLUGIN_CODE "Wrlz")
+# ... další nástroje
+endif()
+```
 
 **Runtime detection:**
 Plugin používá preprocessor define `ITHACA_PLUGIN_TARGET_NAME` pro určení vlastního config adresáře.
@@ -159,7 +181,7 @@ Plugin používá preprocessor define `ITHACA_PLUGIN_TARGET_NAME` pro určení v
 **Formát (example pro VintageV):**
 ```json
 {
-  "sampleBankPath": "C:/SoundBanks/IthacaPlayer/Samplebank-VintageV",
+  "sampleBankPath": "C:/SoundBanks/IthacaPlayer/VntV",
   "version": "1.0",
   "generatedBy": "CMake",
   "buildTimestamp": "251101192141",
@@ -167,7 +189,10 @@ Plugin používá preprocessor define `ITHACA_PLUGIN_TARGET_NAME` pro určení v
 }
 ```
 
-**⚠️ ZMĚNA:** Path nyní odkazuje na `Samplebank-<InstrumentName>` místo `instrument`
+**⚠️ ZMĚNA:** Path nyní používá **PLUGIN_CODE** (4-char identifier)
+- VintageV: `C:/SoundBanks/IthacaPlayer/VntV`
+- Rhodes: `C:/SoundBanks/IthacaPlayer/Rhds`
+- Wurlitzer: `C:/SoundBanks/IthacaPlayer/Wrlz`
 
 **Pole:**
 
