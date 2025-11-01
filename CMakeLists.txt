@@ -606,7 +606,7 @@ endif()
 # Post-build information s BUILD ID
 add_custom_command(TARGET ${PLUGIN_TARGET_NAME} POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E echo "=== IthacaCore + JUCE Plugin Build Completed ==="
-    COMMAND ${CMAKE_COMMAND} -E echo "Plugin: $<TARGET_FILE:IthacaPlayer>"
+    COMMAND ${CMAKE_COMMAND} -E echo "Plugin: $<TARGET_FILE:${PLUGIN_TARGET_NAME}>"
     COMMAND ${CMAKE_COMMAND} -E echo "Build ID: ${BUILD_ID}"
     COMMAND ${CMAKE_COMMAND} -E echo "Build Time: ${BUILD_TIMESTAMP}"
     COMMAND ${CMAKE_COMMAND} -E echo "Build Host: ${BUILD_HOST}"
