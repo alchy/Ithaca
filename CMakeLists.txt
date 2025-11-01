@@ -142,11 +142,11 @@ juce_add_plugin(IthacaPlayer
     PLUGIN_MANUFACTURER_CODE Lau0
     PLUGIN_CODE Itca
     FORMATS AU VST3 Standalone
-    PRODUCT_NAME "IthacaPlayer"
+    PRODUCT_NAME "IthacaPlayer")
 
     # Custom icon (white square with "I" letter placeholder)
-    ICON_BIG "${CMAKE_CURRENT_SOURCE_DIR}/decorators/icon.ico"
-    ICON_SMALL "${CMAKE_CURRENT_SOURCE_DIR}/decorators/icon.icns")                
+    # ICON_BIG "${CMAKE_CURRENT_SOURCE_DIR}/decorators/icon.ico"
+    # ICON_SMALL "${CMAKE_CURRENT_SOURCE_DIR}/decorators/icon.icns")                
 
 # Generate JUCE header 
 juce_generate_juce_header(IthacaPlayer)
