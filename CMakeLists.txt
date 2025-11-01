@@ -411,6 +411,10 @@ target_compile_definitions(${PLUGIN_TARGET_NAME}
         # Example: "IthacaPlayer-VintageV"
         ITHACA_PLUGIN_TARGET_NAME="${PLUGIN_TARGET_NAME}"
 
+        # Define plugin code for config filename generation
+        # Example: "VntV" → samplebank_config-VntV.json
+        ITHACA_PLUGIN_CODE=${PLUGIN_CODE}
+
         # Resource paths for development
         ITHACA_SOURCE_DIR="${CMAKE_CURRENT_SOURCE_DIR}"
         ITHACA_BINARY_DIR="${CMAKE_CURRENT_BINARY_DIR}"
@@ -505,6 +509,7 @@ add_custom_command(TARGET ${PLUGIN_TARGET_NAME} POST_BUILD
     COMMAND ${CMAKE_COMMAND}
         -DSOURCE_JSON=${CMAKE_CURRENT_BINARY_DIR}/generated/samplebank_config.json
         -DPLUGIN_NAME=${PLUGIN_TARGET_NAME}
+        -DPLUGIN_CODE=${PLUGIN_CODE}
         -P ${CMAKE_CURRENT_SOURCE_DIR}/cmake/InstallSampleBankConfig.cmake
     COMMENT "Installing sample bank config for ${PLUGIN_TARGET_NAME} to user's roaming profile"
     VERBATIM

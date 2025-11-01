@@ -49,7 +49,19 @@ namespace SampleBankPathManager
             constexpr const char* PLUGIN_NAME = "IthacaPlayer";
         #endif
 
-        constexpr const char* CONFIG_FILENAME = "samplebank_config.json";
+        // PLUGIN_CODE-based config filename:
+        // Each instrument instance has its own config file named by PLUGIN_CODE
+        // Example: "samplebank-config-VntV.json" for VintageV
+        // Naming convention matches instrument-definition.json pattern
+        // This is passed via preprocessor define ITHACA_PLUGIN_CODE
+        #ifdef ITHACA_PLUGIN_CODE
+            #define STRINGIFY(x) #x
+            #define TOSTRING(x) STRINGIFY(x)
+            const std::string CONFIG_FILENAME = std::string("samplebank-config-") + TOSTRING(ITHACA_PLUGIN_CODE) + ".json";
+        #else
+            // Fallback for old builds
+            const std::string CONFIG_FILENAME = "samplebank-config.json";
+        #endif
         constexpr const char* JSON_KEY_PATH = "sampleBankPath";
         constexpr const char* JSON_KEY_VERSION = "version";
     }

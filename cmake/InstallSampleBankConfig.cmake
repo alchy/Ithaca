@@ -17,7 +17,16 @@ if(NOT DEFINED PLUGIN_NAME)
     message(FATAL_ERROR "PLUGIN_NAME must be defined via -DPLUGIN_NAME=<name>")
 endif()
 
-set(CONFIG_FILENAME "samplebank_config.json")
+# PLUGIN_CODE is passed from CMakeLists.txt via -DPLUGIN_CODE=...
+# It's the 4-character code (e.g., "VntV" for VintageV)
+if(NOT DEFINED PLUGIN_CODE)
+    message(FATAL_ERROR "PLUGIN_CODE must be defined via -DPLUGIN_CODE=<code>")
+endif()
+
+# Config filename includes PLUGIN_CODE for unique identification
+# Example: "samplebank-config-VntV.json"
+# Naming convention matches instrument-definition.json pattern
+set(CONFIG_FILENAME "samplebank-config-${PLUGIN_CODE}.json")
 
 message(STATUS "=== Installing Sample Bank Config ===")
 message(STATUS "Plugin Name: ${PLUGIN_NAME}")

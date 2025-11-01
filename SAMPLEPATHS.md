@@ -1,6 +1,6 @@
 # Sample Bank Paths Configuration Guide
 
-**Document Version:** 2.0
+**Document Version:** 2.1
 **Last Updated:** 2025-11-01
 **Purpose:** Guide pro vytvoření automatického installeru pro Ithaca VST/Standalone a sample banky
 
@@ -35,17 +35,17 @@ Ithaca používá **Multiple Plugin Instances** přístup:
 │              MULTIPLE PLUGIN INSTANCES                       │
 ├─────────────────────────────────────────────────────────────┤
 │                                                              │
-│  Plugin Binary 1: IthacaPlayer-VintageV.vst3                │
+│  Plugin Binary 1: IthacaPlayer-VintageV.vst3 (Code: VntV)   │
 │      ↓                                                       │
 │  Config: %APPDATA%/LordAudio/IthacaPlayer-VintageV/         │
-│      └─ samplebank_config.json                              │
-│          → Sample Bank: C:/SoundBanks/.../Samplebank-VintageV│
+│      └─ samplebank_config-VntV.json                         │
+│          → Sample Bank: C:/SoundBanks/IthacaPlayer/VntV/    │
 │                                                              │
-│  Plugin Binary 2: IthacaPlayer-Rhodes.vst3                  │
+│  Plugin Binary 2: IthacaPlayer-Rhodes.vst3 (Code: Rhds)     │
 │      ↓                                                       │
 │  Config: %APPDATA%/LordAudio/IthacaPlayer-Rhodes/           │
-│      └─ samplebank_config.json                              │
-│          → Sample Bank: C:/SoundBanks/.../Samplebank-Rhodes │
+│      └─ samplebank_config-Rhds.json                         │
+│          → Sample Bank: C:/SoundBanks/IthacaPlayer/Rhds/    │
 │                                                              │
 └─────────────────────────────────────────────────────────────┘
 ```
@@ -100,18 +100,23 @@ build-rhodes/IthacaPlayer-Rhodes_artefacts/Release/
 
 ### Config Structure
 
-Každý instrument instance má vlastní config adresář:
+Každý instrument instance má vlastní config adresář s jedinečným config souborem:
 
 ```
 Windows:
 C:\Users\<user>\AppData\Roaming\LordAudio\
 ├── IthacaPlayer-VintageV\
-│   └── samplebank_config.json → C:/SoundBanks/.../Samplebank-VintageV/
+│   └── samplebank-config-VntV.json → C:/SoundBanks/IthacaPlayer/VntV/
 ├── IthacaPlayer-Rhodes\
-│   └── samplebank_config.json → C:/SoundBanks/.../Samplebank-Rhodes/
+│   └── samplebank-config-Rhds.json → C:/SoundBanks/IthacaPlayer/Rhds/
 └── IthacaPlayer-Wurlitzer\
-    └── samplebank_config.json → C:/SoundBanks/.../Samplebank-Wurlitzer/
+    └── samplebank-config-Wrlz.json → C:/SoundBanks/IthacaPlayer/Wrlz/
 ```
+
+**Naming Convention:**
+- Config file: `samplebank-config-{PLUGIN_CODE}.json`
+- Matches pattern used by `instrument-definition.json`
+- Each instrument instance has unique config file based on 4-char PLUGIN_CODE
 
 ### Sample Bank Structure
 
@@ -176,9 +181,9 @@ Plugin používá preprocessor define `ITHACA_PLUGIN_TARGET_NAME` pro určení v
 
 ## Struktura souborů
 
-### 1. Runtime Config (`samplebank_config.json`)
+### 1. Runtime Config (`samplebank-config-{PLUGIN_CODE}.json`)
 
-**Formát (example pro VintageV):**
+**Formát (example pro VintageV - `samplebank-config-VntV.json`):**
 ```json
 {
   "sampleBankPath": "C:/SoundBanks/IthacaPlayer/VntV",
@@ -283,14 +288,14 @@ Celkem: 88 not × 8 layers = 704 WAV souborů
 
 ### Windows
 
-#### Výchozí cesty
+#### Výchozí cesty (example pro VintageV)
 
 | Co | Cesta |
 |----|-------|
-| **Runtime config** | `C:\Users\<user>\AppData\Roaming\LordAudio\IthacaPlayer\samplebank_config.json` |
-| **Sample bank** | `C:\SoundBanks\IthacaPlayer\instrument\` |
-| **VST3 plugin** | `C:\Program Files\Common Files\VST3\IthacaPlayer.vst3\` |
-| **Standalone exe** | `C:\Program Files\LordAudio\IthacaPlayer\IthacaPlayer.exe` |
+| **Runtime config** | `C:\Users\<user>\AppData\Roaming\LordAudio\IthacaPlayer-VintageV\samplebank-config-VntV.json` |
+| **Sample bank** | `C:\SoundBanks\IthacaPlayer\VntV\` |
+| **VST3 plugin** | `C:\Program Files\Common Files\VST3\IthacaPlayer-VintageV.vst3\` |
+| **Standalone exe** | `C:\Program Files\LordAudio\IthacaPlayer\IthacaPlayer-VintageV.exe` |
 
 #### Environment variables
 ```cmd
@@ -299,10 +304,10 @@ Celkem: 88 not × 8 layers = 704 WAV souborů
 %CommonProgramFiles%     = C:\Program Files\Common Files
 ```
 
-#### Příklad konfigurace
+#### Příklad konfigurace (VintageV)
 ```json
 {
-  "sampleBankPath": "C:/SoundBanks/IthacaPlayer/instrument",
+  "sampleBankPath": "C:/SoundBanks/IthacaPlayer/VntV",
   "version": "1.0",
   "generatedBy": "Installer",
   "buildTimestamp": "251101120000",
@@ -314,25 +319,25 @@ Celkem: 88 not × 8 layers = 704 WAV souborů
 
 ### macOS
 
-#### Výchozí cesty
+#### Výchozí cesty (example pro VintageV)
 
 | Co | Cesta |
 |----|-------|
-| **Runtime config** | `~/Library/Application Support/LordAudio/IthacaPlayer/samplebank_config.json` |
-| **Sample bank** | `~/Library/Application Support/IthacaPlayer/instrument/` |
-| **VST3 plugin** | `~/Library/Audio/Plug-Ins/VST3/IthacaPlayer.vst3/` |
-| **AU plugin** | `~/Library/Audio/Plug-Ins/Components/IthacaPlayer.component/` |
-| **Standalone app** | `/Applications/IthacaPlayer.app` |
+| **Runtime config** | `~/Library/Application Support/LordAudio/IthacaPlayer-VintageV/samplebank-config-VntV.json` |
+| **Sample bank** | `~/Library/Application Support/IthacaPlayer/VntV/` |
+| **VST3 plugin** | `~/Library/Audio/Plug-Ins/VST3/IthacaPlayer-VintageV.vst3/` |
+| **AU plugin** | `~/Library/Audio/Plug-Ins/Components/IthacaPlayer-VintageV.component/` |
+| **Standalone app** | `/Applications/IthacaPlayer-VintageV.app` |
 
 #### Environment variables
 ```bash
 $HOME                    = /Users/<username>
 ```
 
-#### Příklad konfigurace
+#### Příklad konfigurace (VintageV)
 ```json
 {
-  "sampleBankPath": "/Users/jindra/Library/Application Support/IthacaPlayer/instrument",
+  "sampleBankPath": "/Users/jindra/Library/Application Support/IthacaPlayer/VntV",
   "version": "1.0",
   "generatedBy": "Installer",
   "buildTimestamp": "251101120000",
@@ -344,14 +349,14 @@ $HOME                    = /Users/<username>
 
 ### Linux
 
-#### Výchozí cesty
+#### Výchozí cesty (example pro VintageV)
 
 | Co | Cesta |
 |----|-------|
-| **Runtime config** | `~/.local/share/LordAudio/IthacaPlayer/samplebank_config.json` |
-| **Sample bank** | `~/.local/share/IthacaPlayer/instrument/` |
-| **VST3 plugin** | `~/.vst3/IthacaPlayer.vst3/` |
-| **Standalone binary** | `/opt/IthacaPlayer/bin/IthacaPlayer` |
+| **Runtime config** | `~/.local/share/LordAudio/IthacaPlayer-VintageV/samplebank-config-VntV.json` |
+| **Sample bank** | `~/.local/share/IthacaPlayer/VntV/` |
+| **VST3 plugin** | `~/.vst3/IthacaPlayer-VintageV.vst3/` |
+| **Standalone binary** | `/opt/IthacaPlayer/bin/IthacaPlayer-VintageV` |
 
 #### Environment variables
 ```bash
@@ -359,10 +364,10 @@ $HOME                    = /home/<username>
 $XDG_DATA_HOME          = ~/.local/share (default)
 ```
 
-#### Příklad konfigurace
+#### Příklad konfigurace (VintageV)
 ```json
 {
-  "sampleBankPath": "/home/jindra/.local/share/IthacaPlayer/instrument",
+  "sampleBankPath": "/home/jindra/.local/share/IthacaPlayer/VntV",
   "version": "1.0",
   "generatedBy": "Installer",
   "buildTimestamp": "251101120000",
@@ -380,14 +385,15 @@ $XDG_DATA_HOME          = ~/.local/share (default)
 - `samplebank_config.json.in` - Template s placeholdery
 - `CMakeLists.txt` - Build script
 
-**Krok 1: Nastavení výchozí cesty** (CMakeLists.txt:15-28)
+**Krok 1: Nastavení výchozí cesty s PLUGIN_CODE** (CMakeLists.txt)
 ```cmake
+# PLUGIN_CODE je nastaven podle INSTRUMENT_NAME (VntV, Rhds, Wrlz, etc.)
 if(WIN32)
-    set(SAMPLE_BANK_PATH "C:/SoundBanks/IthacaPlayer/instrument")
+    set(SAMPLE_BANK_PATH "C:/SoundBanks/IthacaPlayer/${PLUGIN_CODE}")
 elseif(APPLE)
-    set(SAMPLE_BANK_PATH "$ENV{HOME}/Library/Application Support/IthacaPlayer/instrument")
+    set(SAMPLE_BANK_PATH "$ENV{HOME}/Library/Application Support/IthacaPlayer/${PLUGIN_CODE}")
 else()
-    set(SAMPLE_BANK_PATH "$ENV{HOME}/.local/share/IthacaPlayer/instrument")
+    set(SAMPLE_BANK_PATH "$ENV{HOME}/.local/share/IthacaPlayer/${PLUGIN_CODE}")
 endif()
 ```
 
@@ -423,10 +429,10 @@ configure_file(
 }
 ```
 
-**Výstup (`build/generated/samplebank_config.json`):**
+**Výstup (`build/generated/samplebank_config.json`) - example pro VintageV:**
 ```json
 {
-  "sampleBankPath": "C:/SoundBanks/IthacaPlayer/instrument",
+  "sampleBankPath": "C:/SoundBanks/IthacaPlayer/VntV",
   "version": "1.0",
   "generatedBy": "CMake",
   "buildTimestamp": "251101192141",
@@ -442,7 +448,7 @@ Kompilace a linkování pluginu (VST3, Standalone, AU).
 
 **Soubor:** `cmake/InstallSampleBankConfig.cmake`
 
-**Krok 1: Detekce roaming directory**
+**Krok 1: Detekce roaming directory (s PLUGIN_NAME a PLUGIN_CODE)**
 ```cmake
 if(WIN32)
     # C:\Users\<user>\AppData\Roaming
@@ -455,7 +461,11 @@ else()
     file(TO_CMAKE_PATH "$ENV{HOME}/.local/share" ROAMING_DIR)
 endif()
 
-set(PLUGIN_DATA_DIR "${ROAMING_DIR}/LordAudio/IthacaPlayer")
+# PLUGIN_NAME je např. "IthacaPlayer-VintageV"
+set(PLUGIN_DATA_DIR "${ROAMING_DIR}/LordAudio/${PLUGIN_NAME}")
+
+# Config filename s PLUGIN_CODE (např. "samplebank-config-VntV.json")
+set(CONFIG_FILENAME "samplebank-config-${PLUGIN_CODE}.json")
 ```
 
 **Krok 2: Vytvoření adresáře**
@@ -465,7 +475,7 @@ file(MAKE_DIRECTORY "${PLUGIN_DATA_DIR}")
 
 **Krok 3: Instalace (pouze pokud neexistuje)**
 ```cmake
-set(TARGET_FILE "${PLUGIN_DATA_DIR}/samplebank_config.json")
+set(TARGET_FILE "${PLUGIN_DATA_DIR}/${CONFIG_FILENAME}")
 
 if(NOT EXISTS "${TARGET_FILE}")
     # Čte build/generated/samplebank_config.json
@@ -474,13 +484,18 @@ if(NOT EXISTS "${TARGET_FILE}")
     # Oprava backslashes → forward slashes
     string(REPLACE "\\" "/" JSON_CONTENT_FIXED "${JSON_CONTENT}")
 
-    # Zapíše do roaming profile
+    # Zapíše do roaming profile (např. samplebank-config-VntV.json)
     file(WRITE "${TARGET_FILE}" "${JSON_CONTENT_FIXED}")
 else()
     # PŘESKOČÍ - zachová user settings!
     message(STATUS "Config exists, preserving user settings")
 endif()
 ```
+
+**Example výsledná cesta:**
+- Windows: `C:\Users\<user>\AppData\Roaming\LordAudio\IthacaPlayer-VintageV\samplebank-config-VntV.json`
+- macOS: `~/Library/Application Support/LordAudio/IthacaPlayer-VintageV/samplebank-config-VntV.json`
+- Linux: `~/.local/share/LordAudio/IthacaPlayer-VintageV/samplebank-config-VntV.json`
 
 **⚠️ KLÍČOVÁ VLASTNOST:**
 - Build **NIKDY** nepřepíše existující konfiguraci
@@ -589,26 +604,26 @@ Velikost: Závisí na sample rate a délce
 
 #### Krok 4: Vytvoření Runtime Config
 
-**Výchozí cíl podle platformy:**
+**Výchozí cíl podle platformy (example pro VintageV):**
 
 | Platforma | Cesta |
 |-----------|-------|
-| Windows | `%APPDATA%\LordAudio\IthacaPlayer\samplebank_config.json` |
-| macOS | `~/Library/Application Support/LordAudio/IthacaPlayer/samplebank_config.json` |
-| Linux | `~/.local/share/LordAudio/IthacaPlayer/samplebank_config.json` |
+| Windows | `%APPDATA%\LordAudio\IthacaPlayer-VintageV\samplebank-config-VntV.json` |
+| macOS | `~/Library/Application Support/LordAudio/IthacaPlayer-VintageV/samplebank-config-VntV.json` |
+| Linux | `~/.local/share/LordAudio/IthacaPlayer-VintageV/samplebank-config-VntV.json` |
 
 **Instalační akce:**
 
-1. **Vytvořit adresář:**
+1. **Vytvořit adresář (příklad pro VintageV):**
    ```
-   Windows: %APPDATA%\LordAudio\IthacaPlayer\
-   macOS:   ~/Library/Application Support/LordAudio/IthacaPlayer/
-   Linux:   ~/.local/share/LordAudio/IthacaPlayer/
+   Windows: %APPDATA%\LordAudio\IthacaPlayer-VintageV\
+   macOS:   ~/Library/Application Support/LordAudio/IthacaPlayer-VintageV/
+   Linux:   ~/.local/share/LordAudio/IthacaPlayer-VintageV/
    ```
 
-2. **Zkontrolovat existenci:**
+2. **Zkontrolovat existenci (příklad pro VintageV - samplebank-config-VntV.json):**
    ```
-   if (samplebank_config.json NEEXISTUJE):
+   if (samplebank-config-VntV.json NEEXISTUJE):
        VYTVOŘ nový soubor
    else:
        DOTAZ NA UŽIVATELE:
@@ -637,22 +652,25 @@ Velikost: Závisí na sample rate a délce
                              Forward slash!
    ```
 
-**Pseudokód pro installer:**
+**Pseudokód pro installer (example pro VintageV):**
 ```python
-def create_runtime_config(sample_bank_path, platform):
+def create_runtime_config(sample_bank_path, platform, plugin_name, plugin_code):
+    # Example: plugin_name="IthacaPlayer-VintageV", plugin_code="VntV"
+
     # 1. Detekce roaming directory
     if platform == "Windows":
-        config_dir = os.path.join(os.environ["APPDATA"], "LordAudio", "IthacaPlayer")
+        config_dir = os.path.join(os.environ["APPDATA"], "LordAudio", plugin_name)
     elif platform == "Darwin":
-        config_dir = os.path.join(os.environ["HOME"], "Library", "Application Support", "LordAudio", "IthacaPlayer")
+        config_dir = os.path.join(os.environ["HOME"], "Library", "Application Support", "LordAudio", plugin_name)
     else:  # Linux
-        config_dir = os.path.join(os.environ["HOME"], ".local", "share", "LordAudio", "IthacaPlayer")
+        config_dir = os.path.join(os.environ["HOME"], ".local", "share", "LordAudio", plugin_name)
 
     # 2. Vytvořit adresář
     os.makedirs(config_dir, exist_ok=True)
 
-    # 3. Cesta k config souboru
-    config_file = os.path.join(config_dir, "samplebank_config.json")
+    # 3. Cesta k config souboru (s PLUGIN_CODE)
+    config_filename = f"samplebank-config-{plugin_code}.json"
+    config_file = os.path.join(config_dir, config_filename)
 
     # 4. Zkontrolovat existenci
     if os.path.exists(config_file):
@@ -761,8 +779,9 @@ def create_runtime_config(sample_bank_path, platform):
 │   ✓ Sample banka (704 WAV souborů)                        │
 │   ✓ Konfigurace                                            │
 │                                                             │
-│ Konfigurace uložena:                                        │
-│   %APPDATA%\LordAudio\IthacaPlayer\samplebank_config.json  │
+│ Konfigurace uložena (example pro VintageV):                │
+│   %APPDATA%\LordAudio\IthacaPlayer-VintageV\               │
+│   samplebank-config-VntV.json                              │
 │                                                             │
 │ [x] Spustit Ithaca nyní                                    │
 │                                                             │
@@ -829,22 +848,22 @@ def create_runtime_config(sample_bank_path, platform):
 
 **Řešení:**
 
-1. **Zkontrolovat existenci config souboru:**
+1. **Zkontrolovat existenci config souboru (example pro VintageV):**
    ```bash
    # Windows
-   dir "%APPDATA%\LordAudio\IthacaPlayer\samplebank_config.json"
+   dir "%APPDATA%\LordAudio\IthacaPlayer-VintageV\samplebank-config-VntV.json"
 
    # macOS
-   ls -la ~/Library/Application\ Support/LordAudio/IthacaPlayer/samplebank_config.json
+   ls -la ~/Library/Application\ Support/LordAudio/IthacaPlayer-VintageV/samplebank-config-VntV.json
 
    # Linux
-   ls -la ~/.local/share/LordAudio/IthacaPlayer/samplebank_config.json
+   ls -la ~/.local/share/LordAudio/IthacaPlayer-VintageV/samplebank-config-VntV.json
    ```
 
 2. **Zkontrolovat JSON syntax:**
    ```bash
    # Použijte JSON validator
-   cat samplebank_config.json | python -m json.tool
+   cat samplebank-config-VntV.json | python -m json.tool
    ```
 
 3. **Zkontrolovat cestu v JSON:**
@@ -1012,8 +1031,10 @@ def validate_installation(paths):
     if not os.path.exists(instrument_json):
         errors.append(f"instrument-definition.json not found: {instrument_json}")
 
-    # 4. Runtime config
-    config_file = os.path.join(paths["config"], "samplebank_config.json")
+    # 4. Runtime config (with PLUGIN_CODE)
+    # Example: plugin_code = "VntV" for VintageV
+    config_filename = f"samplebank-config-{paths['plugin_code']}.json"
+    config_file = os.path.join(paths["config"], config_filename)
     if not os.path.exists(config_file):
         errors.append(f"Runtime config not found: {config_file}")
     else:
@@ -1040,6 +1061,8 @@ def validate_installation(paths):
 
 | Verze | Datum | Změny |
 |-------|-------|-------|
+| 2.1 | 2025-11-01 | Config filename pattern: `samplebank-config-{PLUGIN_CODE}.json` (konzistence s `instrument-definition.json`) |
+| 2.0 | 2025-11-01 | Multiple Plugin Instances architecture - PLUGIN_CODE naming convention |
 | 1.0 | 2025-11-01 | Initial version - kompletní dokumentace pro installer |
 
 ---
