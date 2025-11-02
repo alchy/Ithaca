@@ -55,11 +55,6 @@
 #define ITHACA_ENVELOPE_TRIGGERS_END_ATTACK  0.99f
 #define ITHACA_ENVELOPE_TRIGGERS_END_RELEASE 0.01f
 
-#define ITHACA_DEFAULT_ATTACK_MS 10.0f
-#define ITHACA_DEFAULT_DECAY_MS 200.0f
-#define ITHACA_DEFAULT_SUSTAIN_LEVEL 0.7f
-#define ITHACA_DEFAULT_RELEASE_MS 500.0f
-
 // ============================================================================
 // SAMPLE BANK PATHS
 // ============================================================================
