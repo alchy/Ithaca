@@ -75,8 +75,8 @@ endif()
 # Plugin target name with instrument suffix
 set(PLUGIN_TARGET_NAME "IthacaPlayer-${INSTRUMENT_NAME}")
 
-# Product name displayed in DAW
-set(PLUGIN_PRODUCT_NAME "IthacaPlayer ${INSTRUMENT_NAME}")
+# Product name displayed in DAW and used for binary filenames (no spaces!)
+set(PLUGIN_PRODUCT_NAME "IthacaPlayer-${INSTRUMENT_NAME}")
 
 message(STATUS "=== INSTRUMENT INSTANCE CONFIGURATION ===")
 message(STATUS "Instrument Name: ${INSTRUMENT_NAME}")
@@ -185,21 +185,21 @@ configure_file(
 
 # Generate JSON config file from template
 configure_file(
-    ${CMAKE_CURRENT_SOURCE_DIR}/samplebank_config.json.in
-    ${CMAKE_CURRENT_BINARY_DIR}/generated/samplebank_config.json
+    ${CMAKE_CURRENT_SOURCE_DIR}/samplebank-config.template.json.in
+    ${CMAKE_CURRENT_BINARY_DIR}/generated/samplebank-config.json
     @ONLY
 )
 
-# Copy generated JSON to project root (as reference)
+# Copy generated JSON to project root (as reference template)
 configure_file(
-    ${CMAKE_CURRENT_BINARY_DIR}/generated/samplebank_config.json
-    ${CMAKE_CURRENT_SOURCE_DIR}/samplebank_config.json
+    ${CMAKE_CURRENT_BINARY_DIR}/generated/samplebank-config.json
+    ${CMAKE_CURRENT_SOURCE_DIR}/samplebank-config.template.json
     COPYONLY
 )
 
 message(STATUS "=== SAMPLE BANK CONFIG ===")
-message(STATUS "JSON config generated: ${CMAKE_CURRENT_BINARY_DIR}/generated/samplebank_config.json")
-message(STATUS "JSON reference copied to: ${CMAKE_CURRENT_SOURCE_DIR}/samplebank_config.json")
+message(STATUS "JSON config generated: ${CMAKE_CURRENT_BINARY_DIR}/generated/samplebank-config.json")
+message(STATUS "Template copied to: ${CMAKE_CURRENT_SOURCE_DIR}/samplebank-config.template.json")
 message(STATUS "==========================")
 
 # =============================================================================
@@ -507,7 +507,7 @@ add_custom_command(TARGET ${PLUGIN_TARGET_NAME} POST_BUILD
 # POST_BUILD: Install JSON config to user's roaming directory
 add_custom_command(TARGET ${PLUGIN_TARGET_NAME} POST_BUILD
     COMMAND ${CMAKE_COMMAND}
-        -DSOURCE_JSON=${CMAKE_CURRENT_BINARY_DIR}/generated/samplebank_config.json
+        -DSOURCE_JSON=${CMAKE_CURRENT_BINARY_DIR}/generated/samplebank-config.json
         -DPLUGIN_NAME=${PLUGIN_TARGET_NAME}
         -DPLUGIN_CODE=${PLUGIN_CODE}
         -P ${CMAKE_CURRENT_SOURCE_DIR}/cmake/InstallSampleBankConfig.cmake
