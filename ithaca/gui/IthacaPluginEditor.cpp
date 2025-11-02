@@ -12,7 +12,9 @@
 #include "ithaca/gui/components/InfoHeaderComponent.h"
 #include "ithaca/gui/helpers/GuiHelpers.h"
 #include "ithaca/config/AppConstants.h"
+#include "ithaca/audio/SampleBankPathManager.h"
 #include <iostream>
+#include <filesystem>
 
 #define BACKGROUND_PICTURE_OFF 0
 #define CURRENT_INSTRUMENT "Ithaca Grand Piano"
@@ -194,49 +196,80 @@ void IthacaPluginEditor::initializeComponents()
 void IthacaPluginEditor::setupBackground()
 {
 #if !BACKGROUND_PICTURE_OFF
-    // ZMĚNĚNO: Dynamické načítání background.jpg ze složky decorators
-    
-    // 1. Zkusit načíst relativně k executable (pro development)
-    juce::File backgroundFile = juce::File::getSpecialLocation(
-        juce::File::currentExecutableFile).getParentDirectory().getChildFile("decorators/background.jpg");
-    
-    // 2. Fallback: Zkusit relativně k current working directory
+    // Load background.jpg from plugin data directory (user roaming)
+    // This ensures consistent location with samplebank config and core_logger
+
+    // 1. Primary: Plugin data directory (user roaming - per instrument instance)
+    std::filesystem::path pluginDataDir = SampleBankPathManager::getPluginDataDirectory();
+    juce::File backgroundFile = juce::File((pluginDataDir / "decorators" / "background.jpg").string());
+
+    // Log primary decorators path
+    if (auto* logger = processorRef.getLogger()) {
+        logger->log("IthacaPluginEditor/setupBackground", LogSeverity::Info,
+                   "Decorators directory: " + (pluginDataDir / "decorators").string());
+        logger->log("IthacaPluginEditor/setupBackground", LogSeverity::Info,
+                   "Looking for background.jpg: " + backgroundFile.getFullPathName().toStdString());
+    }
+
+    // 2. Fallback: Relative to executable (for development)
+    if (!backgroundFile.existsAsFile()) {
+        backgroundFile = juce::File::getSpecialLocation(
+            juce::File::currentExecutableFile).getParentDirectory().getChildFile("decorators/background.jpg");
+
+        if (auto* logger = processorRef.getLogger()) {
+            logger->log("IthacaPluginEditor/setupBackground", LogSeverity::Info,
+                       "Primary path not found, trying fallback: " + backgroundFile.getFullPathName().toStdString());
+        }
+    }
+
+    // 3. Fallback: Relative to current working directory (for development)
     if (!backgroundFile.existsAsFile()) {
         backgroundFile = juce::File::getCurrentWorkingDirectory().getChildFile("decorators/background.jpg");
+
+        if (auto* logger = processorRef.getLogger()) {
+            logger->log("IthacaPluginEditor/setupBackground", LogSeverity::Info,
+                       "Executable fallback not found, trying CWD: " + backgroundFile.getFullPathName().toStdString());
+        }
     }
-    
-    // 3. Fallback: Zkusit absolutní cestu (pro installed plugin)
-    #ifdef _WIN32
-    if (!backgroundFile.existsAsFile()) {
-        backgroundFile = juce::File("C:/ProgramData/IthacaPlayer/decorators/background.jpg");
-    }
-    #elif __APPLE__
-    if (!backgroundFile.existsAsFile()) {
-        backgroundFile = juce::File("~/Library/Application Support/IthacaPlayer/decorators/background.jpg");
-    }
-    #endif
-    
+
     // Načíst obrázek ze souboru
     if (backgroundFile.existsAsFile()) {
         juce::Image image = juce::ImageFileFormat::loadFrom(backgroundFile);
-        
+
         if (image.isValid()) {
             imageComponent.setImage(image);
             imageComponent.setImagePlacement(juce::RectanglePlacement::stretchToFit);
             imageComponent.setInterceptsMouseClicks(false, false);  // Non-interactive
             addAndMakeVisible(imageComponent);
-            
-            GUI_DEBUG("IthacaGUI: Background image loaded successfully from: " 
+
+            if (auto* logger = processorRef.getLogger()) {
+                logger->log("IthacaPluginEditor/setupBackground", LogSeverity::Info,
+                           "Background image loaded successfully from: " + backgroundFile.getFullPathName().toStdString());
+                logger->log("IthacaPluginEditor/setupBackground", LogSeverity::Info,
+                           "Image size: " + std::to_string(image.getWidth()) + "x" + std::to_string(image.getHeight()) + "px");
+            }
+
+            GUI_DEBUG("IthacaGUI: Background image loaded successfully from: "
                       << backgroundFile.getFullPathName().toStdString());
-            GUI_DEBUG("IthacaGUI: Image size: " << image.getWidth() << "x" 
+            GUI_DEBUG("IthacaGUI: Image size: " << image.getWidth() << "x"
                       << image.getHeight() << "px");
         } else {
-            GUI_DEBUG("IthacaGUI: ERROR - Failed to decode image from file: " 
+            if (auto* logger = processorRef.getLogger()) {
+                logger->log("IthacaPluginEditor/setupBackground", LogSeverity::Error,
+                           "Failed to decode image from file: " + backgroundFile.getFullPathName().toStdString());
+            }
+
+            GUI_DEBUG("IthacaGUI: ERROR - Failed to decode image from file: "
                       << backgroundFile.getFullPathName().toStdString());
             createFallbackBackground();
         }
     } else {
-        GUI_DEBUG("IthacaGUI: WARNING - background.jpg not found at: " 
+        if (auto* logger = processorRef.getLogger()) {
+            logger->log("IthacaPluginEditor/setupBackground", LogSeverity::Warning,
+                       "background.jpg not found in any location");
+        }
+
+        GUI_DEBUG("IthacaGUI: WARNING - background.jpg not found at: "
                   << backgroundFile.getFullPathName().toStdString());
         GUI_DEBUG("IthacaGUI: Searched paths:");
         GUI_DEBUG("  1. " << juce::File::getSpecialLocation(
@@ -244,10 +277,14 @@ void IthacaPluginEditor::setupBackground()
             .getChildFile("decorators/background.jpg").getFullPathName().toStdString());
         GUI_DEBUG("  2. " << juce::File::getCurrentWorkingDirectory()
             .getChildFile("decorators/background.jpg").getFullPathName().toStdString());
-        
+
         createFallbackBackground();
     }
 #else
+    if (auto* logger = processorRef.getLogger()) {
+        logger->log("IthacaPluginEditor/setupBackground", LogSeverity::Info,
+                   "Background DISABLED (debug mode - BACKGROUND_PICTURE_OFF)");
+    }
     GUI_DEBUG("IthacaGUI: Background DISABLED (debug mode - BACKGROUND_PICTURE_OFF)");
 #endif
 }

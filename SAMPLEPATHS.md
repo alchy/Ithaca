@@ -98,25 +98,63 @@ build-rhodes/IthacaPlayer-Rhodes_artefacts/Release/
 └── Standalone/IthacaPlayer-Rhodes.exe
 ```
 
-### Config Structure
+### User Data Directory Structure
 
-Každý instrument instance má vlastní config adresář s jedinečným config souborem:
+Každý instrument instance má vlastní user data adresář v roaming profile s kompletní strukturou:
 
 ```
 Windows:
 C:\Users\<user>\AppData\Roaming\LordAudio\
 ├── IthacaPlayer-VintageV\
-│   └── samplebank-config-VntV.json → C:/SoundBanks/IthacaPlayer/VntV/
+│   ├── samplebank-config-VntV.json → C:/SoundBanks/IthacaPlayer/VntV/
+│   ├── decorators\
+│   │   └── background.jpg
+│   └── core_logger\
+│       └── core_logger.log
 ├── IthacaPlayer-Rhodes\
-│   └── samplebank-config-Rhds.json → C:/SoundBanks/IthacaPlayer/Rhds/
+│   ├── samplebank-config-Rhds.json → C:/SoundBanks/IthacaPlayer/Rhds/
+│   ├── decorators\
+│   │   └── background.jpg
+│   └── core_logger\
+│       └── core_logger.log
 └── IthacaPlayer-Wurlitzer\
-    └── samplebank-config-Wrlz.json → C:/SoundBanks/IthacaPlayer/Wrlz/
+    ├── samplebank-config-Wrlz.json → C:/SoundBanks/IthacaPlayer/Wrlz/
+    ├── decorators\
+    │   └── background.jpg
+    └── core_logger\
+        └── core_logger.log
+
+macOS:
+~/Library/Application Support/LordAudio/
+├── IthacaPlayer-VintageV/
+│   ├── samplebank-config-VntV.json
+│   ├── decorators/
+│   │   └── background.jpg
+│   └── core_logger/
+│       └── core_logger.log
+└── ...
+
+Linux:
+~/.local/share/LordAudio/
+├── IthacaPlayer-VintageV/
+│   ├── samplebank-config-VntV.json
+│   ├── decorators/
+│   │   └── background.jpg
+│   └── core_logger/
+│       └── core_logger.log
+└── ...
 ```
+
+**User Data Files:**
+- `samplebank-config-{PLUGIN_CODE}.json` - Sample bank path configuration
+- `decorators/background.jpg` - GUI background image
+- `core_logger/core_logger.log` - Runtime log file
 
 **Naming Convention:**
 - Config file: `samplebank-config-{PLUGIN_CODE}.json`
 - Matches pattern used by `instrument-definition.json`
 - Each instrument instance has unique config file based on 4-char PLUGIN_CODE
+- All user data is isolated per instrument instance
 
 ### Sample Bank Structure
 

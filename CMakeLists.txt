@@ -466,38 +466,38 @@ target_link_libraries(${PLUGIN_TARGET_NAME}
 )
 
 # =============================================================================
-# Copy resources (background image) to build directory
+# Install decorators (background.jpg) to user roaming directory
 # =============================================================================
 
-# Create decorators folder in build directory
-file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/decorators)
-
-# Copy background.jpg to multiple locations for different build scenarios
+# POST_BUILD: Install decorators to user's roaming directory
+# This ensures decorators are in the same location as samplebank config and core_logger
 add_custom_command(TARGET ${PLUGIN_TARGET_NAME} POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E copy_if_different
-        ${CMAKE_CURRENT_SOURCE_DIR}/decorators/background.jpg
-        ${CMAKE_CURRENT_BINARY_DIR}/decorators/background.jpg
-    COMMENT "Copying background.jpg to build directory"
+    COMMAND ${CMAKE_COMMAND}
+        -DSOURCE_IMAGE=${CMAKE_CURRENT_SOURCE_DIR}/decorators/background.jpg
+        -DPLUGIN_NAME=${PLUGIN_TARGET_NAME}
+        -P ${CMAKE_CURRENT_SOURCE_DIR}/cmake/InstallDecorators.cmake
+    COMMENT "Installing decorators for ${PLUGIN_TARGET_NAME} to user's roaming profile"
+    VERBATIM
 )
 
-# Also copy to Standalone executable location (Debug)
+# Also keep copies in Standalone executable location for development fallback
+# (Development builds will check user roaming first, then fall back to these)
 add_custom_command(TARGET ${PLUGIN_TARGET_NAME} POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E make_directory
         ${CMAKE_CURRENT_BINARY_DIR}/${PLUGIN_TARGET_NAME}_artefacts/Debug/Standalone/decorators
     COMMAND ${CMAKE_COMMAND} -E copy_if_different
         ${CMAKE_CURRENT_SOURCE_DIR}/decorators/background.jpg
         ${CMAKE_CURRENT_BINARY_DIR}/${PLUGIN_TARGET_NAME}_artefacts/Debug/Standalone/decorators/background.jpg
-    COMMENT "Copying background.jpg to Standalone Debug location"
+    COMMENT "Copying background.jpg to Standalone Debug location (development fallback)"
 )
 
-# Copy to Standalone executable location (Release)
 add_custom_command(TARGET ${PLUGIN_TARGET_NAME} POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E make_directory
         ${CMAKE_CURRENT_BINARY_DIR}/${PLUGIN_TARGET_NAME}_artefacts/Release/Standalone/decorators
     COMMAND ${CMAKE_COMMAND} -E copy_if_different
         ${CMAKE_CURRENT_SOURCE_DIR}/decorators/background.jpg
         ${CMAKE_CURRENT_BINARY_DIR}/${PLUGIN_TARGET_NAME}_artefacts/Release/Standalone/decorators/background.jpg
-    COMMENT "Copying background.jpg to Standalone Release location"
+    COMMENT "Copying background.jpg to Standalone Release location (development fallback)"
 )
 
 # =============================================================================

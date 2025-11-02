@@ -20,10 +20,13 @@ IthacaPluginProcessor::IthacaPluginProcessor()
       currentBlockSize_(0),
       processBlockCallCount_(0)
 {
-    // Initialize logger first
-    logger_ = std::make_unique<Logger>(".");
+    // Initialize logger first - use plugin data directory (user roaming)
+    std::string loggerPath = SampleBankPathManager::getPluginDataDirectory().string();
+    logger_ = std::make_unique<Logger>(loggerPath);
     if (logger_) {
         logger_->log("IthacaPluginProcessor/constructor", LogSeverity::Info, "=== ITHACA PLUGIN STARTING ===");
+        logger_->log("IthacaPluginProcessor/constructor", LogSeverity::Info,
+                   "Logger directory: " + loggerPath);
     }
 
     // Initialize parameter pointers through ParameterManager

@@ -215,6 +215,13 @@ public:
      */
     MidiLearnManager* getMidiLearnManager() { return midiLearnManager_.get(); }
 
+    /**
+     * @brief Get pointer to Logger for diagnostics
+     * @return Pointer to Logger (may be nullptr if initialization failed)
+     * @note Used by GUI components to log diagnostic information
+     */
+    Logger* getLogger() const { return logger_.get(); }
+
 private:
     //==============================================================================
     // Core Components
