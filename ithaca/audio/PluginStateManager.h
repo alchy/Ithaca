@@ -43,11 +43,13 @@ public:
      * @param destData Destination memory block for binary data
      * @param parameters APVTS containing all parameters
      * @param midiLearnManager Optional MIDI Learn manager (can be nullptr)
+     * @param sampleBankPath Optional sample bank path to save (can be nullptr)
      * @param logCallback Optional logging callback
      */
     static void saveState(juce::MemoryBlock& destData,
                          juce::AudioProcessorValueTreeState& parameters,
                          MidiLearnManager* midiLearnManager = nullptr,
+                         const juce::String* sampleBankPath = nullptr,
                          LogCallback logCallback = nullptr);
 
     /**
@@ -56,6 +58,7 @@ public:
      * @param sizeInBytes Size of binary data
      * @param parameters APVTS to restore parameters into
      * @param midiLearnManager Optional MIDI Learn manager (can be nullptr)
+     * @param sampleBankPath Optional pointer to restore sample bank path into (can be nullptr)
      * @param logCallback Optional logging callback
      * @return true if state was loaded successfully
      */
@@ -63,6 +66,7 @@ public:
                          int sizeInBytes,
                          juce::AudioProcessorValueTreeState& parameters,
                          MidiLearnManager* midiLearnManager = nullptr,
+                         juce::String* sampleBankPath = nullptr,
                          LogCallback logCallback = nullptr);
 
 private:
@@ -70,23 +74,27 @@ private:
      * @brief Create root XML element with all state data
      * @param parameters APVTS containing parameters
      * @param midiLearnManager MIDI Learn manager (can be nullptr)
+     * @param sampleBankPath Sample bank path to save (can be nullptr)
      * @return Unique pointer to root XML element
      */
     static std::unique_ptr<juce::XmlElement> createStateXml(
         juce::AudioProcessorValueTreeState& parameters,
-        MidiLearnManager* midiLearnManager);
+        MidiLearnManager* midiLearnManager,
+        const juce::String* sampleBankPath);
 
     /**
      * @brief Restore state from XML element
      * @param xmlState Root XML element
      * @param parameters APVTS to restore into
      * @param midiLearnManager MIDI Learn manager (can be nullptr)
+     * @param sampleBankPath Pointer to restore sample bank path into (can be nullptr)
      * @param logCallback Optional logging callback
      * @return true if restoration was successful
      */
     static bool restoreFromXml(juce::XmlElement* xmlState,
                                juce::AudioProcessorValueTreeState& parameters,
                                MidiLearnManager* midiLearnManager,
+                               juce::String* sampleBankPath,
                                LogCallback logCallback);
 
     /**
@@ -108,4 +116,5 @@ private:
     // Root XML tag name
     static constexpr const char* ROOT_TAG = "IthacaPluginState";
     static constexpr const char* MIDI_LEARN_TAG = "MidiLearnMappings";
+    static constexpr const char* SAMPLE_BANK_PATH_ATTR = "sampleBankPath";
 };

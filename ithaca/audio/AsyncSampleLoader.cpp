@@ -58,6 +58,100 @@ void AsyncSampleLoader::startLoading(const std::string& sampleDirectory,
     );
 }
 
+void AsyncSampleLoader::initializeWithSineWaves(int targetSampleRate,
+                                                 int blockSize,
+                                                 Logger& logger,
+                                                 int velocityLayerCount)
+{
+    logger.log("AsyncSampleLoader/initializeWithSineWaves", LogSeverity::Info,
+              "=== INITIALIZING WITH SINE WAVES ===");
+    logger.log("AsyncSampleLoader/initializeWithSineWaves", LogSeverity::Info,
+              "Target sample rate: " + std::to_string(targetSampleRate) + " Hz");
+    logger.log("AsyncSampleLoader/initializeWithSineWaves", LogSeverity::Info,
+              "Velocity layers: " + std::to_string(velocityLayerCount));
+
+    // Stop any previous loading operation
+    stopLoading();
+
+    try {
+        // Initialize EnvelopeStaticData if not already done
+        if (!EnvelopeStaticData::isInitialized()) {
+            logger.log("AsyncSampleLoader/initializeWithSineWaves", LogSeverity::Info,
+                      "Initializing envelope static data...");
+            EnvelopeStaticData::initialize(logger);
+        }
+
+        // Create VoiceManager with sine waves (synchronous, fast)
+        logger.log("AsyncSampleLoader/initializeWithSineWaves", LogSeverity::Info,
+                  "Creating VoiceManager with sine waves...");
+        auto vm = std::make_unique<VoiceManager>(logger, velocityLayerCount, targetSampleRate);
+
+        // Prepare to play
+        vm->prepareToPlay(blockSize);
+
+        // Store VoiceManager
+        {
+            std::lock_guard<std::mutex> lock(stateMutex_);
+            voiceManager_ = std::move(vm);
+            targetSampleRate_ = targetSampleRate;
+            velocityLayerCount_ = velocityLayerCount;
+            instrumentName_ = "Sine Wave Test Tone";
+            state_.store(LoadingState::Completed);
+        }
+
+        logger.log("AsyncSampleLoader/initializeWithSineWaves", LogSeverity::Info,
+                  "=== SINE WAVE INITIALIZATION COMPLETE ===");
+
+    } catch (const std::exception& e) {
+        logger.log("AsyncSampleLoader/initializeWithSineWaves", LogSeverity::Error,
+                  "Failed to initialize with sine waves: " + std::string(e.what()));
+        std::lock_guard<std::mutex> lock(stateMutex_);
+        errorMessage_ = e.what();
+        state_.store(LoadingState::Error);
+    }
+}
+
+void AsyncSampleLoader::loadSampleBankAsync(const std::string& sampleDirectory, Logger& logger)
+{
+    logger.log("AsyncSampleLoader/loadSampleBankAsync", LogSeverity::Info,
+              "=== LOADING SAMPLE BANK (ASYNC) ===");
+    logger.log("AsyncSampleLoader/loadSampleBankAsync", LogSeverity::Info,
+              "Sample directory: " + sampleDirectory);
+
+    // Verify sample rate is set (from sine wave initialization)
+    if (targetSampleRate_ <= 0) {
+        logger.log("AsyncSampleLoader/loadSampleBankAsync", LogSeverity::Error,
+                  "Cannot load sample bank: Sample rate not set. Call initializeWithSineWaves() first.");
+        return;
+    }
+
+    // Stop any previous loading operation
+    stopLoading();
+
+    // Use stored sample rate (set during sine wave initialization)
+    int currentSampleRate = targetSampleRate_;
+
+    logger.log("AsyncSampleLoader/loadSampleBankAsync", LogSeverity::Info,
+              "Using sample rate: " + std::to_string(currentSampleRate) + " Hz");
+
+    // Reset state for new loading operation
+    {
+        std::lock_guard<std::mutex> lock(stateMutex_);
+        state_.store(LoadingState::InProgress);
+        errorMessage_.clear();
+        shouldStop_.store(false);
+    }
+
+    // Start worker thread for sample bank loading
+    loadingThread_ = std::make_unique<std::thread>(
+        &AsyncSampleLoader::sampleBankWorkerFunction,
+        this,
+        sampleDirectory,
+        currentSampleRate,
+        &logger
+    );
+}
+
 void AsyncSampleLoader::stopLoading()
 {
     if (!loadingThread_) {
@@ -106,6 +200,12 @@ int AsyncSampleLoader::getTargetSampleRate() const
 
 //==============================================================================
 // Result Transfer
+
+bool AsyncSampleLoader::hasVoiceManager() const
+{
+    std::lock_guard<std::mutex> lock(stateMutex_);
+    return voiceManager_ != nullptr;
+}
 
 std::unique_ptr<VoiceManager> AsyncSampleLoader::takeVoiceManager()
 {
@@ -317,9 +417,199 @@ void AsyncSampleLoader::workerFunction(const std::string& sampleDirectory,
         state_.store(LoadingState::Error);
         
         if (logger) {
-            logger->log("AsyncSampleLoader", LogSeverity::Error, 
+            logger->log("AsyncSampleLoader", LogSeverity::Error,
                        "=== ASYNC LOADING FAILED ===");
-            logger->log("AsyncSampleLoader", LogSeverity::Error, 
+            logger->log("AsyncSampleLoader", LogSeverity::Error,
+                       "Unknown exception caught");
+        }
+    }
+}
+
+//==============================================================================
+// Sample Bank Worker Function
+
+void AsyncSampleLoader::sampleBankWorkerFunction(const std::string& sampleDirectory,
+                                                  int targetSampleRate,
+                                                  Logger* logger)
+{
+    try {
+        if (logger) {
+            logger->log("AsyncSampleLoader/sampleBankWorker", LogSeverity::Info,
+                       "=== SAMPLE BANK LOADING STARTED (ASYNC) ===");
+        }
+
+        // Check for stop signal
+        if (shouldStop_.load()) {
+            if (logger) {
+                logger->log("AsyncSampleLoader/sampleBankWorker", LogSeverity::Warning,
+                           "Loading interrupted before starting");
+            }
+            std::lock_guard<std::mutex> lock(stateMutex_);
+            state_.store(LoadingState::Idle);
+            return;
+        }
+
+        // Load instrument metadata
+        if (logger) {
+            logger->log("AsyncSampleLoader/sampleBankWorker", LogSeverity::Info,
+                       "Loading instrument metadata...");
+        }
+
+        InstrumentMetadata metadata = InstrumentMetadataLoader::loadFromDirectory(
+            juce::File(sampleDirectory), logger);
+
+        // Check for stop signal
+        if (shouldStop_.load()) {
+            if (logger) {
+                logger->log("AsyncSampleLoader/sampleBankWorker", LogSeverity::Warning,
+                           "Loading interrupted after metadata");
+            }
+            std::lock_guard<std::mutex> lock(stateMutex_);
+            state_.store(LoadingState::Idle);
+            return;
+        }
+
+        // Create new VoiceManager with sample bank (old one was moved to processor)
+        if (logger) {
+            logger->log("AsyncSampleLoader/sampleBankWorker", LogSeverity::Info,
+                       "Creating VoiceManager with " + std::to_string(metadata.velocityMaps) + " velocity layers...");
+        }
+
+        auto newVoiceManager = std::make_unique<VoiceManager>(sampleDirectory, *logger, metadata.velocityMaps);
+
+        if (logger) {
+            logger->log("AsyncSampleLoader/sampleBankWorker", LogSeverity::Info,
+                       "VoiceManager created successfully");
+        }
+
+        // Check for stop signal
+        if (shouldStop_.load()) {
+            if (logger) {
+                logger->log("AsyncSampleLoader/sampleBankWorker", LogSeverity::Warning,
+                           "Loading interrupted after VoiceManager creation");
+            }
+            std::lock_guard<std::mutex> lock(stateMutex_);
+            state_.store(LoadingState::Idle);
+            return;
+        }
+
+        // Initialize system (scan directory)
+        if (logger) {
+            logger->log("AsyncSampleLoader/sampleBankWorker", LogSeverity::Info,
+                       "Initializing sampler system (scanning directory)...");
+        }
+
+        newVoiceManager->initializeSystem(*logger);
+
+        if (logger) {
+            logger->log("AsyncSampleLoader/sampleBankWorker", LogSeverity::Info,
+                       "System initialized successfully");
+        }
+
+        // Check for stop signal
+        if (shouldStop_.load()) {
+            if (logger) {
+                logger->log("AsyncSampleLoader/sampleBankWorker", LogSeverity::Warning,
+                           "Loading interrupted after system initialization");
+            }
+            std::lock_guard<std::mutex> lock(stateMutex_);
+            state_.store(LoadingState::Idle);
+            return;
+        }
+
+        // Load sample bank with target sample rate
+        if (logger) {
+            logger->log("AsyncSampleLoader/sampleBankWorker", LogSeverity::Info,
+                       "Loading sample bank with target sample rate: " + std::to_string(targetSampleRate) + " Hz...");
+        }
+
+        newVoiceManager->loadSampleBank(sampleDirectory, targetSampleRate, *logger);
+
+        if (logger) {
+            logger->log("AsyncSampleLoader/sampleBankWorker", LogSeverity::Info,
+                       "Sample bank loaded successfully");
+        }
+
+        // Check for stop signal
+        if (shouldStop_.load()) {
+            if (logger) {
+                logger->log("AsyncSampleLoader/sampleBankWorker", LogSeverity::Warning,
+                           "Loading interrupted after sample bank loading");
+            }
+            std::lock_guard<std::mutex> lock(stateMutex_);
+            state_.store(LoadingState::Idle);
+            return;
+        }
+
+        // Prepare to play
+        int blockSize = 256;  // Default block size
+        if (logger) {
+            logger->log("AsyncSampleLoader/sampleBankWorker", LogSeverity::Info,
+                       "Preparing to play (block size: " + std::to_string(blockSize) + ")...");
+        }
+
+        newVoiceManager->prepareToPlay(blockSize);
+
+        if (logger) {
+            logger->log("AsyncSampleLoader/sampleBankWorker", LogSeverity::Info,
+                       "Prepared to play successfully");
+        }
+
+        // Store new VoiceManager (thread-safe)
+        {
+            std::lock_guard<std::mutex> lock(stateMutex_);
+            voiceManager_ = std::move(newVoiceManager);
+        }
+
+        // Check for stop signal
+        if (shouldStop_.load()) {
+            if (logger) {
+                logger->log("AsyncSampleLoader/sampleBankWorker", LogSeverity::Warning,
+                           "Loading interrupted after sample loading");
+            }
+            std::lock_guard<std::mutex> lock(stateMutex_);
+            state_.store(LoadingState::Idle);
+            return;
+        }
+
+        // Update metadata
+        {
+            std::lock_guard<std::mutex> lock(stateMutex_);
+            instrumentName_ = metadata.instrumentName.toStdString();
+            velocityLayerCount_ = metadata.velocityMaps;
+            state_.store(LoadingState::Completed);
+        }
+
+        if (logger) {
+            logger->log("AsyncSampleLoader/sampleBankWorker", LogSeverity::Info,
+                       "=== SAMPLE BANK LOADING COMPLETED ===");
+            logger->log("AsyncSampleLoader/sampleBankWorker", LogSeverity::Info,
+                       "Instrument: " + metadata.instrumentName.toStdString());
+            logger->log("AsyncSampleLoader/sampleBankWorker", LogSeverity::Info,
+                       "Velocity layers: " + std::to_string(metadata.velocityMaps));
+        }
+
+    } catch (const std::exception& e) {
+        std::lock_guard<std::mutex> lock(stateMutex_);
+        errorMessage_ = e.what();
+        state_.store(LoadingState::Error);
+
+        if (logger) {
+            logger->log("AsyncSampleLoader/sampleBankWorker", LogSeverity::Error,
+                       "=== SAMPLE BANK LOADING FAILED ===");
+            logger->log("AsyncSampleLoader/sampleBankWorker", LogSeverity::Error,
+                       "Exception: " + std::string(e.what()));
+        }
+
+    } catch (...) {
+        std::lock_guard<std::mutex> lock(stateMutex_);
+        errorMessage_ = "Unknown error during sample bank loading";
+        state_.store(LoadingState::Error);
+
+        if (logger) {
+            logger->log("AsyncSampleLoader/sampleBankWorker", LogSeverity::Error,
+                       "=== SAMPLE BANK LOADING FAILED ===");
+            logger->log("AsyncSampleLoader/sampleBankWorker", LogSeverity::Error,
                        "Unknown exception caught");
         }
     }

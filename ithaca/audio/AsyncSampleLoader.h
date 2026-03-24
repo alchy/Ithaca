@@ -60,25 +60,53 @@ public:
     
     //==========================================================================
     // Main Interface
-    
+
+    /**
+     * @brief Initialize with sine waves (no sample bank)
+     * @param targetSampleRate Target sample rate (44100 or 48000 Hz)
+     * @param blockSize Audio block size for prepareToPlay
+     * @param logger Reference to Logger for error reporting
+     * @param velocityLayerCount Number of velocity layers (1-8), default 8
+     *
+     * Creates VoiceManager with sine waves immediately (synchronous).
+     * This is fast and allows plugin to start without sample bank.
+     * Call loadSampleBankAsync() later to replace with real samples.
+     */
+    void initializeWithSineWaves(int targetSampleRate,
+                                 int blockSize,
+                                 Logger& logger,
+                                 int velocityLayerCount = 8);
+
     /**
      * @brief Start asynchronous sample loading
      * @param sampleDirectory Path to sample directory
      * @param targetSampleRate Target sample rate (44100 or 48000 Hz)
      * @param blockSize Audio block size for prepareToPlay
      * @param logger Reference to Logger for error reporting
-     * 
+     *
      * If loading is already in progress, it will be stopped first.
      * This method returns immediately - loading happens in background thread.
      */
-    void startLoading(const std::string& sampleDirectory, 
+    void startLoading(const std::string& sampleDirectory,
                      int targetSampleRate,
                      int blockSize,
                      Logger& logger);
-    
+
+    /**
+     * @brief Load sample bank into existing VoiceManager (replaces sine waves)
+     * @param sampleDirectory Path to sample directory
+     * @param logger Reference to Logger for error reporting
+     *
+     * Asynchronously loads real samples into existing VoiceManager.
+     * VoiceManager must already exist (call initializeWithSineWaves() first).
+     * Uses current sample rate from VoiceManager.
+     * This method returns immediately - loading happens in background thread.
+     */
+    void loadSampleBankAsync(const std::string& sampleDirectory, Logger& logger);
+
     /**
      * @brief Stop loading gracefully
-     * 
+     *
      * Sets stop flag and waits for thread to finish (blocking call).
      * Safe to call even if no loading is in progress.
      */
@@ -129,6 +157,12 @@ public:
      * ownership is transferred to caller.
      */
     std::unique_ptr<VoiceManager> takeVoiceManager();
+
+    /**
+     * @brief Check if VoiceManager is available
+     * @return true if VoiceManager exists and can be transferred
+     */
+    bool hasVoiceManager() const;
 
     /**
      * @brief Get loaded instrument name from metadata
@@ -187,4 +221,21 @@ private:
                        int targetSampleRate,
                        int blockSize,
                        Logger* logger);
+
+    /**
+     * @brief Worker function for loading sample bank into existing VoiceManager
+     * @param sampleDirectory Sample directory path
+     * @param targetSampleRate Target sample rate
+     * @param logger Logger pointer (guaranteed valid during execution)
+     *
+     * This function:
+     * 1. Reads instrument metadata from JSON
+     * 2. Calls voiceManager_->loadSampleBank()
+     * 3. Updates instrumentName_ and velocityLayerCount_
+     *
+     * Checks shouldStop_ flag for graceful interruption.
+     */
+    void sampleBankWorkerFunction(const std::string& sampleDirectory,
+                                   int targetSampleRate,
+                                   Logger* logger);
 };

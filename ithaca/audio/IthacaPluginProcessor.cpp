@@ -6,6 +6,8 @@
 #include "ithaca/audio/IthacaPluginProcessor.h"
 #include "ithaca/audio/SampleBankPathManager.h"
 #include "ithaca/gui/IthacaPluginEditor.h"
+#include <filesystem>
+#include <iostream>
 
 //==============================================================================
 // Constructor - Initialize with async loader and MIDI Learn
@@ -21,12 +23,57 @@ IthacaPluginProcessor::IthacaPluginProcessor()
       processBlockCallCount_(0)
 {
     // Initialize logger first - use plugin data directory (user roaming)
-    std::string loggerPath = SampleBankPathManager::getPluginDataDirectory().string();
-    logger_ = std::make_unique<Logger>(loggerPath);
+    // IMPORTANT: Ensure the directory exists before creating Logger, as Logger will call
+    // std::exit(1) if the directory doesn't exist, causing immediate crash.
+    std::filesystem::path loggerDir = SampleBankPathManager::getPluginDataDirectory();
+
+    // Robustly ensure directory exists
+    try {
+        if (!std::filesystem::exists(loggerDir)) {
+            std::filesystem::create_directories(loggerDir);
+        }
+
+        // Verify directory was created successfully
+        if (!std::filesystem::exists(loggerDir) || !std::filesystem::is_directory(loggerDir)) {
+            // Critical: Directory still doesn't exist after creation attempt
+            // Fall back to temp directory to avoid crash
+            std::cerr << "[IthacaPluginProcessor] ERROR: Failed to create logger directory: "
+                      << loggerDir.string() << std::endl;
+            std::cerr << "[IthacaPluginProcessor] Falling back to temp directory for logging" << std::endl;
+            loggerDir = std::filesystem::temp_directory_path() / "IthacaPlayer" / "logs";
+            std::filesystem::create_directories(loggerDir);
+        }
+    } catch (const std::filesystem::filesystem_error& e) {
+        // Handle filesystem errors gracefully
+        std::cerr << "[IthacaPluginProcessor] ERROR: Filesystem error while creating logger directory: "
+                  << e.what() << std::endl;
+        std::cerr << "[IthacaPluginProcessor] Falling back to temp directory for logging" << std::endl;
+        loggerDir = std::filesystem::temp_directory_path() / "IthacaPlayer" / "logs";
+        try {
+            std::filesystem::create_directories(loggerDir);
+        } catch (...) {
+            std::cerr << "[IthacaPluginProcessor] CRITICAL: Cannot create any log directory!" << std::endl;
+        }
+    }
+
+    std::string loggerPath = loggerDir.string();
+
+    // Enable console logging in Debug builds for better visibility of errors
+    #ifdef _DEBUG
+        bool useConsole = true;  // Show logs on console in Debug mode
+    #else
+        bool useConsole = false; // File-only logging in Release mode
+    #endif
+
+    logger_ = std::make_unique<Logger>(loggerPath, LogSeverity::Info, useConsole, true);
     if (logger_) {
         logger_->log("IthacaPluginProcessor/constructor", LogSeverity::Info, "=== ITHACA PLUGIN STARTING ===");
         logger_->log("IthacaPluginProcessor/constructor", LogSeverity::Info,
                    "Logger directory: " + loggerPath);
+        if (useConsole) {
+            logger_->log("IthacaPluginProcessor/constructor", LogSeverity::Info,
+                       "Console logging enabled (Debug build)");
+        }
     }
 
     // Initialize parameter pointers through ParameterManager
@@ -61,30 +108,36 @@ IthacaPluginProcessor::IthacaPluginProcessor()
         logger_->log("IthacaPluginProcessor/constructor", LogSeverity::Info, "Performance Monitor created");
     }
 
-    // Load sample directory from JSON config (roaming profile)
-    auto samplePathOpt = SampleBankPathManager::getSampleBankPath();
+    // Initialize with sine waves immediately (fast, non-blocking)
+    // Sample bank will be loaded later via GUI folder picker
+    if (logger_) {
+        logger_->log("IthacaPluginProcessor/constructor", LogSeverity::Info,
+                   "Initializing with sine wave test tones...");
+    }
 
-    if (samplePathOpt.has_value()) {
-        currentSampleDirectory_ = juce::String(samplePathOpt.value().string());
+    // Initialize with sine waves at 44100 Hz (will be updated in prepareToPlay)
+    asyncLoader_->initializeWithSineWaves(44100, 512, *logger_, 8);
+
+    // Transfer VoiceManager immediately (sine wave init is synchronous)
+    if (asyncLoader_->getState() == AsyncSampleLoader::LoadingState::Completed) {
+        voiceManager_ = asyncLoader_->takeVoiceManager();
+        samplerInitialized_ = true;
         if (logger_) {
             logger_->log("IthacaPluginProcessor/constructor", LogSeverity::Info,
-               "Sample directory loaded from config: " + currentSampleDirectory_.toStdString());
-        }
-    } else {
-        // No config found - log error, will fail to load samples
-        currentSampleDirectory_ = "";
-        if (logger_) {
-            logger_->log("IthacaPluginProcessor/constructor", LogSeverity::Error,
-               "No sample bank config found! Please ensure samplebank_config.json exists in roaming profile.");
+                       "Sine wave initialization complete - ready for audio");
         }
     }
+
+    // No sample directory or sample bank loaded initially
+    currentSampleDirectory_ = "";
+    loadedSampleBankPath_ = "";
 
     if (logger_) {
         logger_->log("IthacaPluginProcessor/constructor", LogSeverity::Info, "Plugin initialized");
     }
     if (logger_) {
         logger_->log("IthacaPluginProcessor/constructor", LogSeverity::Info,
-           "Async loading enabled - samples will load in background");
+           "Sine wave mode active - use folder picker to load sample bank");
     }
     if (logger_) {
         logger_->log("IthacaPluginProcessor/constructor", LogSeverity::Info,
@@ -196,10 +249,30 @@ void IthacaPluginProcessor::prepareToPlay(double sampleRate, int samplesPerBlock
         // Check if sample rate changed
         if (voiceManager_->getCurrentSampleRate() != static_cast<int>(sampleRate)) {
             if (logger_) {
+                logger_->log("IthacaPluginProcessor/prepareToPlay", LogSeverity::Warning,
+                   "Sample rate changed from " +
+                   std::to_string(voiceManager_->getCurrentSampleRate()) +
+                   " to " + std::to_string(static_cast<int>(sampleRate)) + " Hz");
                 logger_->log("IthacaPluginProcessor/prepareToPlay", LogSeverity::Info,
-                   "Sample rate changed - triggering reload");
+                   "Reinitializing with sine waves at new sample rate...");
             }
-            samplerInitialized_ = false;  // Force reload
+
+            // Reinitialize with sine waves at new sample rate
+            asyncLoader_->initializeWithSineWaves(static_cast<int>(sampleRate), samplesPerBlock, *logger_, 8);
+
+            if (asyncLoader_->getState() == AsyncSampleLoader::LoadingState::Completed) {
+                voiceManager_ = asyncLoader_->takeVoiceManager();
+                samplerInitialized_ = true;
+
+                // If we had a sample bank loaded, reload it
+                if (!loadedSampleBankPath_.isEmpty()) {
+                    if (logger_) {
+                        logger_->log("IthacaPluginProcessor/prepareToPlay", LogSeverity::Info,
+                                   "Reloading sample bank at new sample rate...");
+                    }
+                    asyncLoader_->loadSampleBankAsync(loadedSampleBankPath_.toStdString(), *logger_);
+                }
+            }
         } else {
             // Just update block size
             voiceManager_->prepareToPlay(samplesPerBlock);
@@ -207,38 +280,26 @@ void IthacaPluginProcessor::prepareToPlay(double sampleRate, int samplesPerBlock
                 logger_->log("IthacaPluginProcessor/prepareToPlay", LogSeverity::Info,
                    "Audio settings updated (no reload needed)");
             }
-            return;
         }
+        return;
     }
 
-    // Check if we need to start loading
+    // If not initialized yet (shouldn't happen as constructor initializes with sine waves)
     if (!samplerInitialized_) {
-        // Check if already loading for this sample rate
-        if (asyncLoader_->isInProgress() &&
-            asyncLoader_->getTargetSampleRate() == static_cast<int>(sampleRate)) {
+        if (logger_) {
+            logger_->log("IthacaPluginProcessor/prepareToPlay", LogSeverity::Warning,
+                       "Sampler not initialized - initializing with sine waves now");
+        }
+
+        asyncLoader_->initializeWithSineWaves(static_cast<int>(sampleRate), samplesPerBlock, *logger_, 8);
+
+        if (asyncLoader_->getState() == AsyncSampleLoader::LoadingState::Completed) {
+            voiceManager_ = asyncLoader_->takeVoiceManager();
+            samplerInitialized_ = true;
             if (logger_) {
                 logger_->log("IthacaPluginProcessor/prepareToPlay", LogSeverity::Info,
-                   "Already loading for sample rate " + std::to_string(sampleRate) + " Hz - skipping");
+                           "Sine wave initialization complete");
             }
-            return;
-        }
-
-        // Start async loading
-        if (logger_) {
-            logger_->log("IthacaPluginProcessor/prepareToPlay", LogSeverity::Info,
-               "Starting async sample loading...");
-        }
-
-        asyncLoader_->startLoading(
-            currentSampleDirectory_.toStdString(),
-            static_cast<int>(sampleRate),
-            samplesPerBlock,
-            *logger_
-        );
-
-        if (logger_) {
-            logger_->log("IthacaPluginProcessor/prepareToPlay", LogSeverity::Info,
-               "Async loading started - GUI remains responsive");
         }
     }
 
@@ -357,7 +418,9 @@ void IthacaPluginProcessor::getStateInformation(juce::MemoryBlock& destData)
         }
     };
 
-    PluginStateManager::saveState(destData, parameters_, midiLearnManager_.get(), logCallback);
+    // Save state including sample bank path
+    PluginStateManager::saveState(destData, parameters_, midiLearnManager_.get(),
+                                  &loadedSampleBankPath_, logCallback);
 }
 
 void IthacaPluginProcessor::setStateInformation(const void* data, int sizeInBytes)
@@ -371,8 +434,37 @@ void IthacaPluginProcessor::setStateInformation(const void* data, int sizeInByte
         }
     };
 
+    // Load state including sample bank path
     PluginStateManager::loadState(data, sizeInBytes, parameters_,
-                                  midiLearnManager_.get(), logCallback);
+                                  midiLearnManager_.get(), &loadedSampleBankPath_, logCallback);
+
+    // If a sample bank path was restored, load it asynchronously
+    if (!loadedSampleBankPath_.isEmpty()) {
+        if (logger_) {
+            logger_->log("IthacaPluginProcessor/setStateInformation", LogSeverity::Info,
+                       "Restored sample bank path from state: " + loadedSampleBankPath_.toStdString());
+        }
+
+        // Check if the saved path still exists
+        std::filesystem::path bankPath(loadedSampleBankPath_.toStdString());
+        if (std::filesystem::exists(bankPath) && std::filesystem::is_directory(bankPath)) {
+            if (logger_) {
+                logger_->log("IthacaPluginProcessor/setStateInformation", LogSeverity::Info,
+                           "Sample bank directory exists - will load on next prepareToPlay or can be loaded manually via GUI");
+            }
+            // Note: We don't load here automatically because prepareToPlay might not have been called yet
+            // The GUI can trigger loading via loadSampleBankFromDirectory()
+        } else {
+            if (logger_) {
+                logger_->log("IthacaPluginProcessor/setStateInformation", LogSeverity::Warning,
+                           "Saved sample bank path no longer exists - falling back to sine waves");
+                logger_->log("IthacaPluginProcessor/setStateInformation", LogSeverity::Warning,
+                           "Missing path: " + loadedSampleBankPath_.toStdString());
+            }
+            // Clear the path since it's invalid
+            loadedSampleBankPath_ = "";
+        }
+    }
 }
 
 //==============================================================================
@@ -469,6 +561,59 @@ void IthacaPluginProcessor::changeSampleDirectory(const juce::String& newPath)
     }
 }
 
+void IthacaPluginProcessor::loadSampleBankFromDirectory(const juce::String& sampleBankPath)
+{
+    if (logger_) {
+        logger_->log("IthacaPluginProcessor/loadSampleBankFromDirectory", LogSeverity::Info,
+                   "=== LOADING SAMPLE BANK ===");
+        logger_->log("IthacaPluginProcessor/loadSampleBankFromDirectory", LogSeverity::Info,
+                   "Path: " + sampleBankPath.toStdString());
+    }
+
+    // Validate path exists and is a directory
+    std::filesystem::path bankPath(sampleBankPath.toStdString());
+    if (!std::filesystem::exists(bankPath)) {
+        if (logger_) {
+            logger_->log("IthacaPluginProcessor/loadSampleBankFromDirectory", LogSeverity::Error,
+                       "Sample bank directory does not exist: " + sampleBankPath.toStdString());
+        }
+        return;
+    }
+
+    if (!std::filesystem::is_directory(bankPath)) {
+        if (logger_) {
+            logger_->log("IthacaPluginProcessor/loadSampleBankFromDirectory", LogSeverity::Error,
+                       "Path is not a directory: " + sampleBankPath.toStdString());
+        }
+        return;
+    }
+
+    // Check if VoiceManager is initialized
+    if (!voiceManager_) {
+        if (logger_) {
+            logger_->log("IthacaPluginProcessor/loadSampleBankFromDirectory", LogSeverity::Error,
+                       "VoiceManager not initialized - cannot load sample bank");
+        }
+        return;
+    }
+
+    // Start async loading of sample bank into existing VoiceManager
+    if (logger_) {
+        logger_->log("IthacaPluginProcessor/loadSampleBankFromDirectory", LogSeverity::Info,
+                   "Starting async sample bank loading...");
+    }
+
+    asyncLoader_->loadSampleBankAsync(sampleBankPath.toStdString(), *logger_);
+
+    // Update loaded path (will be persisted in getStateInformation)
+    loadedSampleBankPath_ = sampleBankPath;
+
+    if (logger_) {
+        logger_->log("IthacaPluginProcessor/loadSampleBankFromDirectory", LogSeverity::Info,
+                   "Sample bank loading started in background");
+    }
+}
+
 //==============================================================================
 // Async Loading - Public API for GUI
 
@@ -495,17 +640,21 @@ std::string IthacaPluginProcessor::getLoadingErrorMessage() const
 
 void IthacaPluginProcessor::checkAndTransferVoiceManager()
 {
-    // Check if loading completed
+    // Check if loading completed and there's a new VoiceManager ready
     if (asyncLoader_ &&
         asyncLoader_->getState() == AsyncSampleLoader::LoadingState::Completed &&
-        !samplerInitialized_) {
+        asyncLoader_->hasVoiceManager()) {
 
         if (logger_) {
             logger_->log("IthacaPluginProcessor/checkAndTransfer", LogSeverity::Info,
-               "Async loading completed - transferring VoiceManager");
+               "Async loading completed - transferring new VoiceManager");
+            if (samplerInitialized_) {
+                logger_->log("IthacaPluginProcessor/checkAndTransfer", LogSeverity::Info,
+                   "Replacing existing VoiceManager with newly loaded sample bank");
+            }
         }
 
-        // Transfer ownership of VoiceManager
+        // Transfer ownership of new VoiceManager (replaces old one if exists)
         voiceManager_ = asyncLoader_->takeVoiceManager();
 
         if (voiceManager_) {

@@ -166,6 +166,26 @@ public:
      */
     void changeSampleDirectory(const juce::String& newPath);
 
+    /**
+     * @brief Load sample bank from user-selected directory
+     * @param sampleBankPath Path to sample bank directory
+     * @note Asynchronously loads sample bank into existing VoiceManager (replaces sine waves)
+     * @note Thread-safe, can be called from GUI thread
+     */
+    void loadSampleBankFromDirectory(const juce::String& sampleBankPath);
+
+    /**
+     * @brief Get loaded sample bank path (empty if none loaded)
+     * @return Path to currently loaded sample bank directory
+     */
+    juce::String getLoadedSampleBankPath() const { return loadedSampleBankPath_; }
+
+    /**
+     * @brief Check if a sample bank is currently loaded (not sine waves)
+     * @return true if real samples are loaded, false if using sine waves
+     */
+    bool hasSampleBankLoaded() const { return !loadedSampleBankPath_.isEmpty(); }
+
     //==============================================================================
     // Async Loading - Public API for GUI
     
@@ -248,9 +268,10 @@ private:
     
     //==============================================================================
     // Sample Management
-    
+
     juce::String currentSampleDirectory_;              // Active sample directory
-    
+    juce::String loadedSampleBankPath_;                // Path to loaded sample bank (empty = sine waves)
+
     //==============================================================================
     // Performance Monitoring
     

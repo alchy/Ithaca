@@ -12,6 +12,7 @@
 void PluginStateManager::saveState(juce::MemoryBlock& destData,
                                    juce::AudioProcessorValueTreeState& parameters,
                                    MidiLearnManager* midiLearnManager,
+                                   const juce::String* sampleBankPath,
                                    LogCallback logCallback)
 {
     if (logCallback) {
@@ -24,7 +25,7 @@ void PluginStateManager::saveState(juce::MemoryBlock& destData,
     }
 
     // Create root XML with all state data
-    auto rootXml = createStateXml(parameters, midiLearnManager);
+    auto rootXml = createStateXml(parameters, midiLearnManager, sampleBankPath);
 
     if (logCallback) {
         logCallback("PluginStateManager", LogSeverity::Info,
@@ -55,6 +56,7 @@ bool PluginStateManager::loadState(const void* data,
                                    int sizeInBytes,
                                    juce::AudioProcessorValueTreeState& parameters,
                                    MidiLearnManager* midiLearnManager,
+                                   juce::String* sampleBankPath,
                                    LogCallback logCallback)
 {
     if (logCallback) {
@@ -94,7 +96,7 @@ bool PluginStateManager::loadState(const void* data,
     }
 
     // Restore from XML
-    bool success = restoreFromXml(xmlState.get(), parameters, midiLearnManager, logCallback);
+    bool success = restoreFromXml(xmlState.get(), parameters, midiLearnManager, sampleBankPath, logCallback);
 
     if (logCallback) {
         logCallback("PluginStateManager", LogSeverity::Info,
@@ -118,19 +120,25 @@ bool PluginStateManager::loadState(const void* data,
 
 std::unique_ptr<juce::XmlElement> PluginStateManager::createStateXml(
     juce::AudioProcessorValueTreeState& parameters,
-    MidiLearnManager* midiLearnManager)
+    MidiLearnManager* midiLearnManager,
+    const juce::String* sampleBankPath)
 {
     // Create root XML element
     auto rootXml = std::make_unique<juce::XmlElement>(ROOT_TAG);
 
-    // 1. Save parameter state
+    // 1. Save sample bank path as attribute (if provided)
+    if (sampleBankPath && !sampleBankPath->isEmpty()) {
+        rootXml->setAttribute(SAMPLE_BANK_PATH_ATTR, *sampleBankPath);
+    }
+
+    // 2. Save parameter state
     auto parameterState = parameters.copyState();
     auto parameterXml = parameterState.createXml();
     if (parameterXml) {
         rootXml->addChildElement(parameterXml.release());
     }
 
-    // 2. Save MIDI Learn mappings (if available)
+    // 3. Save MIDI Learn mappings (if available)
     if (midiLearnManager) {
         auto midiLearnXml = midiLearnManager->saveToXml();
         if (midiLearnXml) {
@@ -150,6 +158,7 @@ std::unique_ptr<juce::XmlElement> PluginStateManager::createStateXml(
 bool PluginStateManager::restoreFromXml(juce::XmlElement* xmlState,
                                         juce::AudioProcessorValueTreeState& parameters,
                                         MidiLearnManager* midiLearnManager,
+                                        juce::String* sampleBankPath,
                                         LogCallback logCallback)
 {
     if (!xmlState) {
@@ -166,7 +175,21 @@ bool PluginStateManager::restoreFromXml(juce::XmlElement* xmlState,
                        "Detected new format (IthacaPluginState with MIDI Learn support)");
         }
 
-        // 1. Restore parameter state
+        // 1. Restore sample bank path from attribute (if available)
+        if (sampleBankPath && xmlState->hasAttribute(SAMPLE_BANK_PATH_ATTR)) {
+            *sampleBankPath = xmlState->getStringAttribute(SAMPLE_BANK_PATH_ATTR);
+            if (logCallback) {
+                logCallback("PluginStateManager", LogSeverity::Info,
+                           "Restored sample bank path: " + sampleBankPath->toStdString());
+            }
+        } else {
+            if (logCallback && sampleBankPath) {
+                logCallback("PluginStateManager", LogSeverity::Info,
+                           "No sample bank path found in state (normal for older saves)");
+            }
+        }
+
+        // 2. Restore parameter state
         auto* parameterXml = xmlState->getChildByName(parameters.state.getType());
         if (parameterXml) {
             if (logCallback) {
@@ -185,7 +208,7 @@ bool PluginStateManager::restoreFromXml(juce::XmlElement* xmlState,
             }
         }
 
-        // 2. Restore MIDI Learn mappings
+        // 3. Restore MIDI Learn mappings
         auto* midiLearnXml = xmlState->getChildByName(MIDI_LEARN_TAG);
         if (midiLearnXml) {
             if (logCallback) {

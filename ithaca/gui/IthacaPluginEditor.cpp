@@ -10,6 +10,7 @@
 #include "ithaca/gui/IthacaPluginEditor.h"
 #include "ithaca/gui/components/SliderPanelComponent.h"
 #include "ithaca/gui/components/InfoHeaderComponent.h"
+#include "ithaca/gui/components/SampleBankSelectorComponent.h"
 #include "ithaca/gui/helpers/GuiHelpers.h"
 #include "ithaca/config/AppConstants.h"
 #include "ithaca/audio/SampleBankPathManager.h"
@@ -91,53 +92,68 @@ void IthacaPluginEditor::resized()
 
     #if !BACKGROUND_PICTURE_OFF
     // === BACKGROUND MODE: Hierarchical layout bez mezer ===
-    
+
     // Background image na celé okno (non-interactive)
     imageComponent.setBounds(bounds);
     GUI_DEBUG("IthacaGUI: Background image set to full window");
-    
+
     // Vypočítat výšky sekcí podle ratio
     int windowHeight = bounds.getHeight();
-    int infoHeight = static_cast<int>(windowHeight *
-                                     Constants::Gui::Layout::INFO_SECTION_HEIGHT_RATIO);
+    int infoHeight = static_cast<int>(windowHeight * 0.20f);  // 20% for info header
+    int selectorHeight = static_cast<int>(windowHeight * 0.10f);  // 10% for sample bank selector
 
-    GUI_DEBUG("IthacaGUI: Info header height: " << infoHeight
-              << "px (~" << (Constants::Gui::Layout::INFO_SECTION_HEIGHT_RATIO * 100) << "%)");
-    
+    GUI_DEBUG("IthacaGUI: Info header height: " << infoHeight << "px (~20%)");
+    GUI_DEBUG("IthacaGUI: Sample bank selector height: " << selectorHeight << "px (~10%)");
+
     // ZMĚNĚNO: Content area BEZ paddingu - použije celou plochu okna
     auto contentArea = bounds;  // Původně: bounds.reduced(8)
-    
-    // Info header nahoře (~30%)
+
+    // Info header nahoře (~20%)
     if (infoHeader) {
         infoHeader->setBounds(contentArea.removeFromTop(infoHeight));
         GUI_DEBUG("IthacaGUI: Info header positioned");
     }
-    
+
     // Mezera mezi sekcemi - NYNÍ 0, takže žádná mezera
     contentArea.removeFromTop(Constants::Gui::Layout::SECTION_GAP);  // = 0
-    
+
+    // Sample bank selector (~10%)
+    if (sampleBankSelector) {
+        sampleBankSelector->setBounds(contentArea.removeFromTop(selectorHeight));
+        GUI_DEBUG("IthacaGUI: Sample bank selector positioned");
+    }
+
+    // Mezera mezi sekcemi
+    contentArea.removeFromTop(Constants::Gui::Layout::SECTION_GAP);  // = 0
+
     // Slider panel dole (~70%, zbytek prostoru)
     if (sliderPanel) {
         sliderPanel->setBounds(contentArea);
-        GUI_DEBUG("IthacaGUI: Slider panel positioned - height: " 
+        GUI_DEBUG("IthacaGUI: Slider panel positioned - height: "
                   << contentArea.getHeight() << "px");
     }
-    
+
     #else
     // === DEBUG MODE: Kompaktní layout ===
-    
+
     // ZMĚNĚNO: BEZ paddingu v debug režimu
     auto contentArea = bounds;  // Původně: bounds.reduced(GuiConstants::SECTION_PADDING)
-    
+
     if (infoHeader) {
         infoHeader->setBounds(contentArea.removeFromTop(120));
         contentArea.removeFromTop(Constants::Gui::Layout::SECTION_GAP);  // = 0
         GUI_DEBUG("IthacaGUI: Debug - Info header: 120px");
     }
-    
+
+    if (sampleBankSelector) {
+        sampleBankSelector->setBounds(contentArea.removeFromTop(80));
+        contentArea.removeFromTop(Constants::Gui::Layout::SECTION_GAP);  // = 0
+        GUI_DEBUG("IthacaGUI: Debug - Sample bank selector: 80px");
+    }
+
     if (sliderPanel) {
         sliderPanel->setBounds(contentArea);
-        GUI_DEBUG("IthacaGUI: Debug - Slider panel: " 
+        GUI_DEBUG("IthacaGUI: Debug - Slider panel: "
                   << contentArea.getHeight() << "px");
     }
 #endif
@@ -150,12 +166,24 @@ void IthacaPluginEditor::resized()
 void IthacaPluginEditor::parentHierarchyChanged()
 {
     // Start timer pro live updates v info header when component becomes visible
-    if (isShowing() && infoHeader) {
-        infoHeader->startUpdates();
-        GUI_DEBUG("IthacaGUI: Component shown - Info header timer started");
-    } else if (!isShowing() && infoHeader) {
-        infoHeader->stopUpdates();
-        GUI_DEBUG("IthacaGUI: Component hidden - Info header timer stopped");
+    if (isShowing()) {
+        if (infoHeader) {
+            infoHeader->startUpdates();
+            GUI_DEBUG("IthacaGUI: Component shown - Info header timer started");
+        }
+        if (sampleBankSelector) {
+            sampleBankSelector->startUpdates();
+            GUI_DEBUG("IthacaGUI: Component shown - Sample bank selector timer started");
+        }
+    } else {
+        if (infoHeader) {
+            infoHeader->stopUpdates();
+            GUI_DEBUG("IthacaGUI: Component hidden - Info header timer stopped");
+        }
+        if (sampleBankSelector) {
+            sampleBankSelector->stopUpdates();
+            GUI_DEBUG("IthacaGUI: Component hidden - Sample bank selector timer stopped");
+        }
     }
 }
 
@@ -166,7 +194,7 @@ void IthacaPluginEditor::parentHierarchyChanged()
 void IthacaPluginEditor::initializeComponents()
 {
     GUI_DEBUG("IthacaGUI: Initializing hierarchical components with MIDI Learn");
-    
+
     // Info header (nahoře) - shows instrument info, stats, loading status
     infoHeader = std::make_unique<InfoHeaderComponent>(processorRef);
     if (infoHeader) {
@@ -176,7 +204,16 @@ void IthacaPluginEditor::initializeComponents()
     } else {
         GUI_DEBUG("IthacaGUI: ERROR - Failed to create InfoHeaderComponent");
     }
-    
+
+    // Sample bank selector (uprostřed) - folder picker for sample bank selection
+    sampleBankSelector = std::make_unique<SampleBankSelectorComponent>(processorRef);
+    if (sampleBankSelector) {
+        addAndMakeVisible(sampleBankSelector.get());
+        GUI_DEBUG("IthacaGUI: SampleBankSelectorComponent created");
+    } else {
+        GUI_DEBUG("IthacaGUI: ERROR - Failed to create SampleBankSelectorComponent");
+    }
+
     // Slider panel (dole) - parameter controls with MIDI Learn
     sliderPanel = std::make_unique<SliderPanelComponent>(
         processorRef.getParameters(),
@@ -189,7 +226,7 @@ void IthacaPluginEditor::initializeComponents()
     } else {
         GUI_DEBUG("IthacaGUI: ERROR - Failed to create SliderPanelComponent");
     }
-    
+
     GUI_DEBUG("IthacaGUI: Component initialization completed");
 }
 

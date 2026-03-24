@@ -7,7 +7,7 @@ Professional sample-based virtual instrument plugin built with JUCE framework an
 Ithaca Player is a VST3/AU/Standalone plugin that combines:
 - **JUCE Framework** - Cross-platform audio plugin framework
 - **IthacaCore** - Custom multiplatform sampler engine (128 voices, velocity layers, ADSR envelopes, LFO panning)
-- **JSON Configuration** - Flexible sample bank path management
+- **GUI Sample Bank Selector** - Runtime sample bank loading via folder picker
 - **MIDI Learn** - Dynamic CC mapping for all parameters
 - **Multiple Instrument Instances** - Each instrument (VintageV, Rhodes, Wurlitzer, Piano) as separate plugin
 
@@ -58,13 +58,24 @@ git submodule update --init --recursive
 
 ### 2. Build an Instrument
 
+**IMPORTANT: CMake Location**
+If you have Visual Studio Build Tools installed, CMake is typically located at:
+```
+C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin\cmake.exe
+```
+
+You can find the exact path used for your build in `build/CMakeCache.txt` (line 3)
+
 **Example: Build VintageV**
 ```bash
-# Configure with instrument name
+# Configure with instrument name (if cmake is in PATH)
 cmake -B build -S . -G "Visual Studio 17 2022" -A x64 -DINSTRUMENT_NAME=VintageV
 
 # Build Release
 cmake --build build --config Release --target IthacaPlayer-VintageV -j 4
+
+# OR if cmake is not in PATH, use full path:
+"C:/Program Files (x86)/Microsoft Visual Studio/2022/BuildTools/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/bin/cmake.exe" --build build --config Debug --target IthacaPlayer-VintageV -j 4
 ```
 
 **Example: Build Rhodes**
@@ -72,12 +83,29 @@ cmake --build build --config Release --target IthacaPlayer-VintageV -j 4
 # Clean previous build (optional)
 rm -rf build
 
-# Configure for Rhodes
+# Configure for Rhodes (if cmake is in PATH)
 cmake -B build -S . -G "Visual Studio 17 2022" -A x64 -DINSTRUMENT_NAME=Rhodes
 
 # Build Release
 cmake --build build --config Release --target IthacaPlayer-Rhodes -j 4
+
+# OR if cmake is not in PATH:
+"C:/Program Files (x86)/Microsoft Visual Studio/2022/BuildTools/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/bin/cmake.exe" --build build --config Release --target IthacaPlayer-Rhodes -j 4
 ```
+
+### Rebuilding After Code Changes
+
+If you've modified source code and want to rebuild without reconfiguring:
+
+```bash
+# Debug build (faster, includes debug symbols)
+"C:/Program Files (x86)/Microsoft Visual Studio/2022/BuildTools/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/bin/cmake.exe" --build build --config Debug --target IthacaPlayer-VintageV -j 4
+
+# Release build (optimized)
+"C:/Program Files (x86)/Microsoft Visual Studio/2022/BuildTools/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/bin/cmake.exe" --build build --config Release --target IthacaPlayer-VintageV -j 4
+```
+
+**Note:** No need to run `cmake -B build` again unless you changed CMakeLists.txt or added new files.
 
 ### 3. Run Standalone Application
 ```bash
@@ -96,13 +124,11 @@ Each instrument instance stores its configuration in a platform-specific roaming
 ```
 C:\Users\<user>\AppData\Roaming\LordAudio\
 ├── IthacaPlayer-VintageV\
-│   ├── samplebank-config-VntV.json    # Sample bank path configuration
 │   ├── decorators\
 │   │   └── background.jpg             # GUI background image
 │   └── core_logger\
 │       └── core_logger.log            # Runtime diagnostics log
 ├── IthacaPlayer-Rhodes\
-│   ├── samplebank-config-Rhds.json
 │   ├── decorators\
 │   │   └── background.jpg
 │   └── core_logger\
@@ -114,7 +140,6 @@ C:\Users\<user>\AppData\Roaming\LordAudio\
 ```
 ~/Library/Application Support/LordAudio/
 ├── IthacaPlayer-VintageV/
-│   ├── samplebank-config-VntV.json
 │   ├── decorators/background.jpg
 │   └── core_logger/core_logger.log
 └── ...
@@ -124,66 +149,39 @@ C:\Users\<user>\AppData\Roaming\LordAudio\
 ```
 ~/.local/share/LordAudio/
 ├── IthacaPlayer-VintageV/
-│   ├── samplebank-config-VntV.json
 │   ├── decorators/background.jpg
 │   └── core_logger/core_logger.log
 └── ...
 ```
 
-### Configuration Files
+### User Data Files
 
-1. **samplebank-config-{PLUGIN_CODE}.json** - Sample bank path
-   ```json
-   {
-     "sampleBankPath": "C:/SoundBanks/IthacaPlayer/VntV",
-     "version": "1.0",
-     "generatedBy": "CMake",
-     "buildTimestamp": "251102094752",
-     "platform": "Windows"
-   }
-   ```
+1. **decorators/background.jpg** - GUI background (480x650px), installed during build
 
-2. **decorators/background.jpg** - GUI background (480x650px)
+2. **core_logger/core_logger.log** - Diagnostic log with startup, loading, and error info
 
-3. **core_logger/core_logger.log** - Diagnostic log with startup, loading, and error info
+## Sample Bank Loading
 
-## Sample Bank Configuration
+### GUI-Based Loading Workflow
 
-### Default Sample Bank Paths
+The plugin uses **runtime sample bank loading via GUI** instead of configuration files:
 
-Each instrument has a default sample bank path defined in `CMakeLists.txt`:
+1. **Startup**: Plugin initializes with **sine wave test tones** (immediate playback, no files needed)
+2. **User Selection**: Click **"Load Sample Bank..."** button in GUI
+3. **Folder Picker**: Browse to sample bank directory (e.g., `C:/SoundBanks/IthacaPlayer/VntV`)
+4. **Async Loading**: Background thread loads samples without blocking audio/GUI
+5. **Automatic Swap**: When complete, plugin seamlessly replaces sine waves with real samples
 
-```cmake
-set(SAMPLE_BANK_PATH "C:/SoundBanks/IthacaPlayer/${PLUGIN_CODE}" CACHE STRING "...")
-```
+### Benefits
 
-**Default paths (Windows):**
-- VintageV: `C:/SoundBanks/IthacaPlayer/VntV`
-- Rhodes: `C:/SoundBanks/IthacaPlayer/Rhds`
-- Wurlitzer: `C:/SoundBanks/IthacaPlayer/Wrlz`
-- Piano: `C:/SoundBanks/IthacaPlayer/Pian`
+- **No configuration files** - Sample bank path managed entirely through GUI
+- **Instant startup** - Always playable with sine waves
+- **Runtime switching** - Load different sample banks without restarting
+- **Per-instrument independence** - Each plugin instance remembers its own sample bank
 
-### Changing Sample Bank Path
+### Sample Bank Structure
 
-**Option 1: Edit CMakeLists.txt**
-```cmake
-set(SAMPLE_BANK_PATH "D:/MySamples/${PLUGIN_CODE}" CACHE STRING "...")
-```
-
-**Option 2: Override via command line**
-```bash
-cmake -B build -S . -DINSTRUMENT_NAME=VintageV -DSAMPLE_BANK_PATH="D:/MySamples/VntV"
-```
-
-**Option 3: Edit JSON config after installation**
-```bash
-# Edit this file:
-%APPDATA%\LordAudio\IthacaPlayer-VintageV\samplebank-config-VntV.json
-```
-
-**Note:** Path uses forward slashes (`/`) for JSON compatibility, even on Windows.
-
-For detailed sample bank structure and installer documentation, see [SAMPLEPATHS.md](SAMPLEPATHS.md).
+For detailed sample bank structure requirements, see [SAMPLEPATHS.md](SAMPLEPATHS.md).
 
 ## Project Structure
 
@@ -198,7 +196,7 @@ Ithaca/
 │   │   └── PluginStateManager.*     # Save/load state
 │   ├── gui/                         # User interface
 │   │   ├── IthacaPluginEditor.*     # Main editor window
-│   │   └── components/              # UI components (sliders, info panel)
+│   │   └── components/              # UI components (sliders, sample bank selector)
 │   ├── midi/                        # MIDI processing
 │   │   ├── MidiProcessor.*          # MIDI message handling
 │   │   └── MidiLearnManager.*       # Dynamic CC mapping
@@ -217,17 +215,14 @@ Ithaca/
 │   └── config/
 │       └── IthacaConfig.h           # Core audio engine configuration
 ├── cmake/                           # CMake installation scripts
-│   ├── InstallSampleBankConfig.cmake  # Install sample bank config
-│   └── InstallDecorators.cmake        # Install GUI assets
+│   └── InstallDecorators.cmake      # Install GUI assets
 ├── decorators/                      # GUI assets (source)
 │   └── background.jpg
 ├── json/                            # nlohmann/json library (submodule)
 ├── JUCE/                            # JUCE framework (submodule)
 ├── libsndfile/                      # Audio file I/O (submodule)
 ├── CMakeLists.txt                   # Build configuration
-├── samplebank-config.template.json  # JSON template (generated)
-├── samplebank-config.template.json.in  # JSON template (source)
-├── SAMPLEPATHS.md                   # Sample bank path documentation
+├── SAMPLEPATHS.md                   # Sample bank structure documentation
 └── README.md                        # This file
 ```
 
@@ -244,6 +239,7 @@ Ithaca/
 
 ### GUI Features
 - **Modern interface** with rounded overlays and custom background
+- **Sample bank selector** - Runtime sample bank loading via folder picker
 - **8 parameter sliders**: Master Gain, Master Pan, Attack, Release, Sustain, LFO Speed, LFO Depth, Stereo Field
 - **Real-time statistics**: Active voices, sample rate, CPU usage, velocity layers
 - **MIDI Learn**: Right-click any slider to assign MIDI CC
@@ -293,13 +289,10 @@ cmake --build build --target clean-all-ithaca
 
 CMake automatically installs these files to user roaming directory:
 
-1. **Sample bank config**: `%APPDATA%\LordAudio\IthacaPlayer-VintageV\samplebank-config-VntV.json`
-   - Preserves existing user config if present
-
-2. **Decorators**: `%APPDATA%\LordAudio\IthacaPlayer-VintageV\decorators\background.jpg`
+1. **Decorators**: `%APPDATA%\LordAudio\IthacaPlayer-VintageV\decorators\background.jpg`
    - Always overwrites to update with new builds
 
-3. **Core logger directory**: `%APPDATA%\LordAudio\IthacaPlayer-VintageV\core_logger\`
+2. **Core logger directory**: `%APPDATA%\LordAudio\IthacaPlayer-VintageV\core_logger\`
    - Created automatically on first run
 
 ### Logs
@@ -310,10 +303,10 @@ Runtime logs are written to user roaming directory:
 ```
 
 Log includes:
-- Plugin initialization
-- Sample loading progress
+- Plugin initialization (sine wave startup)
+- Sample loading progress (GUI-triggered)
 - Decorators path resolution
-- Sample bank config loading
+- VoiceManager swap operations
 - MIDI events (if verbose logging enabled)
 - Performance warnings (dropouts, CPU usage)
 - Error diagnostics
@@ -427,12 +420,13 @@ EnvelopeStaticData (RT-safe ADSR) → Voice Processing →
 LFO Panning → Master Gain/Pan → Audio Output
 ```
 
-### Sample Loading
-1. **Startup**: Load JSON config from roaming profile (`samplebank-config-{PLUGIN_CODE}.json`)
-2. **AsyncSampleLoader**: Background thread loads samples from configured path
-3. **InstrumentLoader**: Parse metadata, allocate stereo buffers, read velocity layers
-4. **VoiceManager**: Initialize 128 voices with sample references
-5. **Transfer**: Move VoiceManager to RT thread when ready
+### Sample Loading Workflow
+1. **Startup**: Initialize with sine wave test tones (immediate, no files needed)
+2. **GUI Selection**: User clicks "Load Sample Bank..." button, selects directory
+3. **AsyncSampleLoader**: Background thread loads samples without blocking audio/GUI
+4. **InstrumentLoader**: Parse metadata, allocate stereo buffers, read velocity layers
+5. **VoiceManager Creation**: New VoiceManager with 128 voices and sample references
+6. **RT-Safe Swap**: In processBlock(), atomically replace sine waves with loaded samples
 
 ### Parameter Flow
 ```
@@ -481,29 +475,27 @@ VoiceManager → Logger → core_logger.log (voice state, MIDI events)
 
 ### Sample Loading Fails
 
-1. **Check JSON config exists:**
-   ```bash
-   # VintageV
-   ls "$env:APPDATA\LordAudio\IthacaPlayer-VintageV\samplebank-config-VntV.json"
+1. **Plugin starts with sine waves:**
+   - This is normal behavior - plugin initializes immediately with test tones
+   - Use "Load Sample Bank..." button to load real samples
 
-   # Rhodes
-   ls "$env:APPDATA\LordAudio\IthacaPlayer-Rhodes\samplebank-config-Rhds.json"
-   ```
+2. **Sample bank not loading after selection:**
+   - Check log for diagnostics:
+     ```bash
+     tail -20 "$env:APPDATA\LordAudio\IthacaPlayer-VintageV\core_logger\core_logger.log"
+     ```
+   - Look for AsyncSampleLoader errors or InstrumentLoader failures
 
-2. **Verify path is valid:**
-   - Open JSON config and check `sampleBankPath` value
-   - Ensure path exists and is accessible
-   - Use forward slashes (`/`) even on Windows
-
-3. **Check log for diagnostics:**
-   ```bash
-   tail -20 "$env:APPDATA\LordAudio\IthacaPlayer-VintageV\core_logger\core_logger.log"
-   ```
-
-4. **Verify sample bank structure:**
+3. **Verify sample bank structure:**
    - See [SAMPLEPATHS.md](SAMPLEPATHS.md) for required directory structure
-   - Ensure `instrument-definition.json` exists
+   - Ensure `instrument-definition.json` exists in selected directory
    - Check sample files are WAV format
+   - Verify directory is accessible (not on network drive with permission issues)
+
+4. **Sample bank loads but still uses sine waves:**
+   - Check log for VoiceManager swap messages
+   - Verify AsyncSampleLoader completed successfully
+   - Try restarting plugin after loading
 
 ### Background Image Not Loading
 

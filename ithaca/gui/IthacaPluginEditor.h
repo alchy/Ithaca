@@ -38,6 +38,7 @@
 // Forward declarations
 class SliderPanelComponent;
 class InfoHeaderComponent;
+class SampleBankSelectorComponent;
 
 /**
  * @class IthacaPluginEditor
@@ -116,13 +117,16 @@ private:
     // ========================================================================
     // Hierarchické komponenty
     // ========================================================================
-    
-    /// Info header nahoře (~30% výšky, 80% alpha overlay)
+
+    /// Info header nahoře (~20% výšky, 80% alpha overlay)
     std::unique_ptr<InfoHeaderComponent> infoHeader;
-    
+
+    /// Sample bank selector (~10% výšky, 80% alpha overlay)
+    std::unique_ptr<SampleBankSelectorComponent> sampleBankSelector;
+
     /// Slider panel dole (~70% výšky, 60% alpha overlay) with MIDI Learn
     std::unique_ptr<SliderPanelComponent> sliderPanel;
-    
+
     /// Background image component (full window, non-interactive)
     juce::ImageComponent imageComponent;
 

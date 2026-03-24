@@ -32,8 +32,7 @@ endif()
 # - Sample bank path is instrument-specific
 # =============================================================================
 
-# Define instrument name (can be overridden via -DINSTRUMENT_NAME=...)
-set(INSTRUMENT_NAME "VintageV" CACHE STRING "Instrument name suffix for this plugin instance")
+# No instrument-specific builds - unified plugin with runtime sample bank selection
 
 # =============================================================================
 # PLUGIN CODE CONFIGURATION
@@ -48,43 +47,22 @@ set(INSTRUMENT_NAME "VintageV" CACHE STRING "Instrument name suffix for this plu
 # Format: 4-character alphanumeric code (case-sensitive)
 # =============================================================================
 
-# Plugin Code mapping - explicitly defined for each instrument
-if(INSTRUMENT_NAME STREQUAL "VintageV")
-    set(PLUGIN_CODE "VntV")
-    set(PLUGIN_DESCRIPTION "VintageV Electric Piano")
+# Plugin Code - unified for all sample banks
+set(PLUGIN_CODE "Itca")
+set(PLUGIN_DESCRIPTION "Ithaca Player - Universal Sample Player")
 
-elseif(INSTRUMENT_NAME STREQUAL "Rhodes")
-    set(PLUGIN_CODE "Rhds")
-    set(PLUGIN_DESCRIPTION "Rhodes Mark II Electric Piano")
-
-elseif(INSTRUMENT_NAME STREQUAL "Wurlitzer")
-    set(PLUGIN_CODE "Wrlz")
-    set(PLUGIN_DESCRIPTION "Wurlitzer 200A Electric Piano")
-
-elseif(INSTRUMENT_NAME STREQUAL "Piano")
-    set(PLUGIN_CODE "Pian")
-    set(PLUGIN_DESCRIPTION "Acoustic Piano")
-
-else()
-    # Fallback for unknown instruments - use legacy code
-    set(PLUGIN_CODE "Itca")
-    set(PLUGIN_DESCRIPTION "Ithaca Player (unknown instrument: ${INSTRUMENT_NAME})")
-    message(WARNING "Unknown INSTRUMENT_NAME '${INSTRUMENT_NAME}', using fallback PLUGIN_CODE: ${PLUGIN_CODE}")
-endif()
-
-# Plugin target name with instrument suffix
-set(PLUGIN_TARGET_NAME "IthacaPlayer-${INSTRUMENT_NAME}")
+# Plugin target name - unified
+set(PLUGIN_TARGET_NAME "IthacaPlayer")
 
 # Product name displayed in DAW and used for binary filenames (no spaces!)
-set(PLUGIN_PRODUCT_NAME "IthacaPlayer-${INSTRUMENT_NAME}")
+set(PLUGIN_PRODUCT_NAME "IthacaPlayer")
 
-message(STATUS "=== INSTRUMENT INSTANCE CONFIGURATION ===")
-message(STATUS "Instrument Name: ${INSTRUMENT_NAME}")
+message(STATUS "=== PLUGIN CONFIGURATION ===")
 message(STATUS "Plugin Code:     ${PLUGIN_CODE}")
 message(STATUS "Plugin Target:   ${PLUGIN_TARGET_NAME}")
 message(STATUS "Product Name:    ${PLUGIN_PRODUCT_NAME}")
 message(STATUS "Description:     ${PLUGIN_DESCRIPTION}")
-message(STATUS "=========================================")
+message(STATUS "============================")
 
 # =============================================================================
 # SAMPLE BANK PATH CONFIGURATION
@@ -178,29 +156,6 @@ configure_file(
     ${CMAKE_CURRENT_BINARY_DIR}/generated/BuildID.h
     @ONLY
 )
-
-# =============================================================================
-# SAMPLE BANK CONFIG JSON GENERATION
-# =============================================================================
-
-# Generate JSON config file from template
-configure_file(
-    ${CMAKE_CURRENT_SOURCE_DIR}/samplebank-config.template.json.in
-    ${CMAKE_CURRENT_BINARY_DIR}/generated/samplebank-config.json
-    @ONLY
-)
-
-# Copy generated JSON to project root (as reference template)
-configure_file(
-    ${CMAKE_CURRENT_BINARY_DIR}/generated/samplebank-config.json
-    ${CMAKE_CURRENT_SOURCE_DIR}/samplebank-config.template.json
-    COPYONLY
-)
-
-message(STATUS "=== SAMPLE BANK CONFIG ===")
-message(STATUS "JSON config generated: ${CMAKE_CURRENT_BINARY_DIR}/generated/samplebank-config.json")
-message(STATUS "Template copied to: ${CMAKE_CURRENT_SOURCE_DIR}/samplebank-config.template.json")
-message(STATUS "==========================")
 
 # =============================================================================
 # JUCE a knihovny
@@ -301,6 +256,8 @@ target_sources(${PLUGIN_TARGET_NAME}
         ithaca/gui/components/InfoHeaderComponent.cpp
         ithaca/gui/components/SliderPanelComponent.h
         ithaca/gui/components/SliderPanelComponent.cpp
+        ithaca/gui/components/SampleBankSelectorComponent.h
+        ithaca/gui/components/SampleBankSelectorComponent.cpp
         ithaca/gui/components/MidiLearnSlider.h
 
         # GUI - Factories
@@ -331,6 +288,10 @@ target_sources(${PLUGIN_TARGET_NAME}
         # IthacaCore - InstrumentLoader module
         ithaca-core/sampler/instrument_loader.cpp
         ithaca-core/sampler/instrument_loader.h
+
+        # IthacaCore - Sine Wave Generator (fallback audio)
+        ithaca-core/sampler/sine_wave_generator.cpp
+        ithaca-core/sampler/sine_wave_generator.h
 
         # IthacaCore - Wav exporter
         ithaca-core/sampler/wav_file_exporter.cpp
@@ -498,21 +459,6 @@ add_custom_command(TARGET ${PLUGIN_TARGET_NAME} POST_BUILD
         ${CMAKE_CURRENT_SOURCE_DIR}/decorators/background.jpg
         ${CMAKE_CURRENT_BINARY_DIR}/${PLUGIN_TARGET_NAME}_artefacts/Release/Standalone/decorators/background.jpg
     COMMENT "Copying background.jpg to Standalone Release location (development fallback)"
-)
-
-# =============================================================================
-# Install sample bank config to user's roaming profile
-# =============================================================================
-
-# POST_BUILD: Install JSON config to user's roaming directory
-add_custom_command(TARGET ${PLUGIN_TARGET_NAME} POST_BUILD
-    COMMAND ${CMAKE_COMMAND}
-        -DSOURCE_JSON=${CMAKE_CURRENT_BINARY_DIR}/generated/samplebank-config.json
-        -DPLUGIN_NAME=${PLUGIN_TARGET_NAME}
-        -DPLUGIN_CODE=${PLUGIN_CODE}
-        -P ${CMAKE_CURRENT_SOURCE_DIR}/cmake/InstallSampleBankConfig.cmake
-    COMMENT "Installing sample bank config for ${PLUGIN_TARGET_NAME} to user's roaming profile"
-    VERBATIM
 )
 
 # =============================================================================
