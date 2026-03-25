@@ -276,9 +276,21 @@ void IthacaPluginProcessor::prepareToPlay(double sampleRate, int samplesPerBlock
         } else {
             // Just update block size
             voiceManager_->prepareToPlay(samplesPerBlock);
-            if (logger_) {
-                logger_->log("IthacaPluginProcessor/prepareToPlay", LogSeverity::Info,
-                   "Audio settings updated (no reload needed)");
+
+            // Check if we have a saved sample bank path that needs to be loaded
+            if (!loadedSampleBankPath_.isEmpty()) {
+                if (logger_) {
+                    logger_->log("IthacaPluginProcessor/prepareToPlay", LogSeverity::Info,
+                               "Restored sample bank path found - auto-loading: " + loadedSampleBankPath_.toStdString());
+                }
+                // Always load the saved sample bank path
+                // AsyncSampleLoader will handle graceful swap from sine waves or existing bank
+                asyncLoader_->loadSampleBankAsync(loadedSampleBankPath_.toStdString(), *logger_);
+            } else {
+                if (logger_) {
+                    logger_->log("IthacaPluginProcessor/prepareToPlay", LogSeverity::Info,
+                       "Audio settings updated (no sample bank to load)");
+                }
             }
         }
         return;
