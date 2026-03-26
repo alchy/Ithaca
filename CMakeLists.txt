@@ -167,6 +167,18 @@ add_subdirectory(JUCE)
 # Add libsndfile for IthacaCore
 add_subdirectory(libsndfile)
 
+# speexdsp resampler (submodule inside ithaca-core)
+add_library(speex_resampler STATIC
+    ithaca-core/speexdsp/libspeexdsp/resample.c
+)
+target_include_directories(speex_resampler PUBLIC
+    ${CMAKE_CURRENT_SOURCE_DIR}/ithaca-core/speexdsp/include
+    ${CMAKE_CURRENT_SOURCE_DIR}/ithaca-core/speexdsp/include/speex
+    ${CMAKE_CURRENT_SOURCE_DIR}/ithaca-core/speexdsp/libspeexdsp
+)
+target_compile_definitions(speex_resampler PUBLIC FLOATING_POINT=1 OUTSIDE_SPEEX=1 RANDOM_PREFIX=ithaca)
+set_target_properties(speex_resampler PROPERTIES LINKER_LANGUAGE C)
+
 # =============================================================================
 # JUCE Plugin definice - MULTIPLE INSTRUMENT INSTANCES
 # =============================================================================
@@ -289,6 +301,10 @@ target_sources(${PLUGIN_TARGET_NAME}
         ithaca-core/sampler/instrument_loader.cpp
         ithaca-core/sampler/instrument_loader.h
 
+        # IthacaCore - Sample Rate Converter (offline resampling via speexdsp)
+        ithaca-core/sampler/sample_rate_converter.h
+        ithaca-core/sampler/sample_rate_converter.cpp
+
         # IthacaCore - Sine Wave Generator (fallback audio)
         ithaca-core/sampler/sine_wave_generator.cpp
         ithaca-core/sampler/sine_wave_generator.h
@@ -343,12 +359,14 @@ target_sources(${PLUGIN_TARGET_NAME}
 # =============================================================================
 
 target_include_directories(${PLUGIN_TARGET_NAME} PRIVATE
-    ${CMAKE_CURRENT_SOURCE_DIR}                             # Root directory - IthacaConfig.h zde
-    ${CMAKE_CURRENT_SOURCE_DIR}/ithaca-core                 # IthacaCore modules
-    ${CMAKE_CURRENT_SOURCE_DIR}/ithaca-core/sampler         # IthacaCore sampler modules
-    ${CMAKE_CURRENT_SOURCE_DIR}/ithaca-core/sampler/tests   # Test framework
-    ${CMAKE_CURRENT_SOURCE_DIR}/json/include                # nlohmann/json library
-    ${CMAKE_CURRENT_BINARY_DIR}/generated                   # PŘIDÁNO: Pro BuildID.h
+    ${CMAKE_CURRENT_SOURCE_DIR}
+    ${CMAKE_CURRENT_SOURCE_DIR}/ithaca-core
+    ${CMAKE_CURRENT_SOURCE_DIR}/ithaca-core/sampler
+    ${CMAKE_CURRENT_SOURCE_DIR}/ithaca-core/sampler/tests
+    ${CMAKE_CURRENT_SOURCE_DIR}/ithaca-core/speexdsp/include
+    ${CMAKE_CURRENT_SOURCE_DIR}/ithaca-core/speexdsp/libspeexdsp
+    ${CMAKE_CURRENT_SOURCE_DIR}/json/include
+    ${CMAKE_CURRENT_BINARY_DIR}/generated
 )
 
 # =============================================================================
@@ -416,9 +434,10 @@ target_link_libraries(${PLUGIN_TARGET_NAME}
         juce::juce_audio_utils
         juce::juce_audio_processors
         juce::juce_gui_basics
-        
+
         # IthacaCore dependencies
         sndfile                         # libsndfile for WAV operations
+        speex_resampler                 # speexdsp offline sample rate conversion
         
     PUBLIC
         juce::juce_recommended_config_flags

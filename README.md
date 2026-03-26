@@ -9,31 +9,7 @@ Ithaca Player is a VST3/AU/Standalone plugin that combines:
 - **IthacaCore** - Custom multiplatform sampler engine (128 voices, velocity layers, ADSR envelopes, LFO panning)
 - **GUI Sample Bank Selector** - Runtime sample bank loading via folder picker
 - **MIDI Learn** - Dynamic CC mapping for all parameters
-- **Multiple Instrument Instances** - Each instrument (VintageV, Rhodes, Wurlitzer, Piano) as separate plugin
-
-## Multiple Instrument Instances Architecture
-
-Each instrument is built as an **independent plugin** with its own:
-- Plugin binary (e.g., `IthacaPlayer-VintageV.exe`)
-- VST3/AU registration (appears separately in DAW)
-- User data directory (config, decorators, logs)
-- Sample bank configuration
-
-### Available Instruments
-
-| Instrument | Plugin Code | Binary Name | Description |
-|------------|-------------|-------------|-------------|
-| VintageV   | VntV        | IthacaPlayer-VintageV | Vintage Electric Piano |
-| Rhodes     | Rhds        | IthacaPlayer-Rhodes | Rhodes Electric Piano |
-| Wurlitzer  | Wrlz        | IthacaPlayer-Wurlitzer | Wurlitzer Electric Piano |
-| Piano      | Pian        | IthacaPlayer-Piano | Acoustic Piano |
-
-### Benefits
-
-- **Multiple instruments in one DAW session** - Load VintageV and Rhodes simultaneously
-- **Separate presets** - Each instrument has its own saved state
-- **Independent sample banks** - Different sample paths per instrument
-- **No interference** - Instruments run completely isolated
+- **DSP Chain** - BBE sonic maximizer, limiter
 
 ## Requirements
 
@@ -56,107 +32,80 @@ cd Ithaca
 git submodule update --init --recursive
 ```
 
-### 2. Build an Instrument
-
-**IMPORTANT: CMake Location**
-If you have Visual Studio Build Tools installed, CMake is typically located at:
-```
-C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin\cmake.exe
-```
-
-You can find the exact path used for your build in `build/CMakeCache.txt` (line 3)
-
-**Example: Build VintageV**
-```bash
-# Configure with instrument name (if cmake is in PATH)
-cmake -B build -S . -G "Visual Studio 17 2022" -A x64 -DINSTRUMENT_NAME=VintageV
-
-# Build Release
-cmake --build build --config Release --target IthacaPlayer-VintageV -j 4
-
-# OR if cmake is not in PATH, use full path:
-"C:/Program Files (x86)/Microsoft Visual Studio/2022/BuildTools/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/bin/cmake.exe" --build build --config Debug --target IthacaPlayer-VintageV -j 4
-```
-
-**Example: Build Rhodes**
-```bash
-# Clean previous build (optional)
-rm -rf build
-
-# Configure for Rhodes (if cmake is in PATH)
-cmake -B build -S . -G "Visual Studio 17 2022" -A x64 -DINSTRUMENT_NAME=Rhodes
-
-# Build Release
-cmake --build build --config Release --target IthacaPlayer-Rhodes -j 4
-
-# OR if cmake is not in PATH:
-"C:/Program Files (x86)/Microsoft Visual Studio/2022/BuildTools/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/bin/cmake.exe" --build build --config Release --target IthacaPlayer-Rhodes -j 4
-```
-
-### Rebuilding After Code Changes
-
-If you've modified source code and want to rebuild without reconfiguring:
+### 2. Configure and Build
 
 ```bash
-# Debug build (faster, includes debug symbols)
-"C:/Program Files (x86)/Microsoft Visual Studio/2022/BuildTools/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/bin/cmake.exe" --build build --config Debug --target IthacaPlayer-VintageV -j 4
+# Configure (if cmake is in PATH)
+cmake -B build -S . -G "Visual Studio 17 2022" -A x64
 
-# Release build (optimized)
-"C:/Program Files (x86)/Microsoft Visual Studio/2022/BuildTools/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/bin/cmake.exe" --build build --config Release --target IthacaPlayer-VintageV -j 4
+# Build Debug Standalone
+cmake --build build --config Debug --target IthacaPlayer_Standalone -j 4
+
+# Build Debug VST3
+cmake --build build --config Debug --target IthacaPlayer_VST3 -j 4
+
+# Build Release Standalone
+cmake --build build --config Release --target IthacaPlayer_Standalone -j 4
+
+# Build Release VST3
+cmake --build build --config Release --target IthacaPlayer_VST3 -j 4
+
+# Build all targets
+cmake --build build --config Debug -j 4
 ```
 
-**Note:** No need to run `cmake -B build` again unless you changed CMakeLists.txt or added new files.
+If cmake is not in PATH, use the full path:
+```bash
+"C:/Program Files (x86)/Microsoft Visual Studio/2022/BuildTools/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/bin/cmake.exe" --build build --config Debug --target IthacaPlayer_Standalone -j 4
+```
+
+**Note:** No need to run `cmake -B build` again after code changes unless you modified CMakeLists.txt or added new files.
 
 ### 3. Run Standalone Application
-```bash
-# VintageV
-./build/IthacaPlayer-VintageV_artefacts/Release/Standalone/IthacaPlayer-VintageV.exe
 
-# Rhodes
-./build/IthacaPlayer-Rhodes_artefacts/Release/Standalone/IthacaPlayer-Rhodes.exe
+**Debug build:**
+```
+build\IthacaPlayer_artefacts\Debug\Standalone\IthacaPlayer.exe
+```
+
+**Release build:**
+```
+build\IthacaPlayer_artefacts\Release\Standalone\IthacaPlayer.exe
 ```
 
 ## User Data Structure
 
-Each instrument instance stores its configuration in a platform-specific roaming directory:
+The plugin stores its configuration in a platform-specific roaming directory:
 
 **Windows:**
 ```
 C:\Users\<user>\AppData\Roaming\LordAudio\
-├── IthacaPlayer-VintageV\
-│   ├── decorators\
-│   │   └── background.jpg             # GUI background image
-│   └── core_logger\
-│       └── core_logger.log            # Runtime diagnostics log
-├── IthacaPlayer-Rhodes\
-│   ├── decorators\
-│   │   └── background.jpg
-│   └── core_logger\
-│       └── core_logger.log
-└── ...
+└── IthacaPlayer\
+    ├── decorators\
+    │   └── background.jpg             # GUI background image
+    └── core_logger\
+        └── core_logger.log            # Runtime diagnostics log
 ```
 
 **macOS:**
 ```
 ~/Library/Application Support/LordAudio/
-├── IthacaPlayer-VintageV/
-│   ├── decorators/background.jpg
-│   └── core_logger/core_logger.log
-└── ...
+└── IthacaPlayer/
+    ├── decorators/background.jpg
+    └── core_logger/core_logger.log
 ```
 
 **Linux:**
 ```
 ~/.local/share/LordAudio/
-├── IthacaPlayer-VintageV/
-│   ├── decorators/background.jpg
-│   └── core_logger/core_logger.log
-└── ...
+└── IthacaPlayer/
+    ├── decorators/background.jpg
+    └── core_logger/core_logger.log
 ```
 
 ### User Data Files
 
-1. **decorators/background.jpg** - GUI background (480x650px), installed during build
+1. **decorators/background.jpg** - GUI background (480x650px), installed automatically during build
 
 2. **core_logger/core_logger.log** - Diagnostic log with startup, loading, and error info
 
@@ -177,7 +126,6 @@ The plugin uses **runtime sample bank loading via GUI** instead of configuration
 - **No configuration files** - Sample bank path managed entirely through GUI
 - **Instant startup** - Always playable with sine waves
 - **Runtime switching** - Load different sample banks without restarting
-- **Per-instrument independence** - Each plugin instance remembers its own sample bank
 
 ### Sample Bank Structure
 
@@ -212,6 +160,9 @@ Ithaca/
 │   │   ├── envelopes/               # ADSR/ASR envelopes
 │   │   ├── instrument_loader.*      # Sample loading
 │   │   └── lfopan.*                 # LFO panning effect
+│   ├── dsp/                         # DSP effects chain
+│   │   ├── bbe/                     # BBE sonic maximizer
+│   │   └── limiter/                 # Limiter
 │   └── config/
 │       └── IthacaConfig.h           # Core audio engine configuration
 ├── cmake/                           # CMake installation scripts
@@ -236,6 +187,7 @@ Ithaca/
 - **Master gain/pan** with MIDI CC support
 - **Sustain pedal** support
 - **Velocity layers** support via JSON metadata
+- **DSP chain**: BBE sonic maximizer + limiter
 
 ### GUI Features
 - **Modern interface** with rounded overlays and custom background
@@ -256,8 +208,17 @@ Ithaca/
 ## Build Targets
 
 ```bash
-# Build specific instrument (VintageV example)
-cmake --build build --config Release --target IthacaPlayer-VintageV
+# Build Standalone (Debug)
+cmake --build build --config Debug --target IthacaPlayer_Standalone -j 4
+
+# Build VST3 (Debug)
+cmake --build build --config Debug --target IthacaPlayer_VST3 -j 4
+
+# Build Standalone (Release)
+cmake --build build --config Release --target IthacaPlayer_Standalone -j 4
+
+# Build VST3 (Release)
+cmake --build build --config Release --target IthacaPlayer_VST3 -j 4
 
 # Build all targets
 cmake --build build --config Release
@@ -274,32 +235,33 @@ cmake --build build --target clean-all-ithaca
 
 ## Output Files
 
-### Plugin Formats (VintageV example)
+### Plugin Formats
 
 **Release Build:**
-- **VST3**: `build/IthacaPlayer-VintageV_artefacts/Release/VST3/IthacaPlayer-VintageV.vst3/`
-- **Standalone**: `build/IthacaPlayer-VintageV_artefacts/Release/Standalone/IthacaPlayer-VintageV.exe`
-- **AU** (macOS): `build/IthacaPlayer-VintageV_artefacts/Release/AU/IthacaPlayer-VintageV.component`
+- **VST3**: `build/IthacaPlayer_artefacts/Release/VST3/IthacaPlayer.vst3/`
+- **Standalone**: `build/IthacaPlayer_artefacts/Release/Standalone/IthacaPlayer.exe`
+- **AU** (macOS): `build/IthacaPlayer_artefacts/Release/AU/IthacaPlayer.component`
 
 **Debug Build:**
-- **VST3**: `build/IthacaPlayer-VintageV_artefacts/Debug/VST3/IthacaPlayer-VintageV.vst3/`
-- **Standalone**: `build/IthacaPlayer-VintageV_artefacts/Debug/Standalone/IthacaPlayer-VintageV.exe`
+- **VST3**: `build/IthacaPlayer_artefacts/Debug/VST3/IthacaPlayer.vst3/`
+- **Standalone**: `build/IthacaPlayer_artefacts/Debug/Standalone/IthacaPlayer.exe`
 
 ### Installed Files (POST_BUILD)
 
-CMake automatically installs these files to user roaming directory:
+CMake automatically installs these files after each build:
 
-1. **Decorators**: `%APPDATA%\LordAudio\IthacaPlayer-VintageV\decorators\background.jpg`
+1. **Decorators**: `%APPDATA%\LordAudio\IthacaPlayer\decorators\background.jpg`
    - Always overwrites to update with new builds
+   - Also copied to `build/IthacaPlayer_artefacts/<Config>/Standalone/decorators/` as development fallback
 
-2. **Core logger directory**: `%APPDATA%\LordAudio\IthacaPlayer-VintageV\core_logger\`
+2. **Core logger directory**: `%APPDATA%\LordAudio\IthacaPlayer\core_logger\`
    - Created automatically on first run
 
 ### Logs
 
 Runtime logs are written to user roaming directory:
 ```
-%APPDATA%\LordAudio\IthacaPlayer-VintageV\core_logger\core_logger.log
+%APPDATA%\LordAudio\IthacaPlayer\core_logger\core_logger.log
 ```
 
 Log includes:
@@ -313,61 +275,29 @@ Log includes:
 
 ## Development
 
-### Building Multiple Instruments
-
-To build all instruments sequentially:
+### CMake Configuration Options
 
 ```bash
-# VintageV
-cmake -B build-vintagev -S . -G "Visual Studio 17 2022" -A x64 -DINSTRUMENT_NAME=VintageV
-cmake --build build-vintagev --config Release --target IthacaPlayer-VintageV
+# Basic configure (no options required)
+cmake -B build -S . -G "Visual Studio 17 2022" -A x64
 
-# Rhodes
-cmake -B build-rhodes -S . -G "Visual Studio 17 2022" -A x64 -DINSTRUMENT_NAME=Rhodes
-cmake --build build-rhodes --config Release --target IthacaPlayer-Rhodes
-
-# Wurlitzer
-cmake -B build-wurlitzer -S . -G "Visual Studio 17 2022" -A x64 -DINSTRUMENT_NAME=Wurlitzer
-cmake --build build-wurlitzer --config Release --target IthacaPlayer-Wurlitzer
-
-# Piano
-cmake -B build-piano -S . -G "Visual Studio 17 2022" -A x64 -DINSTRUMENT_NAME=Piano
-cmake --build build-piano --config Release --target IthacaPlayer-Piano
+# Custom default sample bank path
+cmake -B build -S . -G "Visual Studio 17 2022" -A x64 -DSAMPLE_BANK_PATH="D:/Samples/VntV"
 ```
+
+> **Note:** `INSTRUMENT_NAME` is deprecated and no longer used. The plugin builds as a unified `IthacaPlayer` target.
 
 ### Watching Logs (PowerShell)
 
 ```powershell
-# Tail log file for VintageV
-Get-Content -Path "$env:APPDATA\LordAudio\IthacaPlayer-VintageV\core_logger\core_logger.log" -Tail 20 -Wait
+# Tail log file
+Get-Content -Path "$env:APPDATA\LordAudio\IthacaPlayer\core_logger\core_logger.log" -Tail 20 -Wait
 
 # Filter by component
-Get-Content -Path "$env:APPDATA\LordAudio\IthacaPlayer-VintageV\core_logger\core_logger.log" -Tail 20 -Wait | Where-Object { $_ -like "*VoiceManager*" }
+Get-Content -Path "$env:APPDATA\LordAudio\IthacaPlayer\core_logger\core_logger.log" -Tail 20 -Wait | Where-Object { $_ -like "*VoiceManager*" }
 
 # Filter by severity
-Get-Content -Path "$env:APPDATA\LordAudio\IthacaPlayer-VintageV\core_logger\core_logger.log" -Tail 20 -Wait | Where-Object { $_ -like "*ERROR*" }
-```
-
-### CMake Configuration Options
-
-```bash
-# Specify instrument (required)
-cmake -B build -DINSTRUMENT_NAME=VintageV
-
-# Custom sample bank path
-cmake -B build -DINSTRUMENT_NAME=VintageV -DSAMPLE_BANK_PATH="D:/Samples/VntV"
-
-# Release build
-cmake -B build -DINSTRUMENT_NAME=VintageV -DCMAKE_BUILD_TYPE=Release
-
-# Specify generator
-cmake -B build -DINSTRUMENT_NAME=VintageV -G "Visual Studio 17 2022" -A x64
-
-# Multiple options
-cmake -B build -S . -G "Visual Studio 17 2022" -A x64 \
-  -DINSTRUMENT_NAME=VintageV \
-  -DSAMPLE_BANK_PATH="D:/Samples/VntV" \
-  -DCMAKE_BUILD_TYPE=Release
+Get-Content -Path "$env:APPDATA\LordAudio\IthacaPlayer\core_logger\core_logger.log" -Tail 20 -Wait | Where-Object { $_ -like "*ERROR*" }
 ```
 
 ### Debug Mode
@@ -388,36 +318,11 @@ JUCE plugin has additional GUI debug mode:
 
 ## Architecture
 
-### Multiple Instance Isolation
-
-Each instrument instance is **completely isolated**:
-
-```
-Plugin Registration:
-- VintageV → Plugin Code: VntV → IthacaPlayer-VintageV.vst3
-- Rhodes   → Plugin Code: Rhds → IthacaPlayer-Rhodes.vst3
-
-User Data:
-- VintageV → %APPDATA%\LordAudio\IthacaPlayer-VintageV\
-- Rhodes   → %APPDATA%\LordAudio\IthacaPlayer-Rhodes\
-
-Sample Banks:
-- VintageV → C:/SoundBanks/IthacaPlayer/VntV/
-- Rhodes   → C:/SoundBanks/IthacaPlayer/Rhds/
-```
-
-**No shared state between instruments** - Each runs in its own plugin instance with separate:
-- Audio processing thread
-- Voice manager (128 voices each)
-- MIDI processor
-- Parameter state
-- MIDI Learn mappings
-
 ### Audio Pipeline
 ```
 MIDI Input → MidiProcessor → VoiceManager (128 voices) →
 EnvelopeStaticData (RT-safe ADSR) → Voice Processing →
-LFO Panning → Master Gain/Pan → Audio Output
+LFO Panning → DSP Chain (BBE + Limiter) → Master Gain/Pan → Audio Output
 ```
 
 ### Sample Loading Workflow
@@ -460,16 +365,15 @@ VoiceManager → Logger → core_logger.log (voice state, MIDI events)
 
 ### CPU Optimization
 - **RT-safe envelopes**: Pre-computed ADSR curves (no math in audio thread)
-- **Voice pooling**: Pre-allocated 128 voices per instrument instance
+- **Voice pooling**: Pre-allocated 128 voices
 - **SIMD potential**: Prepared for vectorization (currently scalar)
 - **Lock-free**: Atomic parameters for GUI↔audio communication
 - **Async loading**: Non-blocking sample loading in background thread
 
 ### Memory Usage
-- **Sample buffers**: Loaded once per instrument, shared across voices
+- **Sample buffers**: Loaded once, shared across voices
 - **Envelope data**: Static tables (44.1kHz/48kHz)
 - **Voice state**: Minimal per-voice overhead
-- **Multiple instances**: Each instrument has separate memory (no shared samples between VintageV/Rhodes/etc.)
 
 ## Troubleshooting
 
@@ -481,8 +385,8 @@ VoiceManager → Logger → core_logger.log (voice state, MIDI events)
 
 2. **Sample bank not loading after selection:**
    - Check log for diagnostics:
-     ```bash
-     tail -20 "$env:APPDATA\LordAudio\IthacaPlayer-VintageV\core_logger\core_logger.log"
+     ```powershell
+     Get-Content "$env:APPDATA\LordAudio\IthacaPlayer\core_logger\core_logger.log" -Tail 20
      ```
    - Look for AsyncSampleLoader errors or InstrumentLoader failures
 
@@ -490,26 +394,23 @@ VoiceManager → Logger → core_logger.log (voice state, MIDI events)
    - See [SAMPLEPATHS.md](SAMPLEPATHS.md) for required directory structure
    - Ensure `instrument-definition.json` exists in selected directory
    - Check sample files are WAV format
-   - Verify directory is accessible (not on network drive with permission issues)
 
 4. **Sample bank loads but still uses sine waves:**
    - Check log for VoiceManager swap messages
    - Verify AsyncSampleLoader completed successfully
-   - Try restarting plugin after loading
 
 ### Background Image Not Loading
 
 1. **Check decorators directory:**
-   ```bash
-   ls "$env:APPDATA\LordAudio\IthacaPlayer-VintageV\decorators\background.jpg"
+   ```powershell
+   ls "$env:APPDATA\LordAudio\IthacaPlayer\decorators\background.jpg"
    ```
 
 2. **Verify installation:**
-   - CMake POST_BUILD should install `decorators/background.jpg`
+   - CMake POST_BUILD installs `decorators/background.jpg` automatically
    - If missing, run build again to trigger installation
 
 3. **Check log:**
-   - Log shows decorators path resolution attempts
    - Search for `IthacaPluginEditor/setupBackground` in log
 
 ### Build Errors
@@ -522,7 +423,7 @@ VoiceManager → Logger → core_logger.log (voice state, MIDI events)
 2. **Clean build folder:**
    ```bash
    rm -rf build
-   cmake -B build -S . -G "Visual Studio 17 2022" -A x64 -DINSTRUMENT_NAME=VintageV
+   cmake -B build -S . -G "Visual Studio 17 2022" -A x64
    ```
 
 3. **Check MSVC installation:**
@@ -535,46 +436,20 @@ VoiceManager → Logger → core_logger.log (voice state, MIDI events)
    cmake --version  # Should be >= 3.22
    ```
 
-5. **Missing INSTRUMENT_NAME:**
-   ```
-   CMake Error: INSTRUMENT_NAME must be defined
-   ```
-   **Solution:** Add `-DINSTRUMENT_NAME=VintageV` to cmake command
-
 ### Plugin Not Found in DAW
 
-1. **Check VST3 installation path:**
-   ```bash
-   # Should be installed at:
-   C:\Program Files\Common Files\VST3\IthacaPlayer-VintageV.vst3
+1. **Check VST3 path:**
+   ```
+   C:\Program Files\Common Files\VST3\IthacaPlayer.vst3
    ```
 
 2. **Copy manually from build directory:**
    ```bash
-   cp -r build/IthacaPlayer-VintageV_artefacts/Release/VST3/IthacaPlayer-VintageV.vst3 \
+   cp -r build/IthacaPlayer_artefacts/Release/VST3/IthacaPlayer.vst3 \
      "C:\Program Files\Common Files\VST3\"
    ```
 
-3. **Rescan plugins in DAW:**
-   - Most DAWs have "Rescan plugins" option
-   - Some require restart after adding new plugins
-
-4. **Check DAW plugin folder settings:**
-   - Verify DAW is scanning `C:\Program Files\Common Files\VST3\`
-   - Check DAW plugin blacklist
-
-### Wrong Instrument Loads
-
-If you built multiple instruments but the wrong one loads:
-
-1. **Each instrument has unique plugin code:**
-   - VintageV → VntV
-   - Rhodes → Rhds
-   - Check DAW plugin list for correct name
-
-2. **Check user data directory:**
-   - Ensure each instrument has separate directory
-   - Verify config files don't point to wrong sample bank
+3. **Rescan plugins in DAW** or restart after adding new plugins.
 
 ## Contributing
 
@@ -586,38 +461,11 @@ If you built multiple instruments but the wrong one loads:
 
 ### Git Workflow
 ```bash
-# Create feature branch
 git checkout -b feature/my-feature
-
-# Make changes
 git add .
 git commit -m "Description of changes"
-
-# Push to remote
 git push -u origin feature/my-feature
 ```
-
-### Adding New Instruments
-
-To add a new instrument (e.g., "Clavinet"):
-
-1. **Edit CMakeLists.txt** (around line 30):
-   ```cmake
-   elseif(INSTRUMENT_NAME STREQUAL "Clavinet")
-       set(PLUGIN_CODE "Clav")
-       set(PLUGIN_DESCRIPTION "Clavinet Electric Piano")
-   ```
-
-2. **Build:**
-   ```bash
-   cmake -B build -S . -DINSTRUMENT_NAME=Clavinet
-   cmake --build build --config Release --target IthacaPlayer-Clavinet
-   ```
-
-3. **Prepare sample bank:**
-   - Create `C:/SoundBanks/IthacaPlayer/Clav/`
-   - Add samples and `instrument-definition.json`
-   - See [SAMPLEPATHS.md](SAMPLEPATHS.md) for structure
 
 ## License
 
@@ -632,7 +480,7 @@ To add a new instrument (e.g., "Clavinet"):
 ## Documentation
 
 - **[SAMPLEPATHS.md](SAMPLEPATHS.md)** - Complete sample bank path system documentation
-- **[CMakeLists.txt](CMakeLists.txt)** - Build system configuration with instrument mapping
+- **[CMakeLists.txt](CMakeLists.txt)** - Build system configuration
 
 ## Support
 
@@ -642,5 +490,5 @@ For issues and feature requests, please use [GitHub Issues](https://github.com/a
 
 **Version**: 1.1.0
 **Build System**: CMake 3.22+
-**Architecture**: Multiple Instrument Instances (per-instrument isolation)
+**Plugin Target**: IthacaPlayer (unified)
 **Tested On**: Windows 10/11, Visual Studio 2022
