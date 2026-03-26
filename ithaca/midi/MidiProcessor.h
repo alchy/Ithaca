@@ -41,6 +41,16 @@ public:
                           VoiceManager* voiceManager,
                           juce::AudioProcessorValueTreeState& parameters,
                           MidiLearnManager* midiLearnManager = nullptr);
+
+    /**
+     * @brief Zpracuje jednu MIDI zprávu — určeno pro sample-accurate MIDI loop.
+     *        Volá se z IthacaPluginProcessor::processBlock pro každou MIDI zprávu
+     *        samostatně, v pořadí jejich samplePosition.
+     */
+    void processSingleEvent(const juce::MidiMessage& message,
+                            VoiceManager* voiceManager,
+                            juce::AudioProcessorValueTreeState& parameters,
+                            MidiLearnManager* midiLearnManager = nullptr);
     
     // ========================================================================
     // Statistics

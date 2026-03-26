@@ -21,53 +21,55 @@ MidiProcessor::MidiProcessor()
 // Main MIDI Processing
 // ============================================================================
 
+void MidiProcessor::processSingleEvent(const juce::MidiMessage& message,
+                                       VoiceManager* voiceManager,
+                                       juce::AudioProcessorValueTreeState& parameters,
+                                       MidiLearnManager* midiLearnManager)
+{
+    if (!voiceManager) return;
+
+    totalMidiEventsProcessed_.fetch_add(1, std::memory_order_relaxed);
+
+    if (message.isNoteOn()) {
+        uint8_t midiNote = static_cast<uint8_t>(message.getNoteNumber());
+        uint8_t velocity = static_cast<uint8_t>(message.getVelocity());
+        voiceManager->setNoteStateMIDI(midiNote, true, velocity);
+    }
+    else if (message.isNoteOff()) {
+        uint8_t midiNote = static_cast<uint8_t>(message.getNoteNumber());
+        voiceManager->setNoteStateMIDI(midiNote, false);
+    }
+    else if (message.isController()) {
+        uint8_t ccNumber = static_cast<uint8_t>(message.getControllerNumber());
+        uint8_t ccValue  = static_cast<uint8_t>(message.getControllerValue());
+
+        // PRIORITA 1: Sustain Pedal (CC64)
+        if (MidiHelpers::isDamperPedal(ccNumber)) {
+            processSustainPedal(ccValue, voiceManager);
+            return;
+        }
+
+        // PRIORITA 2: MIDI Learn (pokud je aktivní)
+        if (midiLearnManager && midiLearnManager->isLearning()) {
+            if (midiLearnManager->tryLearnCC(ccNumber)) {
+                return;
+            }
+        }
+
+        // PRIORITA 3: Normální CC processing
+        processMidiControlChange(ccNumber, ccValue, parameters, midiLearnManager);
+    }
+}
+
 void MidiProcessor::processMidiBuffer(const juce::MidiBuffer& midiMessages,
                                       VoiceManager* voiceManager,
                                       juce::AudioProcessorValueTreeState& parameters,
                                       MidiLearnManager* midiLearnManager)
 {
     if (!voiceManager) return;
-    
+
     for (const auto& midiMetadata : midiMessages) {
-        auto message = midiMetadata.getMessage();
-        
-        totalMidiEventsProcessed_.fetch_add(1, std::memory_order_relaxed);
-        
-        if (message.isNoteOn()) {
-            uint8_t midiNote = static_cast<uint8_t>(message.getNoteNumber());
-            uint8_t velocity = static_cast<uint8_t>(message.getVelocity());
-            voiceManager->setNoteStateMIDI(midiNote, true, velocity);
-        }
-        else if (message.isNoteOff()) {
-            uint8_t midiNote = static_cast<uint8_t>(message.getNoteNumber());
-            voiceManager->setNoteStateMIDI(midiNote, false);
-        }
-        else if (message.isController()) {
-            uint8_t ccNumber = static_cast<uint8_t>(message.getControllerNumber());
-            uint8_t ccValue = static_cast<uint8_t>(message.getControllerValue());
-            
-            // ================================================================
-            // PRIORITA 1: Sustain Pedal (CC64) - NOVĚ PŘIDÁNO
-            // ================================================================
-            if (MidiHelpers::isDamperPedal(ccNumber)) {
-                processSustainPedal(ccValue, voiceManager);
-                continue; // Skip další processing pro CC64
-            }
-            
-            // ================================================================
-            // PRIORITA 2: MIDI Learn (pokud je aktivní)
-            // ================================================================
-            if (midiLearnManager && midiLearnManager->isLearning()) {
-                if (midiLearnManager->tryLearnCC(ccNumber)) {
-                    continue; // CC bylo naučeno, neprocházej dál
-                }
-            }
-            
-            // ================================================================
-            // PRIORITA 3: Normální CC processing (s learned mappings)
-            // ================================================================
-            processMidiControlChange(ccNumber, ccValue, parameters, midiLearnManager);
-        }
+        processSingleEvent(midiMetadata.getMessage(), voiceManager, parameters, midiLearnManager);
     }
 }
 

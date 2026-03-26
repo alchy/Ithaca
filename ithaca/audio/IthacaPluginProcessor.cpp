@@ -378,23 +378,52 @@ void IthacaPluginProcessor::processBlock(juce::AudioBuffer<float>& buffer,
     // Update VoiceManager parameters (RT-safe through ParameterManager)
     parameterManager_.updateSamplerParametersRTSafe(voiceManager_.get());
 
-    // Process MIDI events (delegated to MidiProcessor with MIDI Learn)
-    if (midiProcessor_) {
-        midiProcessor_->processMidiBuffer(
-            midiMessages,
-            voiceManager_.get(),
-            parameters_,
-            midiLearnManager_.get()  // Pass MIDI Learn Manager
+    // Sample-accurate MIDI processing:
+    // Render audio up to each MIDI event's sample position, then apply the event.
+    // This ensures CC64 (sustain pedal), Note On, and Note Off are applied at
+    // the correct position within the block — prevents mass note-off caused by
+    // CC64=0 being processed before Note On events that arrive later in the block.
+    float* left  = buffer.getWritePointer(0);
+    float* right = buffer.getWritePointer(1);
+    const int totalSamples = buffer.getNumSamples();
+    int currentSample = 0;
+
+    for (const auto& midiMetadata : midiMessages) {
+        const int eventSample = juce::jlimit(0, totalSamples, midiMetadata.samplePosition);
+
+        // Render audio segment up to this event
+        if (eventSample > currentSample && voiceManager_) {
+            voiceManager_->processBlockSegment(
+                left  + currentSample,
+                right + currentSample,
+                eventSample - currentSample
+            );
+            currentSample = eventSample;
+        }
+
+        // Apply MIDI event at its correct position
+        if (midiProcessor_) {
+            midiProcessor_->processSingleEvent(
+                midiMetadata.getMessage(),
+                voiceManager_.get(),
+                parameters_,
+                midiLearnManager_.get()
+            );
+        }
+    }
+
+    // Render remaining audio after last MIDI event
+    if (currentSample < totalSamples && voiceManager_) {
+        voiceManager_->processBlockSegment(
+            left  + currentSample,
+            right + currentSample,
+            totalSamples - currentSample
         );
     }
 
-    // Render audio through VoiceManager
+    // Apply LFO panning and DSP chain to the complete block
     if (voiceManager_) {
-        voiceManager_->processBlockUninterleaved(
-            buffer.getWritePointer(0),
-            buffer.getWritePointer(1),
-            buffer.getNumSamples()
-        );
+        voiceManager_->finalizeBlock(left, right, totalSamples);
     }
 
     // End performance measurement
